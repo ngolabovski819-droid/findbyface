@@ -1,0 +1,132 @@
+---
+import Nav from '../components/Nav.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+  canonical?: string;
+}
+
+const {
+  title,
+  description = 'Find lookalike OnlyFans creators instantly. Upload a photo and discover matching creators in seconds.',
+  canonical,
+} = Astro.props;
+
+const canonicalUrl = canonical ?? new URL(Astro.url.pathname, 'https://findbyface.org').href;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- GA4 --><!-- placeholder — add GA4 tag here when ID is ready -->
+  <title>{title}</title>
+  <meta name="description" content={description} />
+  <link rel="canonical" href={canonicalUrl} />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <slot name="head" />
+</head>
+<body>
+  <Nav />
+  <main>
+    <slot />
+  </main>
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <a href="/" class="logo-text"><span style="color:#fff">find</span><span style="background:linear-gradient(135deg,#7c3aed,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">byface</span></a>
+      <nav class="footer-links">
+        <a href="/blog/">Blog</a>
+        <a href="/onlyfans-search/">Search</a>
+        <a href="/categories/top/">Categories</a>
+      </nav>
+      <p class="footer-legal">© {new Date().getFullYear()} findbyface.org — For entertainment purposes only. Results are based on visual similarity and are not an indication of identity.</p>
+    </div>
+  </footer>
+</body>
+</html>
+
+<style is:global>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface-raised: #1a1a2e;
+    --accent: #7c3aed;
+    --accent-light: #a855f7;
+    --accent-pink: #ec4899;
+    --accent-glow: rgba(124,58,237,0.25);
+    --text: #f0f0f5;
+    --text-muted: #8888aa;
+    --border: rgba(124,58,237,0.2);
+    --success: #22c55e;
+    --radius: 12px;
+    --radius-lg: 20px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4 { font-family: 'Syne', sans-serif; font-weight: 800; }
+  a { color: inherit; text-decoration: none; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+
+  .logo-text {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.4rem;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .site-footer {
+    border-top: 1px solid var(--border);
+    margin-top: 80px;
+    padding: 48px 20px;
+  }
+
+  .footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    text-align: center;
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 28px;
+  }
+
+  .footer-links a {
+    color: var(--text-muted);
+    font-size: 14px;
+    transition: color 0.2s;
+  }
+
+  .footer-links a:hover { color: var(--text); }
+
+  .footer-legal {
+    color: var(--text-muted);
+    font-size: 12px;
+    max-width: 600px;
+    line-height: 1.7;
+  }
+</style>

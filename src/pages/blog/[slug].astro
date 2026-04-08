@@ -1,0 +1,185 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  return posts.map(post => ({
+    params: { slug: post.id.replace(/\.md$/, '') },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await post.render();
+const { title, description, date, image } = post.data;
+const slug = post.id.replace(/\.md$/, '');
+const canonical = `https://findbyface.org/blog/${slug}/`;
+const formattedDate = new Date(date).toLocaleDateString('en-US', {
+  year: 'numeric', month: 'long', day: 'numeric'
+});
+---
+
+<Base title={`${title} | findbyface`} description={description} canonical={canonical}>
+  <slot name="head" slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": title,
+      "description": description,
+      "datePublished": date,
+      "url": canonical,
+      "publisher": { "@type": "Organization", "name": "findbyface" }
+    })} />
+  </slot>
+
+  <article class="blog-post">
+    <header class="post-header">
+      <p class="post-date">{formattedDate}</p>
+      <h1>{title}</h1>
+      {description && <p class="post-desc">{description}</p>}
+      {image && (
+        <div class="post-hero-img">
+          <img src={image} alt={title} loading="eager" fetchpriority="high" />
+        </div>
+      )}
+    </header>
+
+    <div class="post-content prose">
+      <Content />
+    </div>
+
+    <footer class="post-footer">
+      <a href="/blog/" class="back-link">← Back to Blog</a>
+    </footer>
+  </article>
+</Base>
+
+<style>
+  .blog-post {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 60px 24px;
+  }
+
+  .post-header {
+    margin-bottom: 48px;
+    text-align: center;
+  }
+
+  .post-date {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+
+  .post-header h1 {
+    font-size: clamp(1.75rem, 4vw, 2.75rem);
+    line-height: 1.2;
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+
+  .post-desc {
+    color: var(--text-muted);
+    font-size: 18px;
+    line-height: 1.6;
+    max-width: 600px;
+    margin: 0 auto 32px;
+  }
+
+  .post-hero-img {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-top: 32px;
+  }
+
+  .post-hero-img img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Prose styles for markdown content */
+  .prose {
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1.8;
+  }
+
+  .prose :global(h2) {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent-light);
+    margin: 40px 0 16px;
+  }
+
+  .prose :global(h3) {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 28px 0 12px;
+  }
+
+  .prose :global(p) {
+    margin-bottom: 20px;
+    color: var(--text);
+  }
+
+  .prose :global(a) {
+    color: var(--accent-light);
+    text-decoration: underline;
+  }
+
+  .prose :global(ul), .prose :global(ol) {
+    padding-left: 24px;
+    margin-bottom: 20px;
+  }
+
+  .prose :global(li) {
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+
+  .prose :global(code) {
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 13px;
+    padding: 2px 6px;
+  }
+
+  .prose :global(pre) {
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    overflow-x: auto;
+    margin-bottom: 24px;
+  }
+
+  .prose :global(blockquote) {
+    border-left: 3px solid var(--accent);
+    padding-left: 20px;
+    margin: 24px 0;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  .post-footer {
+    margin-top: 60px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+  }
+
+  .back-link {
+    color: var(--accent-light);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .back-link:hover {
+    color: var(--text);
+  }
+</style>

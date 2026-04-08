@@ -1,0 +1,62 @@
+---
+import { categories } from '../config/categories';
+
+interface Props {
+  activeSlug?: string;
+}
+
+const { activeSlug } = Astro.props;
+---
+
+<div class="chips-wrapper">
+  <div class="chips">
+    {categories.map(cat => (
+      <a
+        href={`/categories/${cat.slug}/`}
+        class={`chip ${activeSlug === cat.slug ? 'chip-active' : ''}`}
+      >
+        {cat.emoji && <span aria-hidden="true">{cat.emoji}</span>}
+        {cat.label}
+      </a>
+    ))}
+  </div>
+</div>
+
+<style>
+  .chips-wrapper {
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    padding: 8px 0;
+  }
+
+  .chips-wrapper::-webkit-scrollbar { display: none; }
+
+  .chips {
+    display: flex;
+    gap: 8px;
+    min-width: max-content;
+    padding: 0 20px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+
+  .chip:hover, .chip-active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+</style>

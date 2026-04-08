@@ -1,0 +1,123 @@
+---
+import { proxyImg } from '../utils/image';
+
+interface Props {
+  creator: {
+    username: string;
+    name?: string;
+    avatar?: string;
+    subscribePrice?: number;
+    subscribeprice?: number;
+    isVerified?: boolean;
+    isverified?: boolean;
+    matchPct?: number;
+    favoritedCount?: number;
+    favoritedcount?: number;
+  };
+  index: number;
+}
+
+const { creator, index } = Astro.props;
+const name = creator.name || creator.username || 'Unknown';
+const username = creator.username || '';
+const avatar = creator.avatar || '';
+const price = creator.subscribePrice ?? creator.subscribeprice;
+const isVerified = creator.isVerified ?? creator.isverified;
+const matchPct = creator.matchPct;
+
+const imgSrc = avatar?.startsWith('http') ? proxyImg(avatar, 320, 427) : '/no-image.png';
+const imgSrcset = avatar?.startsWith('http')
+  ? [144, 240, 320, 480].map(w => `${proxyImg(avatar, w, Math.round(w * 4 / 3))} ${w}w`).join(', ')
+  : '';
+const imgSizes = '(max-width:480px) 144px, (max-width:768px) 240px, 320px';
+
+const priceLabel = (!price || isNaN(Number(price))) ? 'FREE' : `$${parseFloat(String(price)).toFixed(2)}`;
+const profileUrl = `https://onlyfans.com/${encodeURIComponent(username)}`;
+---
+
+<div class="creator-card">
+  <div class="card-img-wrap">
+    <img
+      src={imgSrc}
+      srcset={imgSrcset || undefined}
+      sizes={imgSrcset ? imgSizes : undefined}
+      alt={`${name} OnlyFans creator`}
+      loading={index === 0 ? 'eager' : 'lazy'}
+      fetchpriority={index === 0 ? 'high' : undefined}
+      decoding="async"
+      referrerpolicy="no-referrer"
+      onerror="if(this.src!=='/no-image.png'){this.removeAttribute('srcset');this.src='/no-image.png';}"
+    />
+    {matchPct && <span class="match-badge">{matchPct}% match</span>}
+  </div>
+  <div class="card-body">
+    <p class="creator-name">
+      {isVerified && <span class="verified" title="Verified">✓ </span>}{name}
+    </p>
+    <p class="username">@{username}</p>
+    <p class={`price ${priceLabel === 'FREE' ? 'price-free' : ''}`}>{priceLabel}</p>
+    <a href={profileUrl} class="view-btn" target="_blank" rel="noopener noreferrer">
+      View Profile
+    </a>
+  </div>
+</div>
+
+<style>
+  .creator-card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .creator-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px var(--accent-glow);
+  }
+
+  .card-img-wrap {
+    aspect-ratio: 3/4;
+    overflow: hidden;
+    position: relative;
+    background: var(--surface-raised);
+  }
+
+  .card-img-wrap img {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+  }
+
+  .match-badge {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(124,58,237,0.9);
+    color: #fff;
+    font-size: 11px; font-weight: 700;
+    padding: 3px 8px; border-radius: 20px;
+  }
+
+  .card-body { padding: 12px 14px; }
+
+  .creator-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .verified { color: var(--accent); }
+  .username { color: var(--text-muted); font-size: 12px; margin-bottom: 6px; }
+  .price { font-weight: 700; font-size: 15px; margin-bottom: 10px; color: var(--text-muted); }
+  .price-free { color: var(--success); }
+
+  .view-btn {
+    display: block; text-align: center;
+    background: var(--accent); color: #fff;
+    border-radius: 8px; padding: 8px;
+    font-size: 13px; font-weight: 600;
+    transition: background 0.2s;
+  }
+
+  .view-btn:hover { background: var(--accent-light); }
+</style>

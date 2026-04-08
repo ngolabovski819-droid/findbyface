@@ -1,0 +1,85 @@
+---
+interface Props {
+  placeholder?: string;
+  action?: string;
+}
+const { placeholder = 'Search creators...', action = '/onlyfans-search/' } = Astro.props;
+---
+
+<div class="search-bar-wrap">
+  <span class="search-divider">— or search by name —</span>
+  <form class="search-form" action={action} method="get">
+    <input
+      type="text"
+      name="q"
+      class="search-input"
+      placeholder={placeholder}
+      autocomplete="off"
+    />
+    <button type="submit" class="search-btn">Search</button>
+  </form>
+</div>
+
+<style>
+  .search-bar-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .search-divider {
+    color: var(--text-muted);
+    font-size: 13px;
+    letter-spacing: 0.05em;
+  }
+
+  .search-form {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .search-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .search-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .search-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius);
+    color: #fff;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 20px;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+
+  .search-btn:hover {
+    background: var(--accent-light);
+  }
+</style>

@@ -1,0 +1,147 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+
+const posts = (await getCollection('blog')).sort(
+  (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime()
+);
+// Use post.id as the URL slug (Astro v5 Content Layer)
+const postSlug = (post: any) => post.id.replace(/\.md$/, '');
+---
+
+<Base
+  title="Blog — findbyface"
+  description="Tips, guides, and news about finding OnlyFans creators."
+  canonical="https://findbyface.org/blog/"
+>
+  <section class="blog-page">
+    <div class="blog-header">
+      <h1>Blog</h1>
+      <p>Tips, guides, and updates</p>
+    </div>
+
+    {posts.length === 0 ? (
+      <p class="no-posts">No posts yet — check back soon.</p>
+    ) : (
+      <div class="posts-grid">
+        {posts.map(post => (
+          <a href={`/blog/${post.id.replace(/\.md$/, '')}/`} class="post-card">
+            {post.data.image && (
+              <div class="post-img-wrap">
+                <img src={post.data.image} alt={post.data.title} loading="lazy" />
+              </div>
+            )}
+            <div class="post-body">
+              <p class="post-date">{new Date(post.data.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+              <h2>{post.data.title}</h2>
+              <p class="post-desc">{post.data.description}</p>
+              <span class="read-more">Read more →</span>
+            </div>
+          </a>
+        ))}
+      </div>
+    )}
+  </section>
+</Base>
+
+<style>
+  .blog-page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 60px 24px;
+  }
+
+  .blog-header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+
+  .blog-header h1 {
+    font-size: clamp(2rem, 5vw, 3rem);
+    background: linear-gradient(135deg, var(--accent), var(--accent-pink));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+
+  .blog-header p {
+    color: var(--text-muted);
+    font-size: 16px;
+  }
+
+  .no-posts {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 60px 0;
+  }
+
+  .posts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+  }
+
+  .post-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .post-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px var(--accent-glow);
+  }
+
+  .post-img-wrap {
+    aspect-ratio: 16/9;
+    overflow: hidden;
+    background: var(--surface-raised);
+  }
+
+  .post-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .post-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .post-date {
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+
+  .post-body h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+
+  .post-desc {
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.6;
+    flex: 1;
+    margin-bottom: 16px;
+  }
+
+  .read-more {
+    color: var(--accent-light);
+    font-size: 13px;
+    font-weight: 600;
+  }
+</style>

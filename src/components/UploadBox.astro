@@ -1,0 +1,316 @@
+---
+// UploadBox — drag+drop photo upload with face search
+// MVP: sends dummy descriptor → API returns mocked match results
+---
+
+<div class="upload-section">
+  <div class="upload-box" id="uploadBox">
+    <div class="upload-idle" id="uploadIdle">
+      <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <h3>Drop a photo here</h3>
+      <p>Upload any image — we'll find creators who look just like them</p>
+      <button class="choose-btn" id="chooseBtn">Choose photo</button>
+      <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" style="display:none" />
+      <p class="upload-hint">JPG · PNG · WEBP &nbsp;·&nbsp; Ctrl+V to paste</p>
+    </div>
+
+    <div class="upload-preview" id="uploadPreview" style="display:none">
+      <img id="previewImg" alt="Uploaded photo preview" />
+      <div class="upload-overlay" id="uploadOverlay">
+        <div class="spinner"></div>
+        <p id="uploadStatus">Analyzing face...</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="upload-error" id="uploadError" style="display:none"></p>
+
+  <div class="search-divider">
+    <span>— or search by name —</span>
+  </div>
+
+  <form class="search-bar-inline" id="nameSearchForm" action="/onlyfans-search/" method="get">
+    <input type="text" name="q" id="nameSearchInput" placeholder="Search creators..." autocomplete="off" />
+    <button type="submit">Search</button>
+  </form>
+
+  <div id="faceResults" class="face-results" style="display:none">
+    <h2 class="results-heading">Matching Creators</h2>
+    <div id="faceResultsGrid" class="face-results-grid"></div>
+  </div>
+</div>
+
+<script>
+  const uploadBox    = document.getElementById('uploadBox')!;
+  const fileInput    = document.getElementById('fileInput') as HTMLInputElement;
+  const chooseBtn    = document.getElementById('chooseBtn')!;
+  const uploadIdle   = document.getElementById('uploadIdle')!;
+  const uploadPreview = document.getElementById('uploadPreview')!;
+  const previewImg   = document.getElementById('previewImg') as HTMLImageElement;
+  const uploadOverlay = document.getElementById('uploadOverlay')!;
+  const uploadStatus = document.getElementById('uploadStatus')!;
+  const uploadError  = document.getElementById('uploadError')!;
+  const faceResults  = document.getElementById('faceResults')!;
+  const faceResultsGrid = document.getElementById('faceResultsGrid')!;
+
+  chooseBtn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files?.[0]) handleFile(fileInput.files[0]);
+  });
+
+  uploadBox.addEventListener('dragover', e => {
+    e.preventDefault();
+    uploadBox.classList.add('drag-over');
+  });
+  uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('drag-over'));
+  uploadBox.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadBox.classList.remove('drag-over');
+    const file = (e as DragEvent).dataTransfer?.files[0];
+    if (file?.type.startsWith('image/')) handleFile(file);
+  });
+
+  document.addEventListener('paste', e => {
+    const file = e.clipboardData?.files[0];
+    if (file?.type.startsWith('image/')) handleFile(file);
+  });
+
+  async function handleFile(file: File) {
+    uploadError.style.display = 'none';
+    const reader = new FileReader();
+    reader.onload = async ev => {
+      if (!ev.target?.result) return;
+      previewImg.src = String(ev.target.result);
+      uploadIdle.style.display = 'none';
+      uploadPreview.style.display = 'block';
+      uploadOverlay.style.display = 'flex';
+      uploadStatus.textContent = 'Analyzing face...';
+
+      try {
+        // MVP: send dummy descriptor — Phase 2 replaces this with real face-api.js extraction
+        const descriptor = new Array(128).fill(0);
+        const resp = await fetch('/api/face-search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ descriptor }),
+        });
+        if (!resp.ok) throw new Error('Search failed');
+        const data = await resp.json();
+        uploadOverlay.style.display = 'none';
+        showResults(data.results ?? []);
+      } catch {
+        uploadOverlay.style.display = 'none';
+        uploadStatus.textContent = '';
+        showError('Search failed — please try again');
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function showError(msg: string) {
+    uploadError.textContent = msg;
+    uploadError.style.display = 'block';
+  }
+
+  function proxyImg(url: string, w: number, h: number): string {
+    if (!url || url.startsWith('/')) return url;
+    return `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//, ''))}&w=${w}&h=${h}&fit=cover&output=webp`;
+  }
+
+  function renderCard(c: any, index: number): string {
+    const imgSrc = c.avatar?.startsWith('http') ? proxyImg(c.avatar, 320, 427) : '/no-image.png';
+    const price = c.subscribePrice ?? c.subscribeprice;
+    const priceLabel = (!price || isNaN(price)) ? 'FREE' : `$${parseFloat(price).toFixed(2)}`;
+    const match = c.matchPct ? `<span class="match-badge">${c.matchPct}% match</span>` : '';
+    const profileUrl = `https://onlyfans.com/${encodeURIComponent(c.username)}`;
+    return `<div class="creator-card">
+      <div class="card-img-wrap">
+        <img src="${imgSrc}" alt="${c.name || c.username}" loading="${index === 0 ? 'eager' : 'lazy'}"
+          decoding="async" referrerpolicy="no-referrer"
+          onerror="if(this.src!=='/no-image.png'){this.removeAttribute('srcset');this.src='/no-image.png';}">
+        ${match}
+      </div>
+      <div class="card-body">
+        <p class="creator-name">${c.name || c.username}</p>
+        <p class="username">@${c.username}</p>
+        <p class="price ${priceLabel === 'FREE' ? 'price-free' : ''}">${priceLabel}</p>
+        <a href="${profileUrl}" class="view-btn" target="_blank" rel="noopener">View Profile</a>
+      </div>
+    </div>`;
+  }
+
+  function showResults(results: any[]) {
+    faceResultsGrid.innerHTML = results.map((c, i) => renderCard(c, i)).join('');
+    faceResults.style.display = 'block';
+    faceResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+</script>
+
+<style>
+  .upload-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 0 20px;
+    width: 100%;
+  }
+
+  .upload-box {
+    width: 100%;
+    max-width: 600px;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    transition: border-color 0.2s, background 0.2s;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  .upload-box.drag-over {
+    border-color: var(--accent);
+    background: rgba(124,58,237,0.05);
+  }
+
+  .upload-idle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 52px 24px;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .upload-icon {
+    width: 48px; height: 48px;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .upload-idle h3 { font-size: 1.2rem; }
+  .upload-idle p { color: var(--text-muted); font-size: 14px; }
+  .upload-hint { font-size: 12px !important; opacity: 0.6; }
+
+  .choose-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    padding: 12px 32px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: background 0.2s;
+    margin-top: 4px;
+  }
+
+  .choose-btn:hover { background: var(--accent-light); }
+
+  .upload-preview {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+  }
+
+  .upload-preview img { width: 100%; height: 100%; object-fit: cover; }
+
+  .upload-overlay {
+    position: absolute; inset: 0;
+    background: rgba(10,10,15,0.75);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid rgba(124,58,237,0.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .upload-error {
+    color: #f87171;
+    font-size: 14px;
+    text-align: center;
+  }
+
+  .search-divider {
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  .search-bar-inline {
+    display: flex;
+    max-width: 480px;
+    width: 100%;
+  }
+
+  .search-bar-inline input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-right: none;
+    border-radius: var(--radius) 0 0 var(--radius);
+    padding: 12px 16px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-bar-inline input:focus { border-color: var(--accent); }
+  .search-bar-inline input::placeholder { color: var(--text-muted); }
+
+  .search-bar-inline button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: background 0.2s;
+  }
+
+  .search-bar-inline button:hover { background: var(--accent-light); }
+
+  .face-results { width: 100%; max-width: 1200px; }
+
+  .results-heading { font-size: 1.5rem; margin-bottom: 24px; text-align: center; }
+
+  .face-results-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+
+  @media (max-width: 900px) { .face-results-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 600px) { .face-results-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+
+  /* Card styles for JS-rendered results */
+  .creator-card { background: var(--surface); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border); transition: transform 0.2s, box-shadow 0.2s; }
+  .creator-card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px var(--accent-glow); }
+  .card-img-wrap { aspect-ratio: 3/4; overflow: hidden; position: relative; background: var(--surface-raised); }
+  .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .match-badge { position: absolute; top: 8px; right: 8px; background: rgba(124,58,237,0.9); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; }
+  .card-body { padding: 12px 14px; }
+  .creator-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .username { color: var(--text-muted); font-size: 12px; margin-bottom: 6px; }
+  .price { font-weight: 700; font-size: 15px; margin-bottom: 10px; color: var(--text-muted); }
+  .price-free { color: var(--success); }
+  .view-btn { display: block; text-align: center; background: var(--accent); color: #fff; border-radius: 8px; padding: 8px; font-size: 13px; font-weight: 600; transition: background 0.2s; }
+  .view-btn:hover { background: var(--accent-light); }
+</style>
