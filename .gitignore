@@ -2,6 +2,7 @@
 node_modules/
 dist/
 .astro/
+.vercel/
 *.csv
 cookies.json
 failed_batch.json
