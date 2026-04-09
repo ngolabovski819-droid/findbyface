@@ -1,118 +1,199 @@
 ---
-// UploadBox — drag+drop photo upload with face search
-// MVP: sends dummy descriptor → API returns mocked match results
+const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent('https://findbyface.org/auth/callback')}`;
 ---
+
+<!-- Auth Gate Modal -->
+<div id="authModal" class="auth-modal" style="display:none" role="dialog" aria-modal="true">
+  <div class="auth-backdrop" id="authBackdrop"></div>
+  <div class="auth-box">
+    <button class="auth-close" id="authClose" aria-label="Close">×</button>
+    <div class="auth-icon-wrap">🔍</div>
+    <h3>You've used your 2 free searches</h3>
+    <p>Sign in free to unlock unlimited searches and see all matching profiles.</p>
+    <a href={GOOGLE_AUTH_URL} class="google-btn">
+      <svg viewBox="0 0 24 24" width="20" height="20" style="flex-shrink:0" aria-hidden="true">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Continue with Google — it's free
+    </a>
+    <button class="auth-skip" id="authSkip">Maybe later</button>
+  </div>
+</div>
 
 <div class="upload-section">
   <div class="upload-box" id="uploadBox">
-    <div class="upload-idle" id="uploadIdle">
+
+    <!-- State 1: Idle -->
+    <div id="uploadIdle" class="upload-idle">
       <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
         <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       <h3>Drop a photo here</h3>
       <p>Upload any image — we'll find creators who look just like them</p>
       <button class="choose-btn" id="chooseBtn">Choose photo</button>
-      <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" style="display:none" />
+      <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" style="display:none" aria-label="Upload photo" />
       <p class="upload-hint">JPG · PNG · WEBP &nbsp;·&nbsp; Ctrl+V to paste</p>
     </div>
 
-    <div class="upload-preview" id="uploadPreview" style="display:none">
-      <img id="previewImg" alt="Uploaded photo preview" />
-      <div class="upload-overlay" id="uploadOverlay">
-        <div class="spinner"></div>
-        <p id="uploadStatus">Analyzing face...</p>
+    <!-- State 2: Scanning -->
+    <div id="uploadScanning" style="display:none" class="scanning-state">
+      <div class="scanning-img-box">
+        <img id="scanningImg" alt="Your photo being analyzed" />
+        <div class="scan-line"></div>
+      </div>
+      <p class="scanning-title">findbyface is searching...</p>
+      <p class="scanning-sub">Analyzing your image and comparing with millions of profiles to find lookalikes.</p>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <p class="progress-pct" id="progressPct">0%</p>
+    </div>
+
+    <!-- State 3: Done -->
+    <div id="uploadDone" style="display:none" class="done-state">
+      <img id="thumbnailImg" class="thumbnail-img" alt="Searched photo" />
+      <div class="done-info">
+        <p class="done-label">Searched image</p>
+        <button class="new-search-btn" id="newSearchBtn">← New Search</button>
       </div>
     </div>
+
   </div>
 
   <p class="upload-error" id="uploadError" style="display:none"></p>
-
-  <div class="search-divider">
-    <span>— or search by name —</span>
-  </div>
-
-  <form class="search-bar-inline" id="nameSearchForm" action="/onlyfans-search/" method="get">
-    <input type="text" name="q" id="nameSearchInput" placeholder="Search creators..." autocomplete="off" />
+  <div class="search-divider"><span>— or search by name —</span></div>
+  <form class="search-bar-inline" action="/onlyfans-search/" method="get">
+    <input type="text" name="q" placeholder="Search creators..." autocomplete="off" />
     <button type="submit">Search</button>
   </form>
+</div>
 
-  <div id="faceResults" class="face-results" style="display:none">
-    <h2 class="results-heading">Matching Creators</h2>
-    <div id="faceResultsGrid" class="face-results-grid"></div>
+<!-- Results -->
+<div id="faceResults" class="face-results" style="display:none">
+  <h2 class="results-heading">Matching Creators</h2>
+  <div id="faceResultsGrid" class="face-results-grid"></div>
+  <div id="unlockBanner" class="unlock-banner" style="display:none">
+    <p id="unlockBannerText">🔒 <strong>8 more matches found</strong> — sign in free to see all</p>
+    <a href={GOOGLE_AUTH_URL} class="unlock-banner-btn">Sign in with Google</a>
   </div>
 </div>
 
 <script>
-  const uploadBox    = document.getElementById('uploadBox')!;
-  const fileInput    = document.getElementById('fileInput') as HTMLInputElement;
-  const chooseBtn    = document.getElementById('chooseBtn')!;
-  const uploadIdle   = document.getElementById('uploadIdle')!;
-  const uploadPreview = document.getElementById('uploadPreview')!;
-  const previewImg   = document.getElementById('previewImg') as HTMLImageElement;
-  const uploadOverlay = document.getElementById('uploadOverlay')!;
-  const uploadStatus = document.getElementById('uploadStatus')!;
-  const uploadError  = document.getElementById('uploadError')!;
-  const faceResults  = document.getElementById('faceResults')!;
+  const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent('https://findbyface.org/auth/callback')}`;
+
+  const uploadBox       = document.getElementById('uploadBox')!;
+  const fileInput       = document.getElementById('fileInput') as HTMLInputElement;
+  const chooseBtn       = document.getElementById('chooseBtn')!;
+  const uploadIdle      = document.getElementById('uploadIdle')!;
+  const uploadScanning  = document.getElementById('uploadScanning')!;
+  const uploadDone      = document.getElementById('uploadDone')!;
+  const scanningImg     = document.getElementById('scanningImg') as HTMLImageElement;
+  const thumbnailImg    = document.getElementById('thumbnailImg') as HTMLImageElement;
+  const progressFill    = document.getElementById('progressFill')!;
+  const progressPct     = document.getElementById('progressPct')!;
+  const uploadError     = document.getElementById('uploadError')!;
+  const faceResults     = document.getElementById('faceResults')!;
   const faceResultsGrid = document.getElementById('faceResultsGrid')!;
+  const newSearchBtn    = document.getElementById('newSearchBtn')!;
+  const authModal       = document.getElementById('authModal')!;
+  const authBackdrop    = document.getElementById('authBackdrop')!;
+  const authClose       = document.getElementById('authClose')!;
+  const authSkip        = document.getElementById('authSkip')!;
+  const unlockBanner    = document.getElementById('unlockBanner')!;
+  const unlockBannerText = document.getElementById('unlockBannerText')!;
+
+  function isSignedIn(): boolean {
+    try { return !!JSON.parse(localStorage.getItem('fbf_user') || 'null'); } catch { return false; }
+  }
+  function getSearchCount(): number {
+    return parseInt(localStorage.getItem('fbf_searches') || '0');
+  }
+  function incrementSearchCount(): void {
+    if (!isSignedIn()) localStorage.setItem('fbf_searches', String(getSearchCount() + 1));
+  }
+  function showAuthModal(): void { authModal.style.display = 'flex'; }
+  function hideAuthModal(): void { authModal.style.display = 'none'; }
+
+  authBackdrop.addEventListener('click', hideAuthModal);
+  authClose.addEventListener('click', hideAuthModal);
+  authSkip.addEventListener('click', hideAuthModal);
 
   chooseBtn.addEventListener('click', () => fileInput.click());
-
-  fileInput.addEventListener('change', () => {
-    if (fileInput.files?.[0]) handleFile(fileInput.files[0]);
-  });
-
-  uploadBox.addEventListener('dragover', e => {
-    e.preventDefault();
-    uploadBox.classList.add('drag-over');
-  });
+  fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) handleFile(fileInput.files[0]); });
+  uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.classList.add('drag-over'); });
   uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('drag-over'));
   uploadBox.addEventListener('drop', e => {
-    e.preventDefault();
-    uploadBox.classList.remove('drag-over');
+    e.preventDefault(); uploadBox.classList.remove('drag-over');
     const file = (e as DragEvent).dataTransfer?.files[0];
     if (file?.type.startsWith('image/')) handleFile(file);
   });
-
   document.addEventListener('paste', e => {
     const file = e.clipboardData?.files[0];
     if (file?.type.startsWith('image/')) handleFile(file);
   });
+  newSearchBtn.addEventListener('click', () => {
+    uploadDone.style.display = 'none';
+    uploadIdle.style.display = 'flex';
+    faceResults.style.display = 'none';
+    uploadError.style.display = 'none';
+    fileInput.value = '';
+  });
 
-  async function handleFile(file: File) {
+  let progressTimer: ReturnType<typeof setInterval> | null = null;
+  function startProgress(): void {
+    let pct = 0;
+    progressFill.style.width = '0%';
+    progressPct.textContent = '0%';
+    progressTimer = setInterval(() => {
+      pct = Math.min(pct + Math.random() * 7 + 1, 87);
+      progressFill.style.width = `${pct}%`;
+      progressPct.textContent = `${Math.round(pct)}%`;
+    }, 220);
+  }
+  function finishProgress(): void {
+    if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+    progressFill.style.width = '100%';
+    progressPct.textContent = '100%';
+  }
+
+  async function handleFile(file: File): Promise<void> {
+    if (!isSignedIn() && getSearchCount() >= 2) { showAuthModal(); return; }
     uploadError.style.display = 'none';
     const reader = new FileReader();
     reader.onload = async ev => {
       if (!ev.target?.result) return;
-      previewImg.src = String(ev.target.result);
+      const dataUrl = String(ev.target.result);
+      scanningImg.src = dataUrl;
+      thumbnailImg.src = dataUrl;
       uploadIdle.style.display = 'none';
-      uploadPreview.style.display = 'block';
-      uploadOverlay.style.display = 'flex';
-      uploadStatus.textContent = 'Analyzing face...';
-
+      uploadScanning.style.display = 'flex';
+      startProgress();
       try {
-        // MVP: send dummy descriptor — Phase 2 replaces this with real face-api.js extraction
-        const descriptor = new Array(128).fill(0);
         const resp = await fetch('/api/face-search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ descriptor }),
+          body: JSON.stringify({ descriptor: new Array(128).fill(0) }),
         });
-        if (!resp.ok) throw new Error('Search failed');
+        if (!resp.ok) throw new Error('failed');
         const data = await resp.json();
-        uploadOverlay.style.display = 'none';
+        finishProgress();
+        incrementSearchCount();
+        await new Promise(r => setTimeout(r, 500));
+        uploadScanning.style.display = 'none';
+        uploadDone.style.display = 'flex';
         showResults(data.results ?? []);
       } catch {
-        uploadOverlay.style.display = 'none';
-        uploadStatus.textContent = '';
-        showError('Search failed — please try again');
+        finishProgress();
+        uploadScanning.style.display = 'none';
+        uploadIdle.style.display = 'flex';
+        uploadError.textContent = 'Search failed — please try again';
+        uploadError.style.display = 'block';
       }
     };
     reader.readAsDataURL(file);
-  }
-
-  function showError(msg: string) {
-    uploadError.textContent = msg;
-    uploadError.style.display = 'block';
   }
 
   function proxyImg(url: string, w: number, h: number): string {
@@ -120,197 +201,261 @@
     return `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//, ''))}&w=${w}&h=${h}&fit=cover&output=webp`;
   }
 
-  function renderCard(c: any, index: number): string {
-    const imgSrc = c.avatar?.startsWith('http') ? proxyImg(c.avatar, 320, 427) : '/no-image.png';
-    const price = c.subscribePrice ?? c.subscribeprice;
-    const priceLabel = (!price || isNaN(price)) ? 'FREE' : `$${parseFloat(price).toFixed(2)}`;
-    const match = c.matchPct ? `<span class="match-badge">${c.matchPct}% match</span>` : '';
-    const profileUrl = `https://onlyfans.com/${encodeURIComponent(c.username)}`;
+  function renderCard(c: Record<string, unknown>, index: number, signedIn: boolean): string {
+    const imgSrc = (c.avatar as string)?.startsWith('http') ? proxyImg(c.avatar as string, 320, 427) : '/no-image.png';
+    const price = (c.subscribePrice ?? c.subscribeprice) as number;
+    const priceLabel = (!price || isNaN(Number(price))) ? 'FREE' : `$${parseFloat(String(price)).toFixed(2)}`;
+    const matchPct = c.matchPct as number;
+    const matchBadge = matchPct ? `<span class="match-badge">${matchPct}% match</span>` : '';
+    const profileUrl = `https://onlyfans.com/${encodeURIComponent(c.username as string)}`;
+    const locked = !signedIn && index >= 4;
+
+    if (locked) {
+      return `<div class="creator-card locked">
+        <div class="card-img-wrap">
+          <img src="${imgSrc}" alt="Locked creator" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+            style="filter:blur(10px);transform:scale(1.08);"
+            onerror="if(this.src!=='/no-image.png'){this.src='/no-image.png';}">
+          ${matchBadge}
+          <div class="lock-overlay" onclick="document.getElementById('authModal').style.display='flex'">
+            <button class="unlock-btn">🔓 Unlock</button>
+          </div>
+        </div>
+        <div class="card-body locked-body">
+          <p class="creator-name">••••• •••••</p>
+          <p class="username">@••••••••</p>
+          <p class="price">${priceLabel}</p>
+          <div class="view-btn-locked">View Profile</div>
+        </div>
+      </div>`;
+    }
+
     return `<div class="creator-card">
       <div class="card-img-wrap">
-        <img src="${imgSrc}" alt="${c.name || c.username}" loading="${index === 0 ? 'eager' : 'lazy'}"
+        <img src="${imgSrc}" alt="${(c.name || c.username) as string}" loading="${index === 0 ? 'eager' : 'lazy'}"
           decoding="async" referrerpolicy="no-referrer"
-          onerror="if(this.src!=='/no-image.png'){this.removeAttribute('srcset');this.src='/no-image.png';}">
-        ${match}
+          onerror="if(this.src!=='/no-image.png'){this.src='/no-image.png';}">
+        ${matchBadge}
       </div>
       <div class="card-body">
-        <p class="creator-name">${c.name || c.username}</p>
-        <p class="username">@${c.username}</p>
+        <p class="creator-name">${(c.name || c.username) as string}</p>
+        <p class="username">@${c.username as string}</p>
         <p class="price ${priceLabel === 'FREE' ? 'price-free' : ''}">${priceLabel}</p>
-        <a href="${profileUrl}" class="view-btn" target="_blank" rel="noopener">View Profile</a>
+        <a href="${profileUrl}" class="view-btn" target="_blank" rel="noopener noreferrer">View Profile</a>
       </div>
     </div>`;
   }
 
-  function showResults(results: any[]) {
-    faceResultsGrid.innerHTML = results.map((c, i) => renderCard(c, i)).join('');
+  function showResults(results: Record<string, unknown>[]): void {
+    const signedIn = isSignedIn();
+    faceResultsGrid.innerHTML = results.map((c, i) => renderCard(c, i, signedIn)).join('');
     faceResults.style.display = 'block';
+    if (!signedIn && results.length > 4) {
+      const locked = results.length - 4;
+      unlockBannerText.innerHTML = `🔒 <strong>${locked} more matches found</strong> — sign in free to see all`;
+      unlockBanner.style.display = 'flex';
+    } else {
+      unlockBanner.style.display = 'none';
+    }
     faceResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 </script>
 
 <style>
+  .auth-modal {
+    position: fixed; inset: 0; z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .auth-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .auth-box {
+    position: relative; z-index: 1;
+    background: var(--surface-raised); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 40px 32px;
+    max-width: 420px; width: 90%; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .auth-close {
+    position: absolute; top: 14px; right: 16px;
+    background: none; border: none; color: var(--text-muted);
+    font-size: 24px; cursor: pointer; line-height: 1; padding: 2px 6px;
+  }
+  .auth-close:hover { color: var(--text); }
+  .auth-icon-wrap { font-size: 40px; margin-bottom: 16px; }
+  .auth-box h3 { font-size: 1.3rem; margin-bottom: 10px; }
+  .auth-box p { color: var(--text-muted); font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
+  .google-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: #fff; color: #1f1f1f; border-radius: 999px;
+    padding: 13px 24px; font-size: 15px; font-weight: 600;
+    text-decoration: none; transition: box-shadow 0.2s; margin-bottom: 12px;
+  }
+  .google-btn:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+  .auth-skip {
+    background: none; border: none; color: var(--text-muted);
+    font-size: 13px; cursor: pointer; padding: 6px;
+    font-family: inherit; text-decoration: underline; transition: color 0.2s;
+  }
+  .auth-skip:hover { color: var(--text); }
+
   .upload-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    padding: 0 20px;
-    width: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 20px; padding: 0 20px; width: 100%;
   }
-
   .upload-box {
-    width: 100%;
-    max-width: 600px;
-    border: 2px dashed var(--border);
-    border-radius: var(--radius-lg);
-    background: var(--surface);
-    transition: border-color 0.2s, background 0.2s;
-    overflow: hidden;
-    cursor: pointer;
+    width: 100%; max-width: 600px;
+    border: 2px dashed var(--border); border-radius: var(--radius-lg);
+    background: var(--surface); transition: border-color 0.2s, background 0.2s;
+    overflow: hidden; cursor: pointer;
   }
-
-  .upload-box.drag-over {
-    border-color: var(--accent);
-    background: rgba(124,58,237,0.05);
-  }
+  .upload-box.drag-over { border-color: var(--accent); background: rgba(124,58,237,0.05); }
 
   .upload-idle {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 52px 24px;
-    gap: 12px;
-    text-align: center;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 52px 24px; gap: 12px; text-align: center;
   }
-
-  .upload-icon {
-    width: 48px; height: 48px;
-    color: var(--accent);
-    margin-bottom: 8px;
-  }
-
+  .upload-icon { width: 48px; height: 48px; color: var(--accent); margin-bottom: 8px; }
   .upload-idle h3 { font-size: 1.2rem; }
   .upload-idle p { color: var(--text-muted); font-size: 14px; }
   .upload-hint { font-size: 12px !important; opacity: 0.6; }
-
   .choose-btn {
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: 999px;
-    padding: 12px 32px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: 'Inter', sans-serif;
-    transition: background 0.2s;
-    margin-top: 4px;
+    background: var(--accent); color: #fff; border: none; border-radius: 999px;
+    padding: 12px 32px; font-size: 15px; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: background 0.2s; margin-top: 4px;
   }
-
   .choose-btn:hover { background: var(--accent-light); }
 
-  .upload-preview {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16/9;
+  .scanning-state {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 32px 24px; gap: 12px; text-align: center;
   }
-
-  .upload-preview img { width: 100%; height: 100%; object-fit: cover; }
-
-  .upload-overlay {
-    position: absolute; inset: 0;
-    background: rgba(10,10,15,0.75);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
+  .scanning-img-box {
+    position: relative; width: 160px; height: 213px;
+    border-radius: 12px; overflow: hidden; border: 2px solid var(--border);
   }
-
-  .spinner {
-    width: 40px; height: 40px;
-    border: 3px solid rgba(124,58,237,0.2);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+  .scanning-img-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .scan-line {
+    position: absolute; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, transparent, #00d4ff, #7c3aed, #00d4ff, transparent);
+    box-shadow: 0 0 12px #00d4ff, 0 0 24px rgba(0,212,255,0.4);
+    animation: scan 1.8s ease-in-out infinite; top: 0;
   }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .upload-error {
-    color: #f87171;
-    font-size: 14px;
-    text-align: center;
+  @keyframes scan {
+    0%   { top: 0%; opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
   }
-
-  .search-divider {
-    color: var(--text-muted);
-    font-size: 13px;
+  .scanning-title { font-size: 1.1rem; font-weight: 700; color: var(--accent-light); }
+  .scanning-sub { color: var(--text-muted); font-size: 13px; max-width: 380px; line-height: 1.5; }
+  .progress-track {
+    width: 100%; max-width: 320px; height: 6px;
+    background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;
   }
-
-  .search-bar-inline {
-    display: flex;
-    max-width: 480px;
-    width: 100%;
+  .progress-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-pink));
+    border-radius: 3px; transition: width 0.3s ease;
   }
+  .progress-pct { font-size: 12px; color: var(--text-muted); }
 
+  .done-state {
+    display: flex; align-items: center; gap: 16px; padding: 16px 20px;
+  }
+  .thumbnail-img {
+    width: 60px; height: 80px; object-fit: cover;
+    border-radius: 8px; border: 1px solid var(--border); flex-shrink: 0;
+  }
+  .done-info { display: flex; flex-direction: column; gap: 6px; }
+  .done-label { color: var(--text-muted); font-size: 12px; }
+  .new-search-btn {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text); border-radius: 8px; padding: 8px 14px;
+    font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .new-search-btn:hover { border-color: var(--accent); background: rgba(124,58,237,0.08); }
+
+  .upload-error { color: #f87171; font-size: 14px; text-align: center; }
+  .search-divider { color: var(--text-muted); font-size: 13px; }
+  .search-bar-inline { display: flex; max-width: 480px; width: 100%; }
   .search-bar-inline input {
-    flex: 1;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-right: none;
-    border-radius: var(--radius) 0 0 var(--radius);
-    padding: 12px 16px;
-    color: var(--text);
-    font-size: 14px;
-    font-family: 'Inter', sans-serif;
-    outline: none;
-    transition: border-color 0.2s;
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-right: none; border-radius: var(--radius) 0 0 var(--radius);
+    padding: 12px 16px; color: var(--text); font-size: 14px;
+    font-family: inherit; outline: none; transition: border-color 0.2s;
   }
-
   .search-bar-inline input:focus { border-color: var(--accent); }
   .search-bar-inline input::placeholder { color: var(--text-muted); }
-
   .search-bar-inline button {
-    background: var(--accent);
-    color: #fff;
-    border: none;
+    background: var(--accent); color: #fff; border: none;
     border-radius: 0 var(--radius) var(--radius) 0;
-    padding: 12px 20px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: 'Inter', sans-serif;
-    transition: background 0.2s;
+    padding: 12px 20px; font-size: 14px; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: background 0.2s;
   }
-
   .search-bar-inline button:hover { background: var(--accent-light); }
 
-  .face-results { width: 100%; max-width: 1200px; }
-
+  .face-results { width: 100%; max-width: 1200px; padding: 0 20px; }
   .results-heading { font-size: 1.5rem; margin-bottom: 24px; text-align: center; }
-
-  .face-results-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
-  }
-
+  .face-results-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
   @media (max-width: 900px) { .face-results-grid { grid-template-columns: repeat(3, 1fr); } }
   @media (max-width: 600px) { .face-results-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
 
-  /* Card styles for JS-rendered results */
-  .creator-card { background: var(--surface); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border); transition: transform 0.2s, box-shadow 0.2s; }
+  .creator-card {
+    background: var(--surface); border-radius: var(--radius-lg);
+    overflow: hidden; border: 1px solid var(--border); transition: transform 0.2s, box-shadow 0.2s;
+  }
   .creator-card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px var(--accent-glow); }
   .card-img-wrap { aspect-ratio: 3/4; overflow: hidden; position: relative; background: var(--surface-raised); }
   .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .match-badge { position: absolute; top: 8px; right: 8px; background: rgba(124,58,237,0.9); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; }
+  .match-badge {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(124,58,237,0.9); color: #fff;
+    font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px;
+  }
   .card-body { padding: 12px 14px; }
-  .creator-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .creator-name { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .username { color: var(--text-muted); font-size: 12px; margin-bottom: 6px; }
   .price { font-weight: 700; font-size: 15px; margin-bottom: 10px; color: var(--text-muted); }
   .price-free { color: var(--success); }
-  .view-btn { display: block; text-align: center; background: var(--accent); color: #fff; border-radius: 8px; padding: 8px; font-size: 13px; font-weight: 600; transition: background 0.2s; }
+  .view-btn { display: block; text-align: center; background: var(--accent); color: #fff; border-radius: 8px; padding: 8px; font-size: 13px; font-weight: 600; transition: background 0.2s; text-decoration: none; }
   .view-btn:hover { background: var(--accent-light); }
+
+  .creator-card.locked { cursor: pointer; }
+  .lock-overlay {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.35); transition: background 0.2s;
+  }
+  .lock-overlay:hover { background: rgba(0,0,0,0.5); }
+  .unlock-btn {
+    background: rgba(124,58,237,0.92); color: #fff; border: none;
+    border-radius: 999px; padding: 10px 20px; font-size: 13px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    box-shadow: 0 4px 16px rgba(124,58,237,0.4); transition: background 0.2s, transform 0.1s;
+  }
+  .unlock-btn:hover { background: var(--accent); transform: scale(1.04); }
+  .locked-body { filter: blur(3px); pointer-events: none; user-select: none; }
+  .view-btn-locked {
+    display: block; text-align: center; background: var(--accent);
+    color: #fff; border-radius: 8px; padding: 8px; font-size: 13px; font-weight: 600;
+  }
+
+  .unlock-banner {
+    margin-top: 20px; padding: 16px 20px;
+    background: rgba(124,58,237,0.12); border: 1px solid rgba(124,58,237,0.3);
+    border-radius: var(--radius); display: flex; align-items: center;
+    justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  }
+  .unlock-banner p { color: var(--text); font-size: 14px; margin: 0; }
+  .unlock-banner-btn {
+    background: var(--accent); color: #fff; border-radius: 999px;
+    padding: 9px 20px; font-size: 13px; font-weight: 600;
+    text-decoration: none; white-space: nowrap; transition: background 0.2s;
+  }
+  .unlock-banner-btn:hover { background: var(--accent-light); }
 </style>
+

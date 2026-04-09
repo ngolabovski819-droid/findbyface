@@ -16,7 +16,14 @@ const isSearch = pathname.startsWith('/onlyfans-search');
     </nav>
 
     <div class="nav-right">
-      <button class="sign-in-btn">Sign in</button>
+      <!-- Signed-out state (default, overridden by JS if signed in) -->
+      <a href="https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/authorize?provider=google&redirect_to=https%3A%2F%2Ffindbyface.org%2Fauth%2Fcallback" class="sign-in-btn" id="signInBtn">Sign in</a>
+      <!-- Signed-in state (hidden until JS sets it) -->
+      <div class="user-pill" id="userPill" style="display:none">
+        <div class="user-avatar" id="userAvatar"></div>
+        <span class="user-name" id="userName"></span>
+        <button class="sign-out-btn" id="signOutBtn">Sign out</button>
+      </div>
       <button class="hamburger" id="hamburger" aria-label="Open menu">
         <span></span>
         <span></span>
@@ -30,6 +37,33 @@ const isSearch = pathname.startsWith('/onlyfans-search');
   const hamburger = document.getElementById('hamburger');
   const navLinks = document.getElementById('navLinks');
   hamburger?.addEventListener('click', () => navLinks?.classList.toggle('open'));
+
+  // Auth state hydration
+  const signInBtn = document.getElementById('signInBtn') as HTMLAnchorElement;
+  const userPill  = document.getElementById('userPill')!;
+  const userAvatar = document.getElementById('userAvatar')!;
+  const userName  = document.getElementById('userName')!;
+  const signOutBtn = document.getElementById('signOutBtn')!;
+
+  function loadAuthState(): void {
+    try {
+      const raw = localStorage.getItem('fbf_user');
+      if (!raw) return;
+      const user = JSON.parse(raw) as { name: string; email: string; avatar?: string };
+      signInBtn.style.display = 'none';
+      userAvatar.textContent = (user.name || user.email || '?')[0].toUpperCase();
+      userName.textContent = user.name?.split(' ')[0] || user.email.split('@')[0];
+      userPill.style.display = 'flex';
+    } catch { /* not signed in */ }
+  }
+
+  signOutBtn?.addEventListener('click', () => {
+    localStorage.removeItem('fbf_user');
+    localStorage.removeItem('fbf_searches');
+    window.location.reload();
+  });
+
+  loadAuthState();
 </script>
 
 <style>
@@ -114,6 +148,26 @@ const isSearch = pathname.startsWith('/onlyfans-search');
   }
 
   .sign-in-btn:hover { background: rgba(124,58,237,0.15); }
+
+  .user-pill {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(124,58,237,0.12);
+    border: 1px solid var(--border);
+    border-radius: 999px; padding: 4px 14px 4px 4px;
+  }
+  .user-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .user-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .sign-out-btn {
+    background: none; border: none; color: var(--text-muted);
+    font-size: 12px; cursor: pointer; font-family: inherit;
+    padding: 0; transition: color 0.2s;
+  }
+  .sign-out-btn:hover { color: #f87171; }
 
   .hamburger {
     display: none;

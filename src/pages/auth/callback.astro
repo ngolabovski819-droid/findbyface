@@ -1,0 +1,72 @@
+---
+export const prerender = true;
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Signing in — findbyface</title>
+  <style>
+    body {
+      background: #0a0a0f; color: #f0f0f5;
+      font-family: 'DM Sans', sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; margin: 0; flex-direction: column; gap: 16px;
+    }
+    .logo { font-size: 1.5rem; font-weight: 800; }
+    .logo span { background: linear-gradient(135deg, #7c3aed, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    p { color: #8888aa; font-size: 14px; }
+    .spinner { width: 36px; height: 36px; border: 3px solid rgba(124,58,237,0.2); border-top-color: #7c3aed; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="logo">find<span>byface</span></div>
+  <div class="spinner"></div>
+  <p id="statusMsg">Signing you in...</p>
+
+  <script>
+    async function handleCallback() {
+      const statusMsg = document.getElementById('statusMsg')!;
+      try {
+        // Supabase returns tokens in URL fragment after OAuth
+        const hash = window.location.hash.substring(1);
+        const params = new URLSearchParams(hash);
+        const accessToken = params.get('access_token');
+
+        if (!accessToken) {
+          statusMsg.textContent = 'No token found — redirecting...';
+          setTimeout(() => { window.location.href = '/'; }, 1500);
+          return;
+        }
+
+        // Call our server-side session endpoint (keeps service key server-side)
+        const resp = await fetch('/api/auth/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ access_token: accessToken }),
+        });
+
+        if (!resp.ok) throw new Error('Session verification failed');
+
+        const user = await resp.json();
+        localStorage.setItem('fbf_user', JSON.stringify({
+          ...user,
+          access_token: accessToken,
+        }));
+        // Clear search count — signed-in users get unlimited
+        localStorage.removeItem('fbf_searches');
+
+        statusMsg.textContent = `Welcome, ${user.name?.split(' ')[0] || user.email}!`;
+        setTimeout(() => { window.location.href = '/'; }, 800);
+      } catch (err) {
+        statusMsg.textContent = 'Sign-in failed — redirecting...';
+        setTimeout(() => { window.location.href = '/'; }, 1500);
+      }
+    }
+
+    handleCallback();
+  </script>
+</body>
+</html>
