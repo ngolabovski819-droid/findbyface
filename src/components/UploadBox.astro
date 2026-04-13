@@ -143,15 +143,22 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
   });
 
   let progressTimer: ReturnType<typeof setInterval> | null = null;
-  function startProgress(): void {
+  let _faceapi: any = null;
+  let _modelsLoaded = false;
+
+  function setProgressLabel(text: string): void {
+    const sub = document.querySelector('.scanning-sub') as HTMLElement | null;
+    if (sub) sub.textContent = text;
+  }
+  function startProgress(maxPct = 87): void {
     let pct = 0;
     progressFill.style.width = '0%';
     progressPct.textContent = '0%';
     progressTimer = setInterval(() => {
-      pct = Math.min(pct + Math.random() * 7 + 1, 87);
+      pct = Math.min(pct + Math.random() * 5 + 1, maxPct);
       progressFill.style.width = `${pct}%`;
       progressPct.textContent = `${Math.round(pct)}%`;
-    }, 220);
+    }, 200);
   }
   function finishProgress(): void {
     if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
@@ -159,41 +166,112 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
     progressPct.textContent = '100%';
   }
 
+  async function loadFaceApi(): Promise<any> {
+    if (_faceapi) return _faceapi;
+    // Dynamic import of face-api.js from the installed package (Astro bundles it)
+    // @ts-ignore
+    const mod = await import('/node_modules/@vladmandic/face-api/dist/face-api.esm.js');
+    _faceapi = mod.default ?? mod;
+    return _faceapi;
+  }
+
+  async function ensureModels(faceapi: any): Promise<void> {
+    if (_modelsLoaded) return;
+    await Promise.all([
+      faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
+      faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
+    ]);
+    _modelsLoaded = true;
+  }
+
+  async function detectDescriptor(faceapi: any, img: HTMLImageElement): Promise<Float32Array | null> {
+    const result = await faceapi
+      .detectSingleFace(img, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.4 }))
+      .withFaceDescriptor();
+    return result?.descriptor ?? null;
+  }
+
   async function handleFile(file: File): Promise<void> {
     if (!isSignedIn() && getSearchCount() >= 2) { showAuthModal(); return; }
     uploadError.style.display = 'none';
-    const reader = new FileReader();
-    reader.onload = async ev => {
-      if (!ev.target?.result) return;
-      const dataUrl = String(ev.target.result);
-      scanningImg.src = dataUrl;
-      thumbnailImg.src = dataUrl;
-      uploadIdle.style.display = 'none';
-      uploadScanning.style.display = 'flex';
-      startProgress();
-      try {
-        const resp = await fetch('/api/face-search', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ descriptor: new Array(128).fill(0) }),
-        });
-        if (!resp.ok) throw new Error('failed');
-        const data = await resp.json();
-        finishProgress();
-        incrementSearchCount();
-        await new Promise(r => setTimeout(r, 500));
-        uploadScanning.style.display = 'none';
-        uploadDone.style.display = 'flex';
-        showResults(data.results ?? []);
-      } catch {
+
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = ev => resolve(String(ev.target?.result ?? ''));
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    scanningImg.src = dataUrl;
+    thumbnailImg.src = dataUrl;
+    uploadIdle.style.display = 'none';
+    uploadScanning.style.display = 'flex';
+
+    try {
+      // Phase 1: load models (up to 40%)
+      setProgressLabel('Loading face detection models...');
+      startProgress(40);
+      const faceapi = await loadFaceApi();
+      await ensureModels(faceapi);
+
+      // Phase 2: detect face in image (40→75%)
+      setProgressLabel('Detecting face...');
+      if (progressTimer) clearInterval(progressTimer);
+      progressTimer = null;
+      let pct = 40;
+      progressTimer = setInterval(() => {
+        pct = Math.min(pct + 3, 75);
+        progressFill.style.width = `${pct}%`;
+        progressPct.textContent = `${Math.round(pct)}%`;
+      }, 150);
+
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(); });
+      const descriptor = await detectDescriptor(faceapi, img);
+
+      if (!descriptor) {
         finishProgress();
         uploadScanning.style.display = 'none';
         uploadIdle.style.display = 'flex';
-        uploadError.textContent = 'Search failed — please try again';
+        uploadError.textContent = 'No face detected — try a clearer, well-lit photo';
         uploadError.style.display = 'block';
+        return;
       }
-    };
-    reader.readAsDataURL(file);
+
+      // Phase 3: search API (75→100%)
+      setProgressLabel('Searching for lookalikes...');
+      if (progressTimer) clearInterval(progressTimer);
+      pct = 75;
+      progressTimer = setInterval(() => {
+        pct = Math.min(pct + 4, 97);
+        progressFill.style.width = `${pct}%`;
+        progressPct.textContent = `${Math.round(pct)}%`;
+      }, 180);
+
+      const resp = await fetch('/api/face-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ descriptor: Array.from(descriptor) }),
+      });
+      if (!resp.ok) throw new Error('API error');
+      const data = await resp.json();
+
+      finishProgress();
+      incrementSearchCount();
+      await new Promise(r => setTimeout(r, 400));
+      uploadScanning.style.display = 'none';
+      uploadDone.style.display = 'flex';
+      setProgressLabel('Analyzing your image and comparing with millions of profiles to find lookalikes.');
+      showResults(data.results ?? []);
+    } catch (err) {
+      finishProgress();
+      uploadScanning.style.display = 'none';
+      uploadIdle.style.display = 'flex';
+      setProgressLabel('Analyzing your image and comparing with millions of profiles to find lookalikes.');
+      uploadError.textContent = 'Search failed — please try again';
+      uploadError.style.display = 'block';
+    }
   }
 
   function proxyImg(url: string, w: number, h: number): string {
@@ -205,8 +283,8 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
     const imgSrc = (c.avatar as string)?.startsWith('http') ? proxyImg(c.avatar as string, 320, 427) : '/no-image.png';
     const price = (c.subscribePrice ?? c.subscribeprice) as number;
     const priceLabel = (!price || isNaN(Number(price))) ? 'FREE' : `$${parseFloat(String(price)).toFixed(2)}`;
-    const matchPct = c.matchPct as number;
-    const matchBadge = matchPct ? `<span class="match-badge">${matchPct}% match</span>` : '';
+    const matchPct = c.matchPct != null ? (c.matchPct as number) : null;
+    const matchBadge = matchPct != null && matchPct > 0 ? `<span class="match-badge">${matchPct}% match</span>` : '';
     const profileUrl = `https://onlyfans.com/${encodeURIComponent(c.username as string)}`;
     const locked = !signedIn && index >= 4;
 
