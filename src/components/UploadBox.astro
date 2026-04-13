@@ -1,5 +1,4 @@
 ---
-const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent('https://findbyface.org/auth/callback')}`;
 ---
 
 <!-- Terms of Use Modal -->
@@ -47,7 +46,7 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
     <div class="auth-icon-wrap">🔍</div>
     <h3>You've used your 2 free searches</h3>
     <p>Sign in free to unlock unlimited searches and see all matching profiles.</p>
-    <a href={GOOGLE_AUTH_URL} class="google-btn">
+    <a id="googleAuthBtn" href="#" class="google-btn">
       <svg viewBox="0 0 24 24" width="20" height="20" style="flex-shrink:0" aria-hidden="true">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -84,9 +83,11 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
       <p class="scanning-title">findbyface is searching...</p>
       <p class="scanning-sub">Analyzing your image and comparing with millions of profiles to find lookalikes.</p>
       <div class="progress-track">
-        <div class="progress-fill" id="progressFill"></div>
+        <div class="progress-fill"></div>
       </div>
-      <p class="progress-pct" id="progressPct">0%</p>
+      <p class="progress-pct" id="progressPct">
+        <span class="dot dot1">●</span><span class="dot dot2">●</span><span class="dot dot3">●</span>
+      </p>
     </div>
 
     <!-- State 3: Done -->
@@ -114,12 +115,22 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
   <div id="faceResultsGrid" class="face-results-grid"></div>
   <div id="unlockBanner" class="unlock-banner" style="display:none">
     <p id="unlockBannerText">🔒 <strong>8 more matches found</strong> — sign in free to see all</p>
-    <a href={GOOGLE_AUTH_URL} class="unlock-banner-btn">Sign in with Google</a>
+    <a id="unlockBannerBtn" href="#" class="unlock-banner-btn">Sign in with Google</a>
   </div>
 </div>
 
 <script>
-  const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent('https://findbyface.org/auth/callback')}`;
+  // Build Google OAuth URL dynamically so localhost dev doesn't redirect to production
+  function getGoogleAuthUrl(): string {
+    const redirectTo = `${window.location.origin}/auth/callback`;
+    return `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
+  }
+
+  // Wire up auth buttons with dynamic URL
+  const googleAuthBtn   = document.getElementById('googleAuthBtn') as HTMLAnchorElement | null;
+  const unlockBannerBtn = document.getElementById('unlockBannerBtn') as HTMLAnchorElement | null;
+  if (googleAuthBtn)   googleAuthBtn.href   = getGoogleAuthUrl();
+  if (unlockBannerBtn) unlockBannerBtn.href = getGoogleAuthUrl();
 
   const uploadBox       = document.getElementById('uploadBox')!;
   const fileInput       = document.getElementById('fileInput') as HTMLInputElement;
@@ -129,8 +140,7 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
   const uploadDone      = document.getElementById('uploadDone')!;
   const scanningImg     = document.getElementById('scanningImg') as HTMLImageElement;
   const thumbnailImg    = document.getElementById('thumbnailImg') as HTMLImageElement;
-  const progressFill    = document.getElementById('progressFill')!;
-  const progressPct     = document.getElementById('progressPct')!;
+
   const uploadError     = document.getElementById('uploadError')!;
   const faceResults     = document.getElementById('faceResults')!;
   const faceResultsGrid = document.getElementById('faceResultsGrid')!;
@@ -151,7 +161,11 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
   function incrementSearchCount(): void {
     if (!isSignedIn()) localStorage.setItem('fbf_searches', String(getSearchCount() + 1));
   }
-  function showAuthModal(): void { authModal.style.display = 'flex'; }
+  function showAuthModal(): void { 
+    if (googleAuthBtn)   googleAuthBtn.href   = getGoogleAuthUrl();
+    if (unlockBannerBtn) unlockBannerBtn.href = getGoogleAuthUrl();
+    authModal.style.display = 'flex'; 
+  }
   function hideAuthModal(): void { authModal.style.display = 'none'; }
 
   authBackdrop.addEventListener('click', hideAuthModal);
@@ -226,7 +240,6 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
     fileInput.value = '';
   });
 
-  let progressTimer: ReturnType<typeof setInterval> | null = null;
   let _faceapi: any = null;
   let _modelsLoaded = false;
 
@@ -234,28 +247,21 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
     const sub = document.querySelector('.scanning-sub') as HTMLElement | null;
     if (sub) sub.textContent = text;
   }
-  function startProgress(maxPct = 87): void {
-    let pct = 0;
-    progressFill.style.width = '0%';
-    progressPct.textContent = '0%';
-    progressTimer = setInterval(() => {
-      pct = Math.min(pct + Math.random() * 5 + 1, maxPct);
-      progressFill.style.width = `${pct}%`;
-      progressPct.textContent = `${Math.round(pct)}%`;
-    }, 200);
-  }
-  function finishProgress(): void {
-    if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
-    progressFill.style.width = '100%';
-    progressPct.textContent = '100%';
-  }
 
   async function loadFaceApi(): Promise<any> {
     if (_faceapi) return _faceapi;
-    // @ts-ignore
-    const mod = await import('/face-api.esm.js');
-    _faceapi = mod.default ?? mod;
-    if (!_faceapi?.nets) throw new Error('face-api failed to load');
+    // Load UMD build via script tag — exposes window.faceapi, avoids Vite ESM issues
+    if (!(window as any).faceapi) {
+      await new Promise<void>((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = '/face-api.js';
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error('Failed to load face-api.js'));
+        document.head.appendChild(s);
+      });
+    }
+    _faceapi = (window as any).faceapi;
+    if (!_faceapi?.nets) throw new Error('face-api did not expose window.faceapi');
     return _faceapi;
   }
 
@@ -294,30 +300,19 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
     uploadScanning.style.display = 'flex';
 
     try {
-      // Phase 1: load models (up to 40%)
+      // Phase 1: load models
       setProgressLabel('Loading face detection models...');
-      startProgress(40);
       const faceapi = await loadFaceApi();
       await ensureModels(faceapi);
 
-      // Phase 2: detect face in image (40→75%)
-      setProgressLabel('Detecting face...');
-      if (progressTimer) clearInterval(progressTimer);
-      progressTimer = null;
-      let pct = 40;
-      progressTimer = setInterval(() => {
-        pct = Math.min(pct + 3, 75);
-        progressFill.style.width = `${pct}%`;
-        progressPct.textContent = `${Math.round(pct)}%`;
-      }, 150);
-
+      // Phase 2: detect face
+      setProgressLabel('Detecting face in your photo...');
       const img = new Image();
       img.src = dataUrl;
       await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(); });
       const descriptor = await detectDescriptor(faceapi, img);
 
       if (!descriptor) {
-        finishProgress();
         uploadScanning.style.display = 'none';
         uploadIdle.style.display = 'flex';
         uploadError.textContent = 'No face detected — try a clearer, well-lit photo';
@@ -325,16 +320,8 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
         return;
       }
 
-      // Phase 3: search API (75→100%)
+      // Phase 3: search API
       setProgressLabel('Searching for lookalikes...');
-      if (progressTimer) clearInterval(progressTimer);
-      pct = 75;
-      progressTimer = setInterval(() => {
-        pct = Math.min(pct + 4, 97);
-        progressFill.style.width = `${pct}%`;
-        progressPct.textContent = `${Math.round(pct)}%`;
-      }, 180);
-
       const resp = await fetch('/api/face-search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -343,15 +330,13 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
       if (!resp.ok) throw new Error('API error');
       const data = await resp.json();
 
-      finishProgress();
       incrementSearchCount();
-      await new Promise(r => setTimeout(r, 400));
+      await new Promise(r => setTimeout(r, 300));
       uploadScanning.style.display = 'none';
       uploadDone.style.display = 'flex';
       setProgressLabel('Analyzing your image and comparing with millions of profiles to find lookalikes.');
-      showResults(data.results ?? []);
+      showResults(data.results ?? [], data.mode);
     } catch (err) {
-      finishProgress();
       uploadScanning.style.display = 'none';
       uploadIdle.style.display = 'flex';
       setProgressLabel('Analyzing your image and comparing with millions of profiles to find lookalikes.');
@@ -370,7 +355,7 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
     const price = (c.subscribePrice ?? c.subscribeprice) as number;
     const priceLabel = (!price || isNaN(Number(price))) ? 'FREE' : `$${parseFloat(String(price)).toFixed(2)}`;
     const matchPct = c.matchPct != null ? (c.matchPct as number) : null;
-    const matchBadge = matchPct != null && matchPct > 0 ? `<span class="match-badge">${matchPct}% match</span>` : '';
+    const matchBadge = matchPct != null && matchPct > 0 ? `<span class="match-badge">Match: ${matchPct}%</span>` : '';
     const profileUrl = `https://onlyfans.com/${encodeURIComponent(c.username as string)}`;
     const locked = !signedIn && index >= 4;
 
@@ -381,6 +366,7 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
             style="filter:blur(10px);transform:scale(1.08);"
             onerror="if(this.src!=='/no-image.png'){this.src='/no-image.png';}">
           ${matchBadge}
+          <button class="heart-btn" aria-label="Save" onclick="event.stopPropagation()">♡</button>
           <div class="lock-overlay" onclick="document.getElementById('authModal').style.display='flex'">
             <button class="unlock-btn">🔓 Unlock</button>
           </div>
@@ -400,6 +386,7 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
           decoding="async" referrerpolicy="no-referrer"
           onerror="if(this.src!=='/no-image.png'){this.src='/no-image.png';}">
         ${matchBadge}
+        <button class="heart-btn" aria-label="Save">♡</button>
       </div>
       <div class="card-body">
         <p class="creator-name">${(c.name || c.username) as string}</p>
@@ -410,8 +397,12 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
     </div>`;
   }
 
-  function showResults(results: Record<string, unknown>[]): void {
+  function showResults(results: Record<string, unknown>[], mode?: string): void {
     const signedIn = isSignedIn();
+    const heading = document.querySelector('.results-heading') as HTMLElement | null;
+    if (heading) {
+      heading.textContent = 'Matching Creators';
+    }
     faceResultsGrid.innerHTML = results.map((c, i) => renderCard(c, i, signedIn)).join('');
     faceResults.style.display = 'block';
     if (!signedIn && results.length > 4) {
@@ -558,14 +549,32 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
   .scanning-sub { color: var(--text-muted); font-size: 13px; max-width: 380px; line-height: 1.5; }
   .progress-track {
     width: 100%; max-width: 320px; height: 6px;
-    background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;
+    background: rgba(255,255,255,0.08); border-radius: 3px;
+    overflow: hidden; position: relative;
   }
   .progress-fill {
-    height: 100%; width: 0%;
+    position: absolute;
+    height: 100%; width: 42%;
     background: linear-gradient(90deg, var(--accent), var(--accent-pink));
-    border-radius: 3px; transition: width 0.3s ease;
+    border-radius: 3px;
+    animation: progress-bounce 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate;
   }
-  .progress-pct { font-size: 12px; color: var(--text-muted); }
+  @keyframes progress-bounce {
+    from { left: -42%; }
+    to   { left: 100%; }
+  }
+  .progress-pct { font-size: 11px; color: var(--text-muted); letter-spacing: 0.08em; }
+  .dot {
+    display: inline-block;
+    animation: dot-pulse 1.4s ease-in-out infinite;
+    opacity: 0.2;
+  }
+  .dot2 { animation-delay: 0.2s; }
+  .dot3 { animation-delay: 0.4s; }
+  @keyframes dot-pulse {
+    0%, 80%, 100% { opacity: 0.2; transform: translateY(0); }
+    40% { opacity: 1; transform: translateY(-3px); }
+  }
 
   .done-state {
     display: flex; align-items: center; gap: 16px; padding: 16px 20px;
@@ -617,12 +626,21 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
   .card-img-wrap { aspect-ratio: 3/4; overflow: hidden; position: relative; background: var(--surface-raised); }
   .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .match-badge {
-    position: absolute; top: 8px; right: 8px;
-    background: rgba(124,58,237,0.9); color: #fff;
-    font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px;
+    position: absolute; top: 8px; left: 8px;
+    background: #22c55e; color: #fff;
+    font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+    letter-spacing: 0.02em;
   }
+  .heart-btn {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(0,0,0,0.45); border: none; cursor: pointer;
+    border-radius: 50%; width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; color: #fff; transition: background 0.2s;
+  }
+  .heart-btn:hover { background: rgba(236,72,153,0.8); }
   .card-body { padding: 12px 14px; }
-  .creator-name { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .creator-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .username { color: var(--text-muted); font-size: 12px; margin-bottom: 6px; }
   .price { font-weight: 700; font-size: 15px; margin-bottom: 10px; color: var(--text-muted); }
   .price-free { color: var(--success); }
@@ -662,5 +680,84 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
     text-decoration: none; white-space: nowrap; transition: background 0.2s;
   }
   .unlock-banner-btn:hover { background: var(--accent-light); }
+</style>
+
+<style is:global>
+  /* Card styles for dynamically injected innerHTML — Astro scoped CSS doesn't reach these */
+  #faceResults .creator-card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  #faceResults .creator-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px var(--accent-glow);
+  }
+  #faceResults .card-img-wrap {
+    aspect-ratio: 3/4;
+    overflow: hidden;
+    position: relative;
+    background: var(--surface-raised);
+  }
+  #faceResults .card-img-wrap img {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+  }
+  #faceResults .match-badge {
+    position: absolute; top: 8px; left: 8px;
+    background: #22c55e; color: #fff;
+    font-size: 12px; font-weight: 700;
+    padding: 4px 10px; border-radius: 999px;
+    letter-spacing: 0.02em; pointer-events: none;
+  }
+  #faceResults .heart-btn {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(0,0,0,0.45); border: none; cursor: pointer;
+    border-radius: 50%; width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: #fff; transition: background 0.2s;
+  }
+  #faceResults .heart-btn:hover { background: rgba(236,72,153,0.8); }
+  #faceResults .card-body { padding: 12px 14px; }
+  #faceResults .creator-name {
+    font-family: 'Syne', sans-serif; font-weight: 700;
+    font-size: 14px; margin-bottom: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    color: var(--text);
+  }
+  #faceResults .username { color: var(--text-muted); font-size: 12px; margin-bottom: 6px; }
+  #faceResults .price { font-weight: 700; font-size: 15px; margin-bottom: 10px; color: var(--text-muted); }
+  #faceResults .price-free { color: var(--success); }
+  #faceResults .view-btn {
+    display: block; text-align: center;
+    background: var(--accent); color: #fff;
+    border-radius: 8px; padding: 8px;
+    font-size: 13px; font-weight: 600;
+    transition: background 0.2s; text-decoration: none;
+  }
+  #faceResults .view-btn:hover { background: var(--accent-light); }
+
+  /* Locked card styles */
+  #faceResults .creator-card.locked { cursor: pointer; }
+  #faceResults .lock-overlay {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.35); transition: background 0.2s;
+  }
+  #faceResults .lock-overlay:hover { background: rgba(0,0,0,0.5); }
+  #faceResults .unlock-btn {
+    background: rgba(124,58,237,0.92); color: #fff; border: none;
+    border-radius: 999px; padding: 10px 20px; font-size: 13px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    box-shadow: 0 4px 16px rgba(124,58,237,0.4); transition: background 0.2s, transform 0.1s;
+  }
+  #faceResults .unlock-btn:hover { background: var(--accent); transform: scale(1.04); }
+  #faceResults .locked-body { filter: blur(3px); pointer-events: none; user-select: none; }
+  #faceResults .view-btn-locked {
+    display: block; text-align: center; background: var(--accent);
+    color: #fff; border-radius: 8px; padding: 8px; font-size: 13px; font-weight: 600;
+  }
 </style>
 
