@@ -170,7 +170,7 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
   let _pendingFile: File | null = null;
 
   function hasAgreedToTerms(): boolean {
-    return sessionStorage.getItem(TERMS_KEY) === '1';
+    return localStorage.getItem(TERMS_KEY) === '1';
   }
 
   function showTermsModal(file: File): void {
@@ -191,7 +191,7 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
 
   termsAgreeBtn.addEventListener('click', () => {
     if (!termsCheckbox.checked) return;
-    sessionStorage.setItem(TERMS_KEY, '1');
+    localStorage.setItem(TERMS_KEY, '1');
     termsModal.style.display = 'none';
     if (_pendingFile) { const f = _pendingFile; _pendingFile = null; handleFile(f); }
   });
@@ -252,10 +252,10 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
 
   async function loadFaceApi(): Promise<any> {
     if (_faceapi) return _faceapi;
-    // Dynamic import of face-api.js from the installed package (Astro bundles it)
     // @ts-ignore
-    const mod = await import('/node_modules/@vladmandic/face-api/dist/face-api.esm.js');
+    const mod = await import('/face-api.esm.js');
     _faceapi = mod.default ?? mod;
+    if (!_faceapi?.nets) throw new Error('face-api failed to load');
     return _faceapi;
   }
 
