@@ -15,7 +15,10 @@
   "dependencies": {
     "@astrojs/sitemap": "^3.7.2",
     "@astrojs/vercel": "^10.0.4",
+    "@tensorflow/tfjs": "^4.22.0",
+    "@tensorflow/tfjs-backend-wasm": "^4.22.0",
     "@vladmandic/face-api": "^1.7.15",
-    "astro": "^6.1.5"
+    "astro": "^6.1.5",
+    "jimp": "^1.6.1"
   }
 }
