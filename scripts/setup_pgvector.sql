@@ -12,7 +12,7 @@ ALTER TABLE onlyfans_profiles
 
 -- 3. Create an IVFFlat index for fast cosine similarity search
 --    (run AFTER you have at least 1000 embeddings for good performance)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_face_embedding
+CREATE INDEX IF NOT EXISTS idx_face_embedding
   ON onlyfans_profiles
   USING ivfflat (face_embedding vector_cosine_ops)
   WITH (lists = 100);
