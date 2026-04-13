@@ -2,6 +2,43 @@
 const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent('https://findbyface.org/auth/callback')}`;
 ---
 
+<!-- Terms of Use Modal -->
+<div id="termsModal" class="auth-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="termsTitle">
+  <div class="auth-backdrop" id="termsBackdrop"></div>
+  <div class="auth-box terms-box">
+    <button class="auth-close" id="termsClose" aria-label="Close">×</button>
+    <h3 id="termsTitle">User Agreement and Terms of Use</h3>
+    <p class="terms-intro">By using our image search feature, I confirm that:</p>
+    <div class="terms-scroll">
+      <ul class="terms-list">
+        <li>I am at least <strong>18 years of age</strong> or older</li>
+        <li><strong>NOT</strong> use search results to approach or confront individuals</li>
+        <li><strong>NOT</strong> engage in harassment of any person identified in search results</li>
+        <li><strong>NEVER</strong> upload images of minors (under 18 years of age)</li>
+        <li><strong>NOT</strong> follow, monitor, or stalk any individual</li>
+        <li><strong>NOT</strong> attempt to extort, threaten, or blackmail any person</li>
+        <li><strong>NOT</strong> utilize any information in ways that would require findbyface to obtain special licensing or reporting status with government entities</li>
+        <li><strong>NOT</strong> use search results for employment screening, housing decisions, lending evaluations, or insurance assessments</li>
+        <li><strong>NOT</strong> employ this service for any illegal purpose or activity</li>
+        <li>I confirm I am <strong>NOT</strong> a resident or citizen of any European Union country</li>
+        <li>I confirm full compliance with all laws and regulations applicable in my jurisdiction</li>
+        <li>I acknowledge that my jurisdiction permits the use of facial recognition search technology</li>
+      </ul>
+      <p class="terms-section"><strong>Accuracy Disclaimer:</strong> findbyface provides no guarantees regarding the accuracy, reliability, or completeness of information presented on this website. All search results and content are provided "as is" without any warranty of any kind.</p>
+      <p class="terms-section"><strong>Comprehensive Liability Release:</strong> By using this service, I hereby fully and permanently release, waive, and discharge findbyface, along with its parent organization, affiliated companies, subsidiaries, owners, investors, executives, directors, staff members, contractors, and representatives from any and all claims, liabilities, actions, demands, damages, costs, losses, legal proceedings, and judgments of any nature whatsoever, whether currently known or discovered in the future, that may arise from or relate to my use of findbyface services, including but not limited to search results, content accuracy, or data processing. I explicitly waive any legal rights or protections under any jurisdiction's laws that might otherwise limit the scope or effectiveness of this comprehensive release.</p>
+      <p class="terms-section">By clicking "Agree and Search," I acknowledge that I have read, understood, and consent to be legally bound by all terms outlined above.</p>
+    </div>
+    <label class="terms-check-label">
+      <input type="checkbox" id="termsCheckbox" />
+      I understand and agree to the terms
+    </label>
+    <div class="terms-actions">
+      <button class="terms-cancel-btn" id="termsCancelBtn">Cancel</button>
+      <button class="terms-agree-btn" id="termsAgreeBtn" disabled>Agree and Search</button>
+    </div>
+  </div>
+</div>
+
 <!-- Auth Gate Modal -->
 <div id="authModal" class="auth-modal" style="display:none" role="dialog" aria-modal="true">
   <div class="auth-backdrop" id="authBackdrop"></div>
@@ -121,18 +158,65 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
   authClose.addEventListener('click', hideAuthModal);
   authSkip.addEventListener('click', hideAuthModal);
 
+  // ── Terms modal ──────────────────────────────────────────────────────────
+  const termsModal     = document.getElementById('termsModal')!;
+  const termsBackdrop  = document.getElementById('termsBackdrop')!;
+  const termsClose     = document.getElementById('termsClose')!;
+  const termsCheckbox  = document.getElementById('termsCheckbox') as HTMLInputElement;
+  const termsAgreeBtn  = document.getElementById('termsAgreeBtn') as HTMLButtonElement;
+  const termsCancelBtn = document.getElementById('termsCancelBtn')!;
+
+  const TERMS_KEY = 'fbf_terms_agreed';
+  let _pendingFile: File | null = null;
+
+  function hasAgreedToTerms(): boolean {
+    return sessionStorage.getItem(TERMS_KEY) === '1';
+  }
+
+  function showTermsModal(file: File): void {
+    _pendingFile = file;
+    termsCheckbox.checked = false;
+    termsAgreeBtn.disabled = true;
+    termsModal.style.display = 'flex';
+  }
+
+  function hideTermsModal(): void {
+    termsModal.style.display = 'none';
+    _pendingFile = null;
+  }
+
+  termsCheckbox.addEventListener('change', () => {
+    termsAgreeBtn.disabled = !termsCheckbox.checked;
+  });
+
+  termsAgreeBtn.addEventListener('click', () => {
+    if (!termsCheckbox.checked) return;
+    sessionStorage.setItem(TERMS_KEY, '1');
+    termsModal.style.display = 'none';
+    if (_pendingFile) { const f = _pendingFile; _pendingFile = null; handleFile(f); }
+  });
+
+  termsCancelBtn.addEventListener('click', hideTermsModal);
+  termsBackdrop.addEventListener('click', hideTermsModal);
+  termsClose.addEventListener('click', hideTermsModal);
+
+  function gatedFileOpen(file: File): void {
+    if (hasAgreedToTerms()) { handleFile(file); } else { showTermsModal(file); }
+  }
+
+  // ── Upload triggers ───────────────────────────────────────────────────────
   chooseBtn.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) handleFile(fileInput.files[0]); });
+  fileInput.addEventListener('change', () => { if (fileInput.files?.[0]) gatedFileOpen(fileInput.files[0]); });
   uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.classList.add('drag-over'); });
   uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('drag-over'));
   uploadBox.addEventListener('drop', e => {
     e.preventDefault(); uploadBox.classList.remove('drag-over');
     const file = (e as DragEvent).dataTransfer?.files[0];
-    if (file?.type.startsWith('image/')) handleFile(file);
+    if (file?.type.startsWith('image/')) gatedFileOpen(file);
   });
   document.addEventListener('paste', e => {
     const file = e.clipboardData?.files[0];
-    if (file?.type.startsWith('image/')) handleFile(file);
+    if (file?.type.startsWith('image/')) gatedFileOpen(file);
   });
   newSearchBtn.addEventListener('click', () => {
     uploadDone.style.display = 'none';
@@ -358,6 +442,47 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
     max-width: 420px; width: 90%; text-align: center;
     box-shadow: 0 20px 60px rgba(0,0,0,0.5);
   }
+  /* Terms modal overrides */
+  .terms-box {
+    max-width: 560px; text-align: left; padding: 32px 28px 28px;
+  }
+  .terms-box h3 { font-size: 1.2rem; margin-bottom: 8px; }
+  .terms-intro { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
+  .terms-scroll {
+    max-height: 320px; overflow-y: auto; border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 16px; margin-bottom: 16px;
+    font-size: 13px; line-height: 1.65; color: var(--text);
+    scrollbar-width: thin; scrollbar-color: var(--accent) transparent;
+  }
+  .terms-list {
+    padding-left: 18px; margin-bottom: 14px;
+  }
+  .terms-list li { margin-bottom: 7px; }
+  .terms-section { margin-bottom: 12px; }
+  .terms-check-label {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 14px; cursor: pointer; margin-bottom: 18px;
+    color: var(--text);
+  }
+  .terms-check-label input[type="checkbox"] {
+    width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0;
+  }
+  .terms-actions {
+    display: flex; gap: 10px; justify-content: flex-end;
+  }
+  .terms-cancel-btn {
+    padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--text-muted); cursor: pointer; transition: color 0.2s;
+  }
+  .terms-cancel-btn:hover { color: var(--text); }
+  .terms-agree-btn {
+    padding: 10px 22px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    border: none; background: var(--accent); color: #fff;
+    cursor: pointer; transition: background 0.2s, opacity 0.2s;
+  }
+  .terms-agree-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .terms-agree-btn:not(:disabled):hover { background: var(--accent-light); }
   .auth-close {
     position: absolute; top: 14px; right: 16px;
     background: none; border: none; color: var(--text-muted);
