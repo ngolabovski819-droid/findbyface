@@ -179,6 +179,7 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
     if (_modelsLoaded) return;
     await Promise.all([
       faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
+      faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
       faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
     ]);
     _modelsLoaded = true;
@@ -187,6 +188,7 @@ const GOOGLE_AUTH_URL = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/author
   async function detectDescriptor(faceapi: any, img: HTMLImageElement): Promise<Float32Array | null> {
     const result = await faceapi
       .detectSingleFace(img, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.4 }))
+      .withFaceLandmarks()
       .withFaceDescriptor();
     return result?.descriptor ?? null;
   }
