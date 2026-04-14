@@ -250,28 +250,40 @@
 
   async function loadFaceApi(): Promise<any> {
     if (_faceapi) return _faceapi;
-    // Load UMD build via script tag — exposes window.faceapi, avoids Vite ESM issues
     if (!(window as any).faceapi) {
       await new Promise<void>((resolve, reject) => {
         const s = document.createElement('script');
         s.src = '/face-api.js';
         s.onload = () => resolve();
-        s.onerror = () => reject(new Error('Failed to load face-api.js'));
+        s.onerror = () => reject(new Error('Failed to load face-api.js — check your connection'));
         document.head.appendChild(s);
       });
     }
     _faceapi = (window as any).faceapi;
-    if (!_faceapi?.nets) throw new Error('face-api did not expose window.faceapi');
+    if (!_faceapi?.nets) throw new Error('face-api.js loaded but did not initialise correctly');
     return _faceapi;
+  }
+
+  function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+    return Promise.race([
+      promise,
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error(`Timed out loading ${label} after ${ms / 1000}s`)), ms)
+      ),
+    ]);
   }
 
   async function ensureModels(faceapi: any): Promise<void> {
     if (_modelsLoaded) return;
-    await Promise.all([
-      faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
-      faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
-      faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
-    ]);
+    await withTimeout(
+      Promise.all([
+        faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
+        faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+        faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
+      ]),
+      60000,
+      'face detection models'
+    );
     _modelsLoaded = true;
   }
 
@@ -301,34 +313,53 @@
 
     try {
       // Phase 1: load models
-      setProgressLabel('Loading face detection models...');
-      const faceapi = await loadFaceApi();
-      await ensureModels(faceapi);
+      setProgressLabel('Loading face detection models (first load may take ~15s)...');
+      let faceapi: any;
+      try {
+        faceapi = await loadFaceApi();
+        await ensureModels(faceapi);
+      } catch (e: any) {
+        throw new Error(`Model load failed: ${e?.message ?? e}`);
+      }
 
       // Phase 2: detect face
       setProgressLabel('Detecting face in your photo...');
       const img = new Image();
       img.src = dataUrl;
-      await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(); });
-      const descriptor = await detectDescriptor(faceapi, img);
+      await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error('Image failed to decode')); });
+
+      let descriptor: Float32Array | null;
+      try {
+        descriptor = await withTimeout(detectDescriptor(faceapi, img), 30000, 'face detection');
+      } catch (e: any) {
+        throw new Error(`Face detection failed: ${e?.message ?? e}`);
+      }
 
       if (!descriptor) {
         uploadScanning.style.display = 'none';
         uploadIdle.style.display = 'flex';
-        uploadError.textContent = 'No face detected — try a clearer, well-lit photo';
+        uploadError.textContent = 'No face detected — try a clearer, well-lit photo facing the camera';
         uploadError.style.display = 'block';
         return;
       }
 
       // Phase 3: search API
       setProgressLabel('Searching for lookalikes...');
-      const resp = await fetch('/api/face-search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ descriptor: Array.from(descriptor) }),
-      });
-      if (!resp.ok) throw new Error('API error');
-      const data = await resp.json();
+      let data: any;
+      try {
+        const resp = await fetch('/api/face-search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ descriptor: Array.from(descriptor) }),
+        });
+        if (!resp.ok) {
+          const errText = await resp.text().catch(() => `HTTP ${resp.status}`);
+          throw new Error(`API ${resp.status}: ${errText.slice(0, 120)}`);
+        }
+        data = await resp.json();
+      } catch (e: any) {
+        throw new Error(`Search API failed: ${e?.message ?? e}`);
+      }
 
       incrementSearchCount();
       await new Promise(r => setTimeout(r, 300));
@@ -336,12 +367,14 @@
       uploadDone.style.display = 'flex';
       setProgressLabel('Analyzing your image and comparing with millions of profiles to find lookalikes.');
       showResults(data.results ?? [], data.mode);
-    } catch (err) {
+    } catch (err: any) {
       uploadScanning.style.display = 'none';
       uploadIdle.style.display = 'flex';
       setProgressLabel('Analyzing your image and comparing with millions of profiles to find lookalikes.');
-      uploadError.textContent = 'Search failed — please try again';
+      const msg = err?.message ?? String(err);
+      uploadError.textContent = msg.length > 10 ? msg : 'Search failed — please try again';
       uploadError.style.display = 'block';
+      console.error('[findbyface] handleFile error:', err);
     }
   }
 
