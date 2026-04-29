@@ -50,7 +50,6 @@ export const GET: APIRoute = async ({ url }) => {
     const exprs = terms.flatMap(t => [
       `username.ilike.*${t}*`,
       `name.ilike.*${t}*`,
-      `about.ilike.*${t}*`,
     ]);
     params.set('or', `(${exprs.join(',')})`);
   }
@@ -66,7 +65,7 @@ export const GET: APIRoute = async ({ url }) => {
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
       'Accept-Profile': 'public',
-      Prefer: 'count=exact',
+      Prefer: 'count=estimated',
     },
   });
 
