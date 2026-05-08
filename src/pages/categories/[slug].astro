@@ -3,6 +3,7 @@ import Base from '../../layouts/Base.astro';
 import CreatorCard from '../../components/CreatorCard.astro';
 import CategoryChips from '../../components/CategoryChips.astro';
 import { slugToCategory } from '../../config/categories';
+import { categorySeo } from '../../config/seo-meta';
 
 const { slug } = Astro.params;
 if (!slug) return Astro.redirect('/');
@@ -56,10 +57,40 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     }
   } catch { /* fallback to empty */ }
 }
-
-const pageTitle = `Best ${category.label} OnlyFans Creators | findbyface`;
-const pageDesc  = `Discover the best ${category.label} OnlyFans creators. ${total ? `Browse ${total.toLocaleString()} profiles` : 'Browse thousands of profiles'} and find your favorite.`;
+const seo = categorySeo(slug, category.label, total);
+const pageTitle = seo.title;
+const pageDesc  = seo.description;
 const canonical = `https://findbyface.org/categories/${slug}/`;
+
+const faqJsonLd = {
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: `How is the ${category.label} OnlyFans list ranked?`,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: `Creators are ranked by real fan engagement (favorited count and subscriber metrics) pulled live from OnlyFans. The list is refreshed daily, so newer popular ${category.label} accounts surface quickly.`,
+      },
+    },
+    {
+      '@type': 'Question',
+      name: `Are these ${category.label} OnlyFans accounts free?`,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: `Many are. Use the Free filter to show only ${category.label} OnlyFans creators with $0 subscriptions, or the Bundles filter to find paid creators currently running discount offers.`,
+      },
+    },
+    {
+      '@type': 'Question',
+      name: `How often is the ${category.label} OnlyFans list updated?`,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: `Daily. We track new ${category.label} accounts, profile changes, and pricing updates every 24 hours, with verification status refreshed weekly.`,
+      },
+    },
+  ],
+};
 
 const jsonLd = JSON.stringify({
   '@context': 'https://schema.org',
@@ -83,6 +114,7 @@ const jsonLd = JSON.stringify({
         url: `https://onlyfans.com/${c.username}`,
       })),
     },
+    faqJsonLd,
   ],
 });
 ---

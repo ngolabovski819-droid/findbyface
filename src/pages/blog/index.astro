@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { getCollection } from 'astro:content';
+import { BLOG_SEO } from '../../config/seo-meta';
 
 export const prerender = true;
 
@@ -12,8 +13,8 @@ const postSlug = (post: any) => post.id.replace(/\.md$/, '');
 ---
 
 <Base
-  title="Blog — findbyface"
-  description="Tips, guides, and news about finding OnlyFans creators."
+  title={BLOG_SEO.title}
+  description={BLOG_SEO.description}
   canonical="https://findbyface.org/blog/"
 >
   <section class="blog-page">

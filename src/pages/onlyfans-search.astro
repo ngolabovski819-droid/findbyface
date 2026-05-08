@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import { SEARCH_SEO } from '../config/seo-meta';
 
 const q        = Astro.url.searchParams.get('q') ?? '';
 const verified = Astro.url.searchParams.get('verified') ?? '';
@@ -7,10 +8,7 @@ const price    = Astro.url.searchParams.get('price') ?? '';
 const sort     = Astro.url.searchParams.get('sort') ?? '';
 ---
 
-<Base
-  title="OnlyFans Search Engine | findbyface"
-  description="Search millions of OnlyFans creators with advanced filters. Filter by verified status, price, bundles and more."
->
+<Base title={SEARCH_SEO.title} description={SEARCH_SEO.description}>
   <div class="search-page">
     <div class="search-header">
       <h1>OnlyFans Search Engine</h1>

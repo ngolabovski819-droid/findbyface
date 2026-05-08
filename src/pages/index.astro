@@ -4,6 +4,7 @@ import UploadBox from '../components/UploadBox.astro';
 import StatsBar from '../components/StatsBar.astro';
 import CategoryChips from '../components/CategoryChips.astro';
 import CreatorCard from '../components/CreatorCard.astro';
+import { HOME_SEO } from '../config/seo-meta';
 
 const SUPABASE_URL = import.meta.env.SUPABASE_URL?.replace(/\/+$/, '');
 const SUPABASE_KEY = import.meta.env.SUPABASE_KEY;
@@ -44,7 +45,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
 }
 ---
 
-<Base title="findbyface — Find Lookalike OnlyFans Creators Instantly">
+<Base title={HOME_SEO.title} description={HOME_SEO.description}>
   <div class="hero">
     <div class="hero-badge">
       <span class="badge-dot"></span>
