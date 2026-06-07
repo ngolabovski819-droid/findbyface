@@ -53,7 +53,7 @@ import Base from '../layouts/Base.astro';
               <p class="card-value">Coming soon</p>
             </div>
           </div>
-          <p class="card-sub">Higher-accuracy matching, full-resolution results &amp; no blurred cards.</p>
+          <p class="card-sub">Higher-accuracy AI matching, no ads, full search history with export &amp; more.</p>
           <button class="pro-btn" id="proNotifyBtn">Notify me</button>
         </div>
       </div>
@@ -94,6 +94,11 @@ import Base from '../layouts/Base.astro';
     return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
+  function proxyImg(url, w, h) {
+    if (!url || String(url).startsWith('/')) return url;
+    return `https://images.weserv.nl/?url=${encodeURIComponent(String(url).replace(/^https?:\/\//, ''))}&w=${w}&h=${h}&fit=cover&output=webp`;
+  }
+
   function init() {
     let user = null;
     try { user = JSON.parse(localStorage.getItem('fbf_user') || 'null'); } catch { /* noop */ }
@@ -128,18 +133,52 @@ import Base from '../layouts/Base.astro';
     } else {
       empty.style.display = 'none';
       list.style.display = 'flex';
-      list.innerHTML = history.map(h => `
-        <a href="/" class="search-row">
-          <span class="search-ico">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg>
-          </span>
-          <span class="search-meta">
-            <span class="search-label">${escapeHtml(h.label || 'Photo search')}</span>
-            <span class="search-date">${relTime(h.date)} · ${Number(h.count || 0)} matches</span>
-          </span>
-          <span class="search-arrow">›</span>
-        </a>
-      `).join('');
+      list.innerHTML = history.map((h, i) => {
+        const results = Array.isArray(h.results) ? h.results : [];
+        const cards = results.map(r => {
+          const img = r.avatar && String(r.avatar).startsWith('http')
+            ? proxyImg(r.avatar, 120, 160) : '/no-image.png';
+          const price = (!r.subscribePrice || isNaN(Number(r.subscribePrice)))
+            ? 'FREE' : `$${parseFloat(String(r.subscribePrice)).toFixed(2)}`;
+          const matchTag = r.matchPct ? `<span class="mini-match">${r.matchPct}%</span>` : '';
+          return `<a class="mini-card" href="https://onlyfans.com/${encodeURIComponent(r.username)}" target="_blank" rel="noopener noreferrer">
+            <span class="mini-img"><img src="${img}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="if(this.src!=='/no-image.png'){this.src='/no-image.png';}">${matchTag}</span>
+            <span class="mini-name">${escapeHtml(r.name || r.username)}</span>
+            <span class="mini-price ${price === 'FREE' ? 'free' : ''}">${price}</span>
+          </a>`;
+        }).join('');
+
+        const panel = results.length
+          ? `<div class="search-results" id="sr-${i}" hidden><div class="mini-grid">${cards}</div></div>`
+          : '';
+
+        return `<div class="search-entry">
+          <button class="search-row" type="button" data-idx="${i}" aria-expanded="false">
+            <span class="search-ico">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg>
+            </span>
+            <span class="search-meta">
+              <span class="search-label">${escapeHtml(h.label || 'Photo search')}</span>
+              <span class="search-date">${relTime(h.date)} · ${Number(h.count || 0)} matches</span>
+            </span>
+            <span class="search-chev">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </span>
+          </button>
+          ${panel}
+        </div>`;
+      }).join('');
+
+      // Toggle expand/collapse
+      list.querySelectorAll('.search-row').forEach(row => {
+        row.addEventListener('click', () => {
+          const idx = row.getAttribute('data-idx');
+          const panel = document.getElementById('sr-' + idx);
+          const open = row.getAttribute('aria-expanded') === 'true';
+          row.setAttribute('aria-expanded', String(!open));
+          if (panel) panel.hidden = open;
+        });
+      });
     }
 
     const notify = document.getElementById('proNotifyBtn');
@@ -245,9 +284,11 @@ import Base from '../layouts/Base.astro';
     font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px;
   }
   .search-list { display: flex; flex-direction: column; gap: 6px; }
+  .search-entry { border-radius: 10px; overflow: hidden; }
   .search-row {
-    display: flex; align-items: center; gap: 12px;
+    display: flex; align-items: center; gap: 12px; width: 100%;
     padding: 12px 12px; border-radius: 10px;
+    background: none; border: none; cursor: pointer; font-family: inherit; text-align: left;
     transition: background 0.15s;
   }
   .search-row:hover { background: var(--surface-raised); }
@@ -259,7 +300,36 @@ import Base from '../layouts/Base.astro';
   .search-meta { display: flex; flex-direction: column; min-width: 0; flex: 1; }
   .search-label { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .search-date { font-size: 12px; color: var(--text-muted); }
-  .search-arrow { color: var(--text-muted); font-size: 20px; flex-shrink: 0; }
+  .search-chev { color: var(--text-muted); flex-shrink: 0; display: flex; transition: transform 0.2s; }
+  .search-row[aria-expanded="true"] .search-chev { transform: rotate(180deg); }
+
+  /* Cached results panel */
+  .search-results { padding: 4px 6px 14px; }
+  .mini-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 10px;
+  }
+  .mini-card {
+    display: flex; flex-direction: column; gap: 4px;
+    background: var(--surface-raised); border: 1px solid var(--border);
+    border-radius: 10px; padding: 6px; overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .mini-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .mini-img { position: relative; aspect-ratio: 3/4; border-radius: 7px; overflow: hidden; background: var(--surface); display: block; }
+  .mini-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .mini-match {
+    position: absolute; top: 4px; left: 4px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-pink));
+    color: #fff; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 999px;
+  }
+  .mini-name {
+    font-size: 12px; font-weight: 600; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mini-price { font-size: 11px; font-weight: 700; color: var(--text-muted); }
+  .mini-price.free { color: var(--success); }
 
   .search-empty {
     display: flex; flex-direction: column; align-items: center; text-align: center;

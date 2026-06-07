@@ -264,16 +264,26 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   function incrementSearchCount(): void {
     if (!isSignedIn()) localStorage.setItem('fbf_searches', String(getSearchCount() + 1));
   }
-  function recordSearchHistory(count: number, topName?: string): void {
+  function recordSearchHistory(results: Record<string, unknown>[], topName?: string): void {
     if (!isSignedIn()) return;
     try {
       const raw = localStorage.getItem('fbf_history');
       const history = raw ? JSON.parse(raw) as Array<Record<string, unknown>> : [];
+      // Store a compact copy of the top matches so they can be re-viewed later
+      const saved = results.slice(0, 18).map(c => ({
+        username: c.username,
+        name: c.name || c.username,
+        avatar: c.avatar,
+        subscribePrice: c.subscribePrice ?? c.subscribeprice,
+        matchPct: c.matchPct,
+      }));
       history.unshift({
+        id: Date.now(),
         type: 'image',
         label: topName ? `Photo search · top match ${topName}` : 'Photo search',
-        count,
+        count: results.length,
         date: new Date().toISOString(),
+        results: saved,
       });
       // Keep most recent 25
       localStorage.setItem('fbf_history', JSON.stringify(history.slice(0, 25)));
@@ -535,7 +545,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
       setProgressLabel('Analyzing your image and comparing with millions of profiles to find lookalikes.');
       const results = data.results ?? [];
       const topName = results[0] ? ((results[0].name || results[0].username) as string) : undefined;
-      recordSearchHistory(results.length, topName);
+      recordSearchHistory(results, topName);
       showResults(results, data.mode);
     } catch (err: any) {
       stopScanFX();
