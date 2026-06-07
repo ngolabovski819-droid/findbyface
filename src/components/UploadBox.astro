@@ -186,8 +186,26 @@ if (SUPABASE_URL && SUPABASE_KEY) {
 
 <!-- Results -->
 <div id="faceResults" class="face-results" style="display:none">
-  <h2 class="results-heading">Matching Creators</h2>
+  <div class="results-header">
+    <h2 class="results-heading">Matching Creators</h2>
+    <button id="copyResultsBtn" class="copy-results-btn" type="button" title="Copy your top 10 closest matches">
+      <span class="copy-ico" aria-hidden="true">📋</span>
+      <span class="copy-label">Copy top 10</span>
+    </button>
+  </div>
+  <div id="shareCta" class="share-cta" style="display:none">
+    <span class="share-cta-step">1</span>
+    <span class="share-cta-arrow" aria-hidden="true">→</span>
+    <p class="share-cta-text">Matches copied! Now paste &amp; share your results on Reddit</p>
+    <a id="shareRedditBtn" href="https://www.reddit.com/r/OnlyfansReviewsCenter/submit" target="_blank" rel="noopener" class="share-reddit-btn">
+      <span aria-hidden="true">👽</span> Post to Reddit
+    </a>
+  </div>
   <div id="faceResultsGrid" class="face-results-grid"></div>
+  <div id="faceLoadMoreWrap" class="face-load-more-wrap" style="display:none">
+    <button id="faceLoadMoreBtn" class="face-load-more-btn" type="button">Load 12 more matches</button>
+    <p id="faceResultsCount" class="face-results-count"></p>
+  </div>
   <div id="unlockBanner" class="unlock-banner" style="display:none">
     <p id="unlockBannerText">🔒 <strong>8 more matches found</strong> — sign in free to see all</p>
     <a id="unlockBannerBtn" href="#" class="unlock-banner-btn">Sign in with Google</a>
@@ -226,6 +244,16 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   const authSkip        = document.getElementById('authSkip')!;
   const unlockBanner    = document.getElementById('unlockBanner')!;
   const unlockBannerText = document.getElementById('unlockBannerText')!;
+  const faceLoadMoreWrap = document.getElementById('faceLoadMoreWrap')!;
+  const faceLoadMoreBtn  = document.getElementById('faceLoadMoreBtn') as HTMLButtonElement;
+  const faceResultsCount = document.getElementById('faceResultsCount')!;
+  const copyResultsBtn   = document.getElementById('copyResultsBtn') as HTMLButtonElement;
+  const shareCta         = document.getElementById('shareCta')!;
+
+  // Pagination state for face-search results
+  let allFaceResults: Record<string, unknown>[] = [];
+  let faceShownCount = 0;
+  const FACE_PAGE_SIZE = 12;
 
   function isSignedIn(): boolean {
     try { return !!JSON.parse(localStorage.getItem('fbf_user') || 'null'); } catch { return false; }
@@ -515,7 +543,8 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     const matchPct = c.matchPct != null ? (c.matchPct as number) : null;
     const matchBadge = matchPct != null && matchPct > 0 ? `<span class="match-badge">Match: ${matchPct}%</span>` : '';
     const profileUrl = `https://onlyfans.com/${encodeURIComponent(c.username as string)}`;
-    const locked = !signedIn && index >= 4;
+    // Alternating pattern: every other card is blurred until signed in (1 shown, 1 locked)
+    const locked = !signedIn && index % 2 === 1;
 
     if (locked) {
       return `<div class="creator-card locked">
@@ -556,21 +585,123 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   }
 
   function showResults(results: Record<string, unknown>[], mode?: string): void {
-    const signedIn = isSignedIn();
     const heading = document.querySelector('.results-heading') as HTMLElement | null;
     if (heading) {
       heading.textContent = 'Matching Creators';
     }
-    faceResultsGrid.innerHTML = results.map((c, i) => renderCard(c, i, signedIn)).join('');
+    allFaceResults = results;
+    faceShownCount = 0;
+    faceResultsGrid.innerHTML = '';
+    if (shareCta) shareCta.style.display = 'none';
+    renderNextFacePage();
+    updateCopyBtn();
     faceResults.style.display = 'block';
-    if (!signedIn && results.length > 4) {
-      const locked = results.length - 4;
-      unlockBannerText.innerHTML = `🔒 <strong>${locked} more matches found</strong> — sign in free to see all`;
+    faceResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderNextFacePage(): void {
+    const signedIn = isSignedIn();
+    const next = allFaceResults.slice(faceShownCount, faceShownCount + FACE_PAGE_SIZE);
+    const html = next
+      .map((c, i) => renderCard(c, faceShownCount + i, signedIn))
+      .join('');
+    faceResultsGrid.insertAdjacentHTML('beforeend', html);
+    faceShownCount += next.length;
+    updateFaceResultsUI();
+  }
+
+  function updateFaceResultsUI(): void {
+    const signedIn = isSignedIn();
+    const total = allFaceResults.length;
+
+    // Load more button: show while there are more results to reveal
+    if (faceShownCount < total) {
+      const remaining = total - faceShownCount;
+      const nextBatch = Math.min(FACE_PAGE_SIZE, remaining);
+      faceLoadMoreBtn.textContent = `Load ${nextBatch} more match${nextBatch === 1 ? '' : 'es'}`;
+      faceLoadMoreWrap.style.display = 'flex';
+    } else {
+      faceLoadMoreWrap.style.display = 'none';
+    }
+    faceResultsCount.textContent = `Showing ${faceShownCount} of ${total} matches`;
+
+    // Unlock banner: shown while blurred cards exist in the current view
+    if (!signedIn && faceShownCount > 1) {
+      unlockBannerText.innerHTML = `🔒 <strong>Half your matches are blurred</strong> — sign in free to reveal every lookalike`;
       unlockBanner.style.display = 'flex';
     } else {
       unlockBanner.style.display = 'none';
     }
-    faceResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  faceLoadMoreBtn?.addEventListener('click', () => {
+    faceLoadMoreBtn.disabled = true;
+    renderNextFacePage();
+    faceLoadMoreBtn.disabled = false;
+  });
+
+  function buildTop10Text(): string {
+    const top = allFaceResults.slice(0, 10);
+    const lines = top.map((c, i) => {
+      const name = (c.name || c.username) as string;
+      const handle = c.username as string;
+      const matchPct = c.matchPct != null ? (c.matchPct as number) : null;
+      const matchTag = matchPct != null && matchPct > 0 ? ` — ${matchPct}% match` : '';
+      return `${i + 1}. ${name} (@${handle})${matchTag}\n   https://onlyfans.com/${handle}`;
+    });
+    return `My top ${top.length} OnlyFans lookalike matches from findbyface.org:\n\n${lines.join('\n')}\n\nFind yours free at https://findbyface.org`;
+  }
+
+  copyResultsBtn?.addEventListener('click', async () => {
+    // Gate behind sign-in
+    if (!isSignedIn()) {
+      authModal.style.display = 'flex';
+      return;
+    }
+    if (allFaceResults.length === 0) return;
+
+    const text = buildTop10Text();
+    const labelEl = copyResultsBtn.querySelector('.copy-label') as HTMLElement | null;
+    const original = labelEl?.textContent ?? 'Copy top 10';
+
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // Fallback for older browsers / insecure contexts
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch { /* ignore */ }
+      document.body.removeChild(ta);
+    }
+
+    copyResultsBtn.classList.add('copied');
+    if (labelEl) labelEl.textContent = 'Copied!';
+    if (shareCta) {
+      shareCta.style.display = 'flex';
+      shareCta.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    setTimeout(() => {
+      copyResultsBtn.classList.remove('copied');
+      if (labelEl) labelEl.textContent = original;
+    }, 1800);
+  });
+
+  function updateCopyBtn(): void {
+    if (!copyResultsBtn) return;
+    const labelEl = copyResultsBtn.querySelector('.copy-label') as HTMLElement | null;
+    if (isSignedIn()) {
+      copyResultsBtn.classList.remove('locked');
+      if (labelEl) labelEl.textContent = 'Copy top 10';
+      copyResultsBtn.title = 'Copy your top 10 closest matches';
+    } else {
+      copyResultsBtn.classList.add('locked');
+      if (labelEl) labelEl.textContent = 'Copy top 10';
+      copyResultsBtn.title = 'Sign in free to copy your top 10 matches';
+    }
   }
 </script>
 
@@ -1027,6 +1158,129 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     text-decoration: none; white-space: nowrap; transition: background 0.2s;
   }
   .unlock-banner-btn:hover { background: var(--accent-light); }
+
+  .face-load-more-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 28px;
+  }
+  .face-load-more-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 13px 40px;
+    border-radius: 999px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.2s;
+  }
+  .face-load-more-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent-light);
+    box-shadow: 0 8px 24px rgba(124,58,237,0.2);
+    transform: translateY(-2px);
+  }
+  .face-load-more-btn:disabled { opacity: 0.6; cursor: default; }
+  .face-results-count { color: var(--text-muted); font-size: 13px; margin: 0; }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .copy-results-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.14), rgba(236,72,153,0.12));
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 16px;
+    border-radius: 999px;
+    font-size: 13.5px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s, background 0.2s;
+  }
+  .copy-results-btn:hover {
+    border-color: var(--accent);
+    box-shadow: 0 6px 20px rgba(124,58,237,0.25);
+    transform: translateY(-1px);
+  }
+  .copy-results-btn .copy-ico { font-size: 15px; line-height: 1; }
+  .copy-results-btn.locked .copy-ico::before { content: '🔒'; }
+  .copy-results-btn.locked .copy-ico { font-size: 0; }
+  .copy-results-btn.locked .copy-ico::before { font-size: 15px; }
+  .copy-results-btn.copied {
+    border-color: var(--success);
+    color: var(--success);
+    background: rgba(34,197,94,0.12);
+  }
+
+  .share-cta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 0 0 20px;
+    padding: 14px 18px;
+    border-radius: var(--radius);
+    background: linear-gradient(135deg, rgba(124,58,237,0.12), rgba(255,69,0,0.10));
+    border: 1px solid var(--border);
+    animation: shareCtaIn 0.35s ease;
+  }
+  @keyframes shareCtaIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .share-cta-step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-pink));
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+  }
+  .share-cta-arrow { color: var(--accent-light); font-weight: 700; }
+  .share-cta-text {
+    flex: 1 1 200px;
+    margin: 0;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .share-reddit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #ff4500;
+    color: #fff;
+    padding: 9px 16px;
+    border-radius: 999px;
+    font-size: 13.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+  }
+  .share-reddit-btn:hover {
+    background: #ff5414;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(255,69,0,0.3);
+  }
 </style>
 
 <style is:global>

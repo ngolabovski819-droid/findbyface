@@ -44,7 +44,7 @@ export const POST: APIRoute = async ({ request }) => {
       const rpcResp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/match_faces`, {
         method: 'POST',
         headers: SUPABASE_HEADERS(SUPABASE_KEY),
-        body: JSON.stringify({ query_embedding: vectorStr, match_count: 12 }),
+        body: JSON.stringify({ query_embedding: vectorStr, match_count: 100 }),
       });
 
       if (rpcResp.ok) {
@@ -69,12 +69,12 @@ export const POST: APIRoute = async ({ request }) => {
       // fall through to fallback
     }
 
-    // Fallback: fetch 200 creators with embeddings and compute cosine similarity server-side
+    // Fallback: fetch creators with embeddings and compute cosine similarity server-side
     const embParams = new URLSearchParams({
       select: 'id,username,name,avatar,isverified,subscribeprice,favoritedcount,face_embedding',
       'face_embedding': 'not.is.null',
       order: 'favoritedcount.desc',
-      limit: '200',
+      limit: '1000',
     });
 
     const embResp = await fetch(`${SUPABASE_URL}/rest/v1/onlyfans_profiles?${embParams}`, {
@@ -95,7 +95,7 @@ export const POST: APIRoute = async ({ request }) => {
             return { ...c, _sim: sim };
           })
           .sort((a, b) => (b._sim as number) - (a._sim as number))
-          .slice(0, 12);
+          .slice(0, 100);
 
         results = scored.map(c => ({
           id:             c.id,
@@ -119,7 +119,7 @@ export const POST: APIRoute = async ({ request }) => {
   const params = new URLSearchParams({
     select: 'id,username,name,avatar,isverified,subscribeprice,favoritedcount',
     order:  'favoritedcount.desc',
-    limit:  '12',
+    limit:  '100',
   });
 
   const resp = await fetch(`${SUPABASE_URL}/rest/v1/onlyfans_profiles?${params}`, {

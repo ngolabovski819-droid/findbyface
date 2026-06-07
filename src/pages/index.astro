@@ -102,7 +102,11 @@ const faqJsonLd = JSON.stringify({
   <StatsBar />
 
   <section class="browse-section">
-    <h2 class="section-title">Browse by Category</h2>
+    <div class="browse-head">
+      <span class="eyebrow">Explore</span>
+      <h2 class="section-title">Browse by Category</h2>
+      <p class="browse-sub">Jump straight to a vibe — from blonde and petite to MILF, Latina, and dozens more.</p>
+    </div>
     <CategoryChips />
   </section>
 
@@ -482,6 +486,22 @@ const faqJsonLd = JSON.stringify({
     padding: 0 20px;
   }
 
+  .browse-head {
+    text-align: center;
+    max-width: 620px;
+    margin: 0 auto 28px;
+  }
+
+  .browse-head .section-title {
+    margin: 8px 0 10px;
+  }
+
+  .browse-sub {
+    color: var(--text-muted);
+    font-size: 0.98rem;
+    line-height: 1.6;
+  }
+
   .section-title {
     font-size: 1.4rem;
     margin-bottom: 24px;
@@ -489,12 +509,12 @@ const faqJsonLd = JSON.stringify({
 
   .creators-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 20px;
   }
 
-  @media (max-width: 900px) { .creators-grid { grid-template-columns: repeat(3, 1fr); } }
-  @media (max-width: 600px) { .creators-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+  @media (max-width: 900px) { .creators-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 600px) { .creators-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } }
 
   .load-more-wrap {
     display: flex;
