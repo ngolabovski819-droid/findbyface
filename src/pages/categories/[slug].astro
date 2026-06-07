@@ -11,6 +11,8 @@ if (!slug) return Astro.redirect('/');
 const category = slugToCategory(slug);
 if (!category) return Astro.redirect('/');
 
+Astro.response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
+
 const SUPABASE_URL = import.meta.env.SUPABASE_URL?.replace(/\/+$/, '');
 const SUPABASE_KEY = import.meta.env.SUPABASE_KEY;
 
@@ -29,7 +31,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     params.set('select', 'id,username,name,avatar,isverified,subscribeprice,favoritedcount');
     params.set('or', `(${exprs.join(',')})`);
     params.set('order', 'favoritedcount.desc');
-    params.set('limit', '50');
+    params.set('limit', '20');
 
     const resp = await fetch(`${SUPABASE_URL}/rest/v1/onlyfans_profiles?${params}`, {
       headers: {
@@ -44,7 +46,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
       const raw = await resp.json();
       const cr = resp.headers.get('Content-Range') ?? '';
       total = parseInt(cr.split('/')[1] ?? '0') || 0;
-      hasMore = total > 50;
+      hasMore = total > 20;
       creators = raw.map((c: Record<string, unknown>) => ({
         id: c.id,
         username: c.username,

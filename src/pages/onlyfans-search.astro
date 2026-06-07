@@ -340,8 +340,9 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
 
   .results-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 20px;
+    align-items: start;
   }
 
   .loading-msg { grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 60px 0; }
@@ -357,23 +358,38 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
 
   .load-more-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-  /* Card styles */
-  .creator-card { background: var(--surface); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border); transition: transform 0.2s, box-shadow 0.2s; }
-  .creator-card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px var(--accent-glow); }
-  .card-img-wrap { aspect-ratio: 3/4; overflow: hidden; background: var(--surface-raised); }
-  .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .card-body { padding: 12px 14px; }
-  .creator-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .username { color: var(--text-muted); font-size: 12px; margin-bottom: 6px; }
-  .price { font-weight: 700; font-size: 15px; margin-bottom: 10px; color: var(--text-muted); }
-  .price-free { color: var(--success); }
-  .view-btn { display: block; text-align: center; background: var(--accent); color: #fff; border-radius: 8px; padding: 8px; font-size: 13px; font-weight: 600; transition: background 0.2s; }
-  .view-btn:hover { background: var(--accent-light); }
-
   @media (max-width: 1000px) {
     .search-layout { grid-template-columns: 1fr; }
     .filters { position: static; }
-    .results-grid { grid-template-columns: repeat(3, 1fr); }
+    .results-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
-  @media (max-width: 640px) { .results-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+  @media (max-width: 640px) { .results-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; } }
+  @media (max-width: 380px) { .results-grid { gap: 10px; } }
+</style>
+
+<style is:global>
+  /* Cards are injected via insertAdjacentHTML, so they don't get Astro's
+     scoped attribute — these must be global to apply. */
+  #resultsGrid .creator-card {
+    background: var(--surface); border-radius: var(--radius-lg);
+    overflow: hidden; border: 1px solid var(--border);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex; flex-direction: column; width: 100%; min-width: 0;
+  }
+  #resultsGrid .creator-card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px var(--accent-glow); }
+  #resultsGrid .card-img-wrap { aspect-ratio: 3/4; overflow: hidden; position: relative; background: var(--surface-raised); }
+  #resultsGrid .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #resultsGrid .match-badge {
+    position: absolute; top: 8px; left: 8px;
+    background: #22c55e; color: #fff;
+    font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+    letter-spacing: 0.02em; pointer-events: none;
+  }
+  #resultsGrid .card-body { padding: 12px 14px; display: flex; flex-direction: column; flex: 1; }
+  #resultsGrid .creator-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+  #resultsGrid .username { color: var(--text-muted); font-size: 12px; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #resultsGrid .price { font-weight: 700; font-size: 15px; margin-bottom: 10px; color: var(--text-muted); }
+  #resultsGrid .price-free { color: var(--success); }
+  #resultsGrid .view-btn { display: block; text-align: center; background: var(--accent); color: #fff; border-radius: 8px; padding: 8px; font-size: 13px; font-weight: 600; transition: background 0.2s; text-decoration: none; margin-top: auto; }
+  #resultsGrid .view-btn:hover { background: var(--accent-light); }
 </style>

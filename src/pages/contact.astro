@@ -1,0 +1,227 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base
+  title="Contact findbyface — Support, Feedback & Removal Requests"
+  description="Get in touch with the findbyface team. Send questions, feedback, content concerns, or DMCA and removal requests."
+  canonical="https://findbyface.org/contact/"
+>
+  <article class="prose-page contact-page">
+    <div class="page-head">
+      <h1>Contact <span class="gradient-text">us</span></h1>
+      <p>Questions, feedback, or a content concern? Send us a message and we'll get back to you.</p>
+    </div>
+
+    <div class="contact-grid">
+      <aside class="contact-info">
+        <div class="info-card">
+          <span class="info-emoji">💬</span>
+          <h3>General &amp; support</h3>
+          <p>Ideas, questions, or anything not working as expected — we'd love to hear from you.</p>
+        </div>
+        <div class="info-card">
+          <span class="info-emoji">🛡️</span>
+          <h3>Removal &amp; DMCA</h3>
+          <p>Want an image removed or need to file a copyright notice? Include "DMCA" or "Removal" in your subject and see our <a href="/dmca/">DMCA policy</a>.</p>
+        </div>
+        <div class="info-card">
+          <span class="info-emoji">🔒</span>
+          <h3>Privacy</h3>
+          <p>Read how we handle your data in our <a href="/privacy-policy/">Privacy Policy</a>.</p>
+        </div>
+      </aside>
+
+      <form class="contact-form" id="contactForm" novalidate>
+        <div class="field">
+          <label for="cName">Name</label>
+          <input type="text" id="cName" name="name" maxlength="120" autocomplete="name" required />
+        </div>
+        <div class="field">
+          <label for="cEmail">Email</label>
+          <input type="email" id="cEmail" name="email" maxlength="200" autocomplete="email" required />
+        </div>
+        <div class="field">
+          <label for="cSubject">Subject</label>
+          <input type="text" id="cSubject" name="subject" maxlength="160" />
+        </div>
+        <div class="field">
+          <label for="cMessage">Message</label>
+          <textarea id="cMessage" name="message" rows="6" maxlength="5000" required></textarea>
+        </div>
+        <!-- Honeypot: hidden from users, catches bots -->
+        <div class="hp-field" aria-hidden="true">
+          <label for="cCompany">Company</label>
+          <input type="text" id="cCompany" name="company" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">Send message</button>
+        <p class="form-status" id="formStatus" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </article>
+</Base>
+
+<script>
+  const form = document.getElementById('contactForm') as HTMLFormElement;
+  const btn = document.getElementById('submitBtn') as HTMLButtonElement;
+  const status = document.getElementById('formStatus') as HTMLParagraphElement;
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    status.textContent = '';
+    status.className = 'form-status';
+
+    const data = {
+      name: (document.getElementById('cName') as HTMLInputElement).value,
+      email: (document.getElementById('cEmail') as HTMLInputElement).value,
+      subject: (document.getElementById('cSubject') as HTMLInputElement).value,
+      message: (document.getElementById('cMessage') as HTMLTextAreaElement).value,
+      company: (document.getElementById('cCompany') as HTMLInputElement).value,
+    };
+
+    if (!data.name.trim() || !data.email.trim() || data.message.trim().length < 10) {
+      status.textContent = 'Please fill in your name, email, and a message (at least 10 characters).';
+      status.classList.add('error');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const out = await res.json().catch(() => ({}));
+
+      if (res.ok && out.ok) {
+        form.reset();
+        status.textContent = 'Thanks! Your message has been sent. We\u2019ll get back to you soon.';
+        status.classList.add('success');
+      } else {
+        status.textContent = out.error || 'Something went wrong. Please try again later.';
+        status.classList.add('error');
+      }
+    } catch {
+      status.textContent = 'Network error. Please check your connection and try again.';
+      status.classList.add('error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Send message';
+    }
+  });
+</script>
+
+<style>
+  .contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .info-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+  }
+
+  .info-emoji { font-size: 1.5rem; display: block; margin-bottom: 8px; }
+  .info-card h3 { font-size: 1.05rem; margin-bottom: 6px; }
+  .info-card p { color: var(--text-muted); font-size: 14px; line-height: 1.6; }
+  .info-card a { color: var(--accent-light); text-decoration: underline; }
+  .info-card a:hover { color: var(--accent-pink); }
+
+  .contact-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+
+  .field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .field input,
+  .field textarea {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 15px;
+    padding: 12px 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+
+  .field textarea { resize: vertical; min-height: 120px; }
+
+  .field input:focus,
+  .field textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .hp-field {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  .submit-btn {
+    margin-top: 4px;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    padding: 14px 28px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.2s;
+    box-shadow: 0 8px 24px rgba(124,58,237,0.35);
+  }
+
+  .submit-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(124,58,237,0.5);
+  }
+
+  .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .form-status {
+    font-size: 14px;
+    margin-top: 2px;
+    min-height: 20px;
+  }
+
+  .form-status.success { color: var(--success); }
+  .form-status.error { color: #f87171; }
+
+  @media (max-width: 760px) {
+    .contact-grid { grid-template-columns: 1fr; }
+  }
+</style>

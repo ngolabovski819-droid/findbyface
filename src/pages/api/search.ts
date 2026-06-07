@@ -99,6 +99,9 @@ export const GET: APIRoute = async ({ url }) => {
   cache.set(cacheKey, { data, ts: Date.now() });
 
   return new Response(JSON.stringify(data), {
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+    },
   });
 };

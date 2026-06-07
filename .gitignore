@@ -6,3 +6,5 @@ dist/
 *.csv
 cookies.json
 failed_batch.json
+models/*.onnx
+logs/
