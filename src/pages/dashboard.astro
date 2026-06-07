@@ -152,18 +152,19 @@ import Base from '../layouts/Base.astro';
           ? `<div class="search-results" id="sr-${i}" hidden><div class="mini-grid">${cards}</div></div>`
           : '';
 
+        const hasResults = results.length > 0;
         return `<div class="search-entry">
-          <button class="search-row" type="button" data-idx="${i}" aria-expanded="false">
+          <button class="search-row${hasResults ? '' : ' no-preview'}" type="button" data-idx="${i}" data-has="${hasResults ? '1' : '0'}" aria-expanded="false">
             <span class="search-ico">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg>
             </span>
             <span class="search-meta">
               <span class="search-label">${escapeHtml(h.label || 'Photo search')}</span>
-              <span class="search-date">${relTime(h.date)} · ${Number(h.count || 0)} matches</span>
+              <span class="search-date">${relTime(h.date)} · ${Number(h.count || 0)} matches${hasResults ? '' : ' · preview unavailable'}</span>
             </span>
-            <span class="search-chev">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-            </span>
+            ${hasResults
+              ? `<span class="search-chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span>`
+              : `<span class="search-rerun">Search again ›</span>`}
           </button>
           ${panel}
         </div>`;
@@ -172,6 +173,11 @@ import Base from '../layouts/Base.astro';
       // Toggle expand/collapse
       list.querySelectorAll('.search-row').forEach(row => {
         row.addEventListener('click', () => {
+          // Legacy entries without cached results → go run a fresh search
+          if (row.getAttribute('data-has') !== '1') {
+            window.location.href = '/';
+            return;
+          }
           const idx = row.getAttribute('data-idx');
           const panel = document.getElementById('sr-' + idx);
           const open = row.getAttribute('aria-expanded') === 'true';
@@ -302,6 +308,7 @@ import Base from '../layouts/Base.astro';
   .search-date { font-size: 12px; color: var(--text-muted); }
   .search-chev { color: var(--text-muted); flex-shrink: 0; display: flex; transition: transform 0.2s; }
   .search-row[aria-expanded="true"] .search-chev { transform: rotate(180deg); }
+  .search-rerun { color: var(--accent-light); font-size: 12.5px; font-weight: 600; flex-shrink: 0; white-space: nowrap; }
 
   /* Cached results panel */
   .search-results { padding: 4px 6px 14px; }
