@@ -1,0 +1,239 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base
+  title="Settings — findbyface"
+  description="Manage your findbyface account, privacy and data."
+  canonical="https://findbyface.org/settings/"
+>
+  <section class="settings">
+    <!-- Signed-out gate -->
+    <div class="dash-gate" id="setGate">
+      <div class="gate-card">
+        <h1>Sign in to manage settings</h1>
+        <p>Your account, privacy controls and data live here.</p>
+        <a href="/" class="gate-btn">Go to homepage</a>
+      </div>
+    </div>
+
+    <div class="set-main" id="setMain" style="display:none">
+      <!-- Profile -->
+      <div class="set-panel">
+        <h2>Profile</h2>
+        <label class="set-field-label" for="nameInput">Name</label>
+        <div class="set-inline">
+          <input type="text" id="nameInput" class="set-input" maxlength="60" autocomplete="name" />
+          <button class="set-btn primary" id="saveNameBtn">Save changes</button>
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div class="set-panel">
+        <h2>Email</h2>
+        <p class="set-field-label">Your email address</p>
+        <p class="set-strong" id="setEmail">—</p>
+      </div>
+
+      <!-- Subscription -->
+      <div class="set-panel">
+        <h2>Subscription</h2>
+        <div class="set-row-flex">
+          <div>
+            <p class="set-field-label">Current plan</p>
+            <p class="set-strong">Free Plan</p>
+          </div>
+          <a href="/#pricing" class="set-btn primary">Upgrade</a>
+        </div>
+      </div>
+
+      <!-- Active Sessions -->
+      <div class="set-panel">
+        <h2>Active Sessions</h2>
+        <div class="session-row">
+          <div>
+            <p class="set-strong session-ua" id="sessionUa">—</p>
+            <p class="set-field-label" id="sessionMeta">—</p>
+          </div>
+          <span class="session-current">Current</span>
+        </div>
+        <button class="set-btn outline-warn" id="logoutAllBtn">Logout from all devices</button>
+      </div>
+
+      <!-- Saved Data -->
+      <div class="set-panel">
+        <h2>Saved Data</h2>
+        <div class="set-row-flex">
+          <div>
+            <p class="set-strong">Clear all saved data</p>
+            <p class="set-field-label">Remove your search history saved in this browser in one go.</p>
+          </div>
+          <button class="set-btn outline-warn" id="clearDataBtn">🗑 Clear All</button>
+        </div>
+      </div>
+
+      <!-- Danger Zone -->
+      <div class="set-panel danger-panel">
+        <h2 class="danger-title">Danger Zone</h2>
+        <div class="set-row-flex">
+          <div>
+            <p class="set-strong">Delete account</p>
+            <p class="set-field-label">Permanently delete your account, cancel subscriptions, and remove all data.</p>
+          </div>
+          <button class="set-btn danger" id="deleteBtn">Delete</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<script>
+  function init() {
+    let user = null;
+    try { user = JSON.parse(localStorage.getItem('fbf_user') || 'null'); } catch { /* noop */ }
+
+    const gate = document.getElementById('setGate');
+    const main = document.getElementById('setMain');
+    if (!user) { gate.style.display = 'flex'; main.style.display = 'none'; return; }
+
+    gate.style.display = 'none';
+    main.style.display = 'block';
+
+    // Profile
+    const nameInput = document.getElementById('nameInput') as HTMLInputElement;
+    nameInput.value = user.name || '';
+    document.getElementById('setEmail')!.textContent = user.email || '—';
+
+    document.getElementById('saveNameBtn')?.addEventListener('click', (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      const newName = nameInput.value.trim();
+      if (!newName) { nameInput.focus(); return; }
+      try {
+        const u = JSON.parse(localStorage.getItem('fbf_user') || '{}');
+        u.name = newName;
+        localStorage.setItem('fbf_user', JSON.stringify(u));
+      } catch { /* noop */ }
+      const original = btn.textContent;
+      btn.textContent = 'Saved ✓';
+      btn.disabled = true;
+      setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1600);
+    });
+
+    // Active session
+    const ua = navigator.userAgent;
+    document.getElementById('sessionUa')!.textContent = ua.length > 70 ? ua.slice(0, 70) + '…' : ua;
+    document.getElementById('sessionMeta')!.textContent =
+      `${navigator.platform || 'This device'} · ${new Date().toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}`;
+
+    function signOut() {
+      localStorage.removeItem('fbf_user');
+      localStorage.removeItem('fbf_searches');
+      localStorage.removeItem('fbf_history');
+      window.location.href = '/';
+    }
+
+    document.getElementById('logoutAllBtn')?.addEventListener('click', signOut);
+
+    document.getElementById('clearDataBtn')?.addEventListener('click', (e) => {
+      localStorage.removeItem('fbf_history');
+      localStorage.removeItem('fbf_searches');
+      const btn = e.currentTarget as HTMLButtonElement;
+      btn.textContent = 'Cleared ✓';
+      btn.disabled = true;
+    });
+
+    document.getElementById('deleteBtn')?.addEventListener('click', () => {
+      const ok = window.confirm('Permanently delete your account and all saved data? This cannot be undone.');
+      if (!ok) return;
+      // No app-side user record — clear local session and return home.
+      signOut();
+    });
+  }
+  init();
+</script>
+
+<style>
+  .settings { max-width: 620px; margin: 0 auto; padding: 100px 20px 80px; min-height: 70vh; }
+
+  .dash-gate { display: flex; justify-content: center; padding: 40px 0; }
+  .gate-card {
+    text-align: center; max-width: 440px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 40px 32px;
+  }
+  .gate-card h1 { font-size: 1.5rem; margin-bottom: 12px; }
+  .gate-card p { color: var(--text-muted); margin-bottom: 24px; }
+  .gate-btn {
+    display: inline-block; background: linear-gradient(135deg, var(--accent), var(--accent-light));
+    color: #fff; padding: 11px 26px; border-radius: 999px; font-weight: 700;
+    box-shadow: 0 6px 20px rgba(124,58,237,0.3);
+  }
+
+  .set-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 22px; margin-bottom: 16px;
+  }
+  .set-panel h2 { font-size: 1rem; margin-bottom: 16px; }
+
+  .set-field-label { color: var(--text-muted); font-size: 13px; margin-bottom: 4px; }
+  .set-strong { font-weight: 700; font-size: 14.5px; color: var(--text); }
+
+  .set-inline { display: flex; gap: 12px; align-items: center; }
+  .set-input {
+    flex: 1;
+    background: var(--surface-raised); border: 1px solid var(--border);
+    color: var(--text); border-radius: 9px; padding: 10px 13px;
+    font-size: 14px; font-family: inherit; min-width: 0;
+    transition: border-color 0.2s;
+  }
+  .set-input:focus { outline: none; border-color: var(--accent); }
+
+  .set-row-flex {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap;
+  }
+
+  .set-btn {
+    background: var(--surface-raised); border: 1px solid var(--border);
+    color: var(--text); padding: 9px 18px; border-radius: 9px;
+    font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit;
+    white-space: nowrap; transition: border-color 0.2s, background 0.2s, filter 0.2s;
+    text-decoration: none; display: inline-block;
+  }
+  .set-btn:hover { border-color: var(--accent); }
+  .set-btn:disabled { opacity: 0.75; cursor: default; }
+
+  .set-btn.primary {
+    background: transparent; border-color: var(--accent); color: var(--accent-light);
+  }
+  .set-btn.primary:hover { background: rgba(124,58,237,0.12); }
+
+  .set-btn.outline-warn { border-color: rgba(245,158,11,0.5); color: #f59e0b; }
+  .set-btn.outline-warn:hover { background: rgba(245,158,11,0.1); border-color: #f59e0b; }
+
+  .set-btn.danger { border-color: rgba(248,113,113,0.5); color: #f87171; }
+  .set-btn.danger:hover { background: rgba(248,113,113,0.1); border-color: #f87171; }
+
+  /* Active session */
+  .session-row {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px; margin-bottom: 16px;
+  }
+  .session-ua { word-break: break-word; margin-bottom: 2px; }
+  .session-current {
+    background: rgba(124,58,237,0.16); color: var(--accent-light);
+    font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+    flex-shrink: 0; white-space: nowrap;
+  }
+  #logoutAllBtn { width: 100%; }
+
+  /* Danger zone */
+  .danger-panel { border-color: rgba(248,113,113,0.35); }
+  .danger-title { color: #f87171; }
+
+  @media (max-width: 480px) {
+    .set-inline { flex-direction: column; align-items: stretch; }
+    .set-inline .set-btn { width: 100%; }
+    .session-current { align-self: flex-start; }
+  }
+</style>

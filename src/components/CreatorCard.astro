@@ -52,7 +52,7 @@ const profileUrl = `https://onlyfans.com/${encodeURIComponent(username)}`;
   </div>
   <div class="card-body">
     <p class="creator-name">
-      {isVerified && <span class="verified" title="Verified">✓ </span>}{name}
+      {isVerified && <span class="verified" title="Verified">✓</span>}{name}
     </p>
     <p class="username">@{username}</p>
     <p class={`price ${priceLabel === 'FREE' ? 'price-free' : ''}`}>{priceLabel}</p>
@@ -64,17 +64,35 @@ const profileUrl = `https://onlyfans.com/${encodeURIComponent(username)}`;
 
 <style is:global>
   .creator-card {
+    position: relative;
     background: var(--surface);
     border-radius: var(--radius-lg);
     overflow: hidden;
     border: 1px solid var(--border);
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.28s cubic-bezier(0.22,1,0.36,1), box-shadow 0.28s ease, border-color 0.28s ease;
+  }
+
+  /* Gradient ring on hover */
+  .creator-card::after {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: var(--radius-lg);
+    padding: 1px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-pink));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.28s ease;
+    pointer-events: none;
   }
 
   .creator-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 32px var(--accent-glow);
+    transform: translateY(-6px);
+    box-shadow: 0 16px 40px rgba(124,58,237,0.28);
+    border-color: transparent;
   }
+  .creator-card:hover::after { opacity: 1; }
 
   .creator-card .card-img-wrap {
     aspect-ratio: 3/4;
@@ -86,38 +104,66 @@ const profileUrl = `https://onlyfans.com/${encodeURIComponent(username)}`;
   .creator-card .card-img-wrap img {
     width: 100%; height: 100%;
     object-fit: cover; display: block;
+    transition: transform 0.5s cubic-bezier(0.22,1,0.36,1);
+  }
+  .creator-card:hover .card-img-wrap img { transform: scale(1.06); }
+
+  /* Bottom scrim for depth */
+  .creator-card .card-img-wrap::after {
+    content: '';
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 45%;
+    background: linear-gradient(to top, rgba(10,10,15,0.55), transparent);
+    pointer-events: none;
   }
 
   .creator-card .match-badge {
-    position: absolute; top: 8px; right: 8px;
-    background: rgba(124,58,237,0.9);
+    position: absolute; top: 10px; right: 10px;
+    z-index: 2;
+    background: linear-gradient(135deg, var(--accent), var(--accent-pink));
     color: #fff;
-    font-size: 11px; font-weight: 700;
-    padding: 3px 8px; border-radius: 20px;
+    font-size: 11px; font-weight: 800;
+    padding: 4px 10px; border-radius: 999px;
+    letter-spacing: 0.02em;
+    box-shadow: 0 4px 14px rgba(124,58,237,0.45);
   }
 
-  .creator-card .card-body { padding: 12px 14px; }
+  .creator-card .card-body { padding: 14px 15px 15px; }
 
   .creator-card .creator-name {
     font-family: 'Syne', sans-serif;
     font-weight: 700;
-    font-size: 14px;
+    font-size: 14.5px;
     margin-bottom: 2px;
+    display: flex; align-items: center; gap: 4px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
-  .creator-card .verified { color: var(--accent); }
-  .creator-card .username { color: var(--text-muted); font-size: 12px; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .creator-card .price { font-weight: 700; font-size: 15px; margin-bottom: 10px; color: var(--text-muted); }
+  .creator-card .verified {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 15px; height: 15px; flex: 0 0 15px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-pink));
+    color: #fff; font-size: 9px; font-weight: 900;
+  }
+  .creator-card .username { color: var(--text-muted); font-size: 12px; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .creator-card .price { font-weight: 800; font-size: 15px; margin-bottom: 12px; color: var(--text-muted); }
   .creator-card .price-free { color: var(--success); }
 
   .creator-card .view-btn {
     display: block; text-align: center;
-    background: var(--accent); color: #fff;
-    border-radius: 8px; padding: 8px;
-    font-size: 13px; font-weight: 600;
-    transition: background 0.2s;
+    background: linear-gradient(135deg, var(--accent), var(--accent-light));
+    color: #fff;
+    border-radius: 10px; padding: 9px;
+    font-size: 13px; font-weight: 700;
+    letter-spacing: 0.01em;
+    box-shadow: 0 4px 14px rgba(124,58,237,0.25);
+    transition: filter 0.2s, transform 0.2s, box-shadow 0.2s;
   }
 
-  .creator-card .view-btn:hover { background: var(--accent-light); }
+  .creator-card .view-btn:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(124,58,237,0.4);
+  }
 </style>

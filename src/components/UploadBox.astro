@@ -264,6 +264,21 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   function incrementSearchCount(): void {
     if (!isSignedIn()) localStorage.setItem('fbf_searches', String(getSearchCount() + 1));
   }
+  function recordSearchHistory(count: number, topName?: string): void {
+    if (!isSignedIn()) return;
+    try {
+      const raw = localStorage.getItem('fbf_history');
+      const history = raw ? JSON.parse(raw) as Array<Record<string, unknown>> : [];
+      history.unshift({
+        type: 'image',
+        label: topName ? `Photo search · top match ${topName}` : 'Photo search',
+        count,
+        date: new Date().toISOString(),
+      });
+      // Keep most recent 25
+      localStorage.setItem('fbf_history', JSON.stringify(history.slice(0, 25)));
+    } catch { /* ignore */ }
+  }
   function showAuthModal(): void { 
     if (googleAuthBtn)   googleAuthBtn.href   = getGoogleAuthUrl();
     if (unlockBannerBtn) unlockBannerBtn.href = getGoogleAuthUrl();
@@ -518,7 +533,10 @@ if (SUPABASE_URL && SUPABASE_KEY) {
       uploadScanning.style.display = 'none';
       uploadDone.style.display = 'flex';
       setProgressLabel('Analyzing your image and comparing with millions of profiles to find lookalikes.');
-      showResults(data.results ?? [], data.mode);
+      const results = data.results ?? [];
+      const topName = results[0] ? ((results[0].name || results[0].username) as string) : undefined;
+      recordSearchHistory(results.length, topName);
+      showResults(results, data.mode);
     } catch (err: any) {
       stopScanFX();
       uploadScanning.style.display = 'none';
@@ -553,7 +571,6 @@ if (SUPABASE_URL && SUPABASE_KEY) {
             style="filter:blur(10px);transform:scale(1.08);"
             onerror="if(this.src!=='/no-image.png'){this.src='/no-image.png';}">
           ${matchBadge}
-          <button class="heart-btn" aria-label="Save" onclick="event.stopPropagation()">♡</button>
           <div class="lock-overlay" onclick="document.getElementById('authModal').style.display='flex'">
             <button class="unlock-btn">🔓 Unlock</button>
           </div>
@@ -573,7 +590,6 @@ if (SUPABASE_URL && SUPABASE_KEY) {
           decoding="async" referrerpolicy="no-referrer"
           onerror="if(this.src!=='/no-image.png'){this.src='/no-image.png';}">
         ${matchBadge}
-        <button class="heart-btn" aria-label="Save">♡</button>
       </div>
       <div class="card-body">
         <p class="creator-name">${(c.name || c.username) as string}</p>
@@ -1109,14 +1125,6 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
     letter-spacing: 0.02em;
   }
-  .heart-btn {
-    position: absolute; top: 8px; right: 8px;
-    background: rgba(0,0,0,0.45); border: none; cursor: pointer;
-    border-radius: 50%; width: 30px; height: 30px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 15px; color: #fff; transition: background 0.2s;
-  }
-  .heart-btn:hover { background: rgba(236,72,153,0.8); }
   .card-body { padding: 12px 14px; }
   .creator-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .username { color: var(--text-muted); font-size: 12px; margin-bottom: 6px; }
@@ -1286,20 +1294,36 @@ if (SUPABASE_URL && SUPABASE_KEY) {
 <style is:global>
   /* Card styles for dynamically injected innerHTML — Astro scoped CSS doesn't reach these */
   #faceResults .creator-card {
+    position: relative;
     background: var(--surface);
     border-radius: var(--radius-lg);
     overflow: hidden;
     border: 1px solid var(--border);
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.28s cubic-bezier(0.22,1,0.36,1), box-shadow 0.28s ease, border-color 0.28s ease;
     display: flex;
     flex-direction: column;
     width: 100%;
     min-width: 0;
   }
-  #faceResults .creator-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 32px var(--accent-glow);
+  #faceResults .creator-card::after {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: var(--radius-lg);
+    padding: 1px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-pink));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.28s ease;
+    pointer-events: none;
   }
+  #faceResults .creator-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 16px 40px rgba(124,58,237,0.28);
+    border-color: transparent;
+  }
+  #faceResults .creator-card:hover::after { opacity: 1; }
   #faceResults .card-img-wrap {
     aspect-ratio: 3/4;
     overflow: hidden;
@@ -1309,41 +1333,51 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   #faceResults .card-img-wrap img {
     width: 100%; height: 100%;
     object-fit: cover; display: block;
+    transition: transform 0.5s cubic-bezier(0.22,1,0.36,1);
+  }
+  #faceResults .creator-card:not(.locked):hover .card-img-wrap img { transform: scale(1.06); }
+  #faceResults .card-img-wrap::after {
+    content: '';
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 45%;
+    background: linear-gradient(to top, rgba(10,10,15,0.55), transparent);
+    pointer-events: none;
   }
   #faceResults .match-badge {
-    position: absolute; top: 8px; left: 8px;
-    background: #22c55e; color: #fff;
-    font-size: 12px; font-weight: 700;
+    position: absolute; top: 10px; left: 10px;
+    z-index: 2;
+    background: linear-gradient(135deg, var(--accent), var(--accent-pink));
+    color: #fff;
+    font-size: 12px; font-weight: 800;
     padding: 4px 10px; border-radius: 999px;
     letter-spacing: 0.02em; pointer-events: none;
+    box-shadow: 0 4px 14px rgba(124,58,237,0.45);
   }
-  #faceResults .heart-btn {
-    position: absolute; top: 8px; right: 8px;
-    background: rgba(0,0,0,0.45); border: none; cursor: pointer;
-    border-radius: 50%; width: 30px; height: 30px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px; color: #fff; transition: background 0.2s;
-  }
-  #faceResults .heart-btn:hover { background: rgba(236,72,153,0.8); }
-  #faceResults .card-body { padding: 12px 14px; display: flex; flex-direction: column; flex: 1; }
+  #faceResults .card-body { padding: 14px 15px 15px; display: flex; flex-direction: column; flex: 1; }
   #faceResults .creator-name {
     font-family: 'Syne', sans-serif; font-weight: 700;
-    font-size: 14px; margin-bottom: 2px;
+    font-size: 14.5px; margin-bottom: 2px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     color: var(--text);
   }
-  #faceResults .username { color: var(--text-muted); font-size: 12px; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #faceResults .price { font-weight: 700; font-size: 15px; margin-bottom: 10px; color: var(--text-muted); }
+  #faceResults .username { color: var(--text-muted); font-size: 12px; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #faceResults .price { font-weight: 800; font-size: 15px; margin-bottom: 12px; color: var(--text-muted); }
   #faceResults .price-free { color: var(--success); }
   #faceResults .view-btn {
     display: block; text-align: center;
-    background: var(--accent); color: #fff;
-    border-radius: 8px; padding: 8px;
-    font-size: 13px; font-weight: 600;
-    transition: background 0.2s; text-decoration: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent-light));
+    color: #fff;
+    border-radius: 10px; padding: 9px;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.01em;
+    box-shadow: 0 4px 14px rgba(124,58,237,0.25);
+    transition: filter 0.2s, transform 0.2s, box-shadow 0.2s; text-decoration: none;
     margin-top: auto;
   }
-  #faceResults .view-btn:hover { background: var(--accent-light); }
+  #faceResults .view-btn:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(124,58,237,0.4);
+  }
 
   /* Locked card styles */
   #faceResults .creator-card.locked { cursor: pointer; }
