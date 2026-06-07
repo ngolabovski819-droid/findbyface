@@ -4,7 +4,9 @@ import sitemap from '@astrojs/sitemap';
 
 export default defineConfig({
   output: 'server',
-  adapter: vercel(),
+  adapter: vercel({
+    maxDuration: 30,
+  }),
   site: 'https://findbyface.org',
   integrations: [
     sitemap({
