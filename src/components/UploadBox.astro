@@ -444,8 +444,22 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     ]);
   }
 
+  async function ensureBackend(faceapi: any): Promise<void> {
+    const tf = faceapi?.tf;
+    if (!tf) return;
+    // The backend (webgl/wasm) must be initialised before any model runs,
+    // otherwise face-api throws "backend 'wasm' has not yet been initialized".
+    try {
+      await tf.setBackend('webgl');
+    } catch {
+      try { await tf.setBackend('cpu'); } catch { /* fall through to tf.ready() */ }
+    }
+    await tf.ready();
+  }
+
   async function ensureModels(faceapi: any): Promise<void> {
     if (_modelsLoaded) return;
+    await ensureBackend(faceapi);
     await withTimeout(
       Promise.all([
         faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
