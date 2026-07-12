@@ -3,6 +3,7 @@ const pathname = Astro.url.pathname;
 const isHome = pathname === '/' || pathname === '';
 const isSearch = pathname.startsWith('/onlyfans-search');
 const isDiscover = pathname.startsWith('/ai-discover');
+const isPromote = pathname.startsWith('/promote');
 ---
 
 <header class="nav">
@@ -16,6 +17,7 @@ const isDiscover = pathname.startsWith('/ai-discover');
       {/* Discover is under development — hidden from nav until ready */}
       {false && <a href="/ai-discover/" class={isDiscover ? 'active' : ''}>Discover</a>}
       <a href="/onlyfans-search/" class={isSearch ? 'active' : ''}>OnlyFans Search</a>
+      <a href="/promote/" class={isPromote ? 'active' : ''}>Promote Your OnlyFans</a>
     </nav>
 
     <div class="nav-right">
