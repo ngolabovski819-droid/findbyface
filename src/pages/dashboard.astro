@@ -141,9 +141,13 @@ import Base from '../layouts/Base.astro';
           const price = (!r.subscribePrice || isNaN(Number(r.subscribePrice)))
             ? 'FREE' : `$${parseFloat(String(r.subscribePrice)).toFixed(2)}`;
           const matchTag = r.matchPct ? `<span class="mini-match">${r.matchPct}% match</span>` : '';
-          return `<a class="mini-card" href="https://onlyfans.com/${encodeURIComponent(r.username)}" target="_blank" rel="noopener noreferrer">
+          const profileUrl = r.profileUrl || `https://onlyfans.com/${encodeURIComponent(r.username)}`;
+          const isSponsored = profileUrl.startsWith('/go/');
+          const rel = isSponsored ? 'noopener nofollow sponsored' : 'noopener noreferrer';
+          const adTag = r.sponsored ? '<span class="mini-ad">Ad</span>' : '';
+          return `<a class="mini-card" href="${profileUrl}" target="_blank" rel="${rel}">
             <span class="mini-rank">${ci + 1}</span>
-            <span class="mini-img"><img src="${img}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="if(this.src!=='/no-image.png'){this.src='/no-image.png';}">${matchTag}</span>
+            <span class="mini-img"><img src="${img}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="if(this.src!=='/no-image.png'){this.src='/no-image.png';}">${matchTag}${adTag}</span>
             <span class="mini-body">
               <span class="mini-name">${escapeHtml(r.name || r.username)}</span>
               <span class="mini-price ${price === 'FREE' ? 'free' : ''}">${price}</span>
@@ -397,6 +401,13 @@ import Base from '../layouts/Base.astro';
     background: linear-gradient(135deg, var(--accent), var(--accent-pink));
     color: #fff; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 999px;
     box-shadow: 0 2px 10px rgba(124,58,237,0.5);
+  }
+  .dash .mini-ad {
+    position: absolute; top: 7px; left: 7px; z-index: 2;
+    background: rgba(10,10,15,0.75);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #fff; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 999px;
+    letter-spacing: 0.03em; text-transform: uppercase;
   }
   .dash .mini-body { display: flex; flex-direction: column; gap: 2px; padding: 8px 9px 9px; }
   .dash .mini-name {

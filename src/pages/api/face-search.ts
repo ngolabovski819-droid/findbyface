@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { applySponsorOverrides } from '../../lib/sponsorOverrides';
 
 const SUPABASE_HEADERS = (key: string) => ({
   apikey: key,
@@ -60,7 +61,7 @@ export const POST: APIRoute = async ({ request }) => {
             favoritedCount: c.favoritedcount,
             matchPct:       Math.round(((c.similarity as number) ?? 0) * 100),
           }));
-          return new Response(JSON.stringify({ results, mode: 'vector' }), {
+          return new Response(JSON.stringify({ results: applySponsorOverrides(results), mode: 'vector' }), {
             headers: { 'Content-Type': 'application/json' },
           });
         }
@@ -108,7 +109,7 @@ export const POST: APIRoute = async ({ request }) => {
           matchPct:       Math.round(Math.min(100, Math.max(0, (c._sim as number) * 100))),
         }));
 
-        return new Response(JSON.stringify({ results, mode: 'cosine' }), {
+        return new Response(JSON.stringify({ results: applySponsorOverrides(results), mode: 'cosine' }), {
           headers: { 'Content-Type': 'application/json' },
         });
       }
@@ -142,7 +143,7 @@ export const POST: APIRoute = async ({ request }) => {
     matchPct:       null, // no embeddings yet
   }));
 
-  return new Response(JSON.stringify({ results, mode: 'fallback' }), {
+  return new Response(JSON.stringify({ results: applySponsorOverrides(results), mode: 'fallback' }), {
     headers: { 'Content-Type': 'application/json' },
   });
 };

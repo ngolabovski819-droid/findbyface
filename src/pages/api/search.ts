@@ -1,4 +1,7 @@
 import type { APIRoute } from 'astro';
+import { slugToCategory } from '../../config/categories';
+import { resolvePlacements } from '../../lib/creatorFetch';
+import { applySponsorOverrides } from '../../lib/sponsorOverrides';
 
 const CACHE_TTL = 60_000;
 const cache = new Map<string, { data: unknown; ts: number }>();
@@ -31,19 +34,41 @@ export const GET: APIRoute = async ({ url }) => {
   const bundles  = url.searchParams.get('bundles') ?? '';
   const price    = url.searchParams.get('price') ?? '';
   const sort     = url.searchParams.get('sort') ?? '';
+  const scope    = url.searchParams.get('scope') ?? '';
   const page     = parseInt(url.searchParams.get('page') ?? '1') || 1;
   const pageSize = Math.min(parseInt(url.searchParams.get('page_size') ?? '20') || 20, 100);
+  const order    = sort === 'newest'
+    ? 'first_seen_at.desc.nullslast,favoritedcount.desc'
+    : 'favoritedcount.desc,subscribeprice.asc';
+
+  // Pinning only ever activates for the fixed 'home' / 'category:<slug>' scopes that
+  // index.astro and categories/[slug].astro explicitly opt into — a bare free-text
+  // search (no scope param) always falls through to the plain query below untouched.
+  if (scope === 'home' || scope.startsWith('category:')) {
+    let termsOr: string[] | undefined;
+    if (scope.startsWith('category:')) {
+      const category = slugToCategory(scope.slice('category:'.length));
+      if (category) termsOr = category.terms;
+    }
+    const { creators: placedCreators, total } = await resolvePlacements(scope, { page, pageSize, order, termsOr });
+    const creators = applySponsorOverrides(placedCreators);
+    const hasMore = (page - 1) * pageSize + creators.length < total;
+    const data = { creators, total, hasMore };
+    cache.set(cacheKey, { data, ts: Date.now() });
+    return new Response(JSON.stringify(data), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+      },
+    });
+  }
 
   const params = new URLSearchParams();
   params.set('select', CARD_COLS);
   params.set('limit', String(pageSize));
   params.set('offset', String((page - 1) * pageSize));
 
-  if (sort === 'newest') {
-    params.set('order', 'first_seen_at.desc.nullslast,favoritedcount.desc');
-  } else {
-    params.set('order', 'favoritedcount.desc,subscribeprice.asc');
-  }
+  params.set('order', order);
 
   if (q) {
     const terms = q.split(/[|,]/).map(s => s.trim()).filter(Boolean);
@@ -79,12 +104,12 @@ export const GET: APIRoute = async ({ url }) => {
   const total = parseInt(contentRange.split('/')[1] ?? '0') || 0;
   const hasMore = (page - 1) * pageSize + raw.length < total;
 
-  const creators = raw.map(c => ({
+  const creators = applySponsorOverrides(raw.map(c => ({
     id:               c.id,
-    username:         c.username,
+    username:         c.username as string,
     name:             c.name,
     about:            c.about,
-    avatar:           c.avatar,
+    avatar:           c.avatar as string | undefined,
     isVerified:       c.isverified,
     subscribePrice:   c.subscribeprice,
     favoritedCount:   c.favoritedcount,
@@ -93,7 +118,7 @@ export const GET: APIRoute = async ({ url }) => {
     videosCount:      c.videoscount,
     bundle1Price:     c.bundle1_price,
     bundle1Discount:  c.bundle1_discount,
-  }));
+  })));
 
   const data = { creators, total, hasMore };
   cache.set(cacheKey, { data, ts: Date.now() });

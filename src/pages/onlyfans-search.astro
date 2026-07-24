@@ -143,18 +143,22 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
     const imgSrc = c.avatar?.startsWith('http') ? proxyImg(c.avatar, 320, 427) : '/no-image.png';
     const price = c.subscribePrice ?? c.subscribeprice;
     const priceLabel = (!price || isNaN(price)) ? 'FREE' : `$${parseFloat(price).toFixed(2)}`;
-    const profileUrl = `https://onlyfans.com/${encodeURIComponent(c.username)}`;
+    const profileUrl = c.profileUrl || `https://onlyfans.com/${encodeURIComponent(c.username)}`;
+    const isSponsored = profileUrl.startsWith('/go/');
+    const rel = isSponsored ? 'noopener nofollow sponsored' : 'noopener';
+    const badge = c.sponsored ? '<span class="sponsored-badge">Ad · Sponsored</span>' : '';
     return `<div class="creator-card">
       <div class="card-img-wrap">
         <img src="${imgSrc}" alt="${c.name || c.username}" loading="${index < 8 ? 'eager' : 'lazy'}"
           decoding="async" referrerpolicy="no-referrer"
           onerror="if(this.src!=='/no-image.png'){this.removeAttribute('srcset');this.src='/no-image.png';}">
+        ${badge}
       </div>
       <div class="card-body">
         <p class="creator-name">${c.name || c.username}</p>
         <p class="username">@${c.username}</p>
         <p class="price ${priceLabel === 'FREE' ? 'price-free' : ''}">${priceLabel}</p>
-        <a href="${profileUrl}" class="view-btn" target="_blank" rel="noopener">View Profile</a>
+        <a href="${profileUrl}" class="view-btn" target="_blank" rel="${rel}">View Profile</a>
       </div>
     </div>`;
   }

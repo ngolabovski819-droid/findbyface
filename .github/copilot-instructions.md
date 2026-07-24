@@ -456,6 +456,94 @@ export function buildSrcset(url: string): { src: string; srcset: string; sizes: 
 
 ---
 
+## Sponsored Placements
+
+Paid-placement infrastructure for `/promote` clients: pin a creator into an exact spot,
+override their outbound link/image, and track clicks. Two config files drive everything —
+fulfilling an order should be a config edit, not a code change.
+
+### Config files
+- `src/config/placements.ts` — **WHERE** a creator appears. `placements: Record<scope,
+  { pinned: {username, position}[], excluded: string[] }>`. Scopes are `'home'` and
+  `'category:<slug>'` only — there is no `country` concept in this codebase, don't invent
+  one. `position` is 1-based and **global** across the full paginated list (position 21 =
+  page 2, item 1 at page_size 20). Use `pinAcrossCategories(username, position, slugs?)` to
+  pin the same creator across every category (or an explicit subset) instead of
+  hand-listing 38 entries.
+- `src/config/sponsors.ts` — what a creator's card **links to / shows**, independent of
+  whether they're pinned anywhere. `sponsors: Record<username, { linkOverride?,
+  imageOverride?, clickTable? }>`, case-insensitive lookup via `getSponsorOverride()`.
+  `imageOverride` is applied in-memory only — never written to `onlyfans_profiles`, so it
+  survives future scraper syncs. Overrides apply **everywhere** that creator's card can
+  render (home, category pages, search, dashboard's cached "Latest Searches"), not just a
+  pinned slot, since any organic exposure should still credit the campaign.
+
+### How it fits together
+- `src/lib/creatorFetch.ts` — `resolvePlacements(scope, {page, pageSize, termsOr, order})`
+  is the fetch orchestrator: excludes pinned+excluded usernames from the organic query
+  (keeps pagination offsets aligned), fetches pinned records separately by exact username,
+  and interleaves them into their exact global position. Only activates when a `scope` is
+  passed — `/api/search.ts` only sets it for the `home`/`category` load-more calls, never
+  for free-text search, so pinning can never accidentally leak into user search results.
+  **Resilience**: if a category's filtered organic query comes back empty or fails, it
+  retries once with no filters (general "popular" list) and caps the returned `total` to
+  what's actually on the page — never show a bogus unfiltered count under a category
+  heading, and never let a query failure render as just a lone sponsored card.
+- `src/lib/sponsorOverrides.ts` — `applySponsorOverrides(creators)` stamps a `profileUrl`
+  (and swaps `avatar` if overridden) onto every creator object. Called at the end of every
+  creator-mapping site: `api/search.ts`, `api/face-search.ts`, and the SSR fetches in
+  `index.astro`/`categories/[slug].astro`. (`api/visual-search.ts` / `ai-discover.astro`
+  are intentionally skipped — that page is draft, not production.)
+- `src/pages/go/[username].ts` — the click-tracking redirect. Looks up the sponsor
+  override, logs a click (only if `clickTable` is set and the UA isn't a bot) into
+  whatever Supabase table `clickTable` names, then 302s to `linkOverride` (or the default
+  OnlyFans URL if none). `placement` is derived server-side from `Referer`: known internal
+  paths map to short labels (`home`, `category:<slug>`, `search`, `dashboard`,
+  `internal:<path>`), other hosts become `external:<hostname>`, and a missing referrer is
+  `null` — legitimate (pasted links, in-app browsers strip it), not an error.
+
+### Two gotchas that will silently break attribution
+1. **Never `rel="noreferrer"` on a `/go/` link.** It stops the browser from sending a
+   Referer to our own route, zeroing out placement data even for internal traffic. Use
+   `rel="noopener nofollow sponsored"` instead — every render site already does this
+   (`profileUrl.startsWith('/go/')` branches to the sponsored `rel`).
+2. **Never enable client-side prefetching on a `/go/` link** (e.g. Astro's
+   `data-astro-prefetch`, or the `@astrojs/prefetch` integration if it's ever added). A
+   same-origin prefetch fires the redirect — and the click log — before any real click
+   happens, logging impressions as clicks. This project has no prefetch integration
+   installed today; if one is ever added, exclude `/go/` links explicitly and re-verify
+   with Playwright (curl can't see this — it's a browser-only behavior).
+
+### Render sites that must stay in sync
+Card markup is duplicated in 6 places, not centralized — if you change how a card renders
+(the sponsored badge, the `rel` logic, etc.), update all of them: `CreatorCard.astro`,
+`index.astro` (load-more), `categories/[slug].astro` (load-more), `onlyfans-search.astro`,
+`dashboard.astro` (cached "Latest Searches" mini-cards). `ai-discover.astro` is explicitly
+excluded — it's a draft page, leave it alone.
+
+### Click-tracking tables
+One Supabase table per paying client (`sponsor_clicks_<username>_fbf`) — isolated counts,
+easy reporting, easy archive at campaign end. The `_fbf` suffix matters: this Supabase
+project is shared with other sites (e.g. fanspedia), so it keeps a findbyface campaign's
+table from colliding with another site's table for the same creator. The Supabase REST
+API has no DDL, so new tables are SQL migrations the user runs manually, following
+`scripts/migrations/002-006_*.sql`. Copy `scripts/migrations/007_sponsor_clicks_template.sql`
+to `0NN_sponsor_clicks_<username>_fbf.sql`, fill in the username, have the user run it,
+then set `clickTable: 'sponsor_clicks_<username>_fbf'` on that creator's `sponsors.ts`
+entry.
+
+### Per-order runbook
+Given a creator identifier, purchased placements (home position / categories), a tracking
+link, and optionally a custom image:
+1. If the creator isn't in `onlyfans_profiles` yet, do a one-time fetch **from a completely
+   isolated working directory** — never touch the running scraper/import process or its
+   state files.
+2. Add pin(s) to `placements.ts` (use `pinAcrossCategories` for multi-category buys).
+3. Add the `sponsors.ts` entry (`linkOverride`/`imageOverride`/`clickTable` as needed). If
+   `clickTable` is needed, write and hand off the migration first.
+4. Verify locally in a real browser (position, badge, override, and — if tracked — the
+   Playwright prefetch/click check above) before reporting back or pushing.
+
 ## Guardrails for AI
 - NEVER use Bootstrap or Tailwind — custom CSS with the design tokens above only
 - NEVER add Spanish/i18n — English only forever on this project
