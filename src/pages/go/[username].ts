@@ -10,6 +10,12 @@
 // GOTCHA: never enable client-side prefetching (e.g. Astro's `data-astro-prefetch`) on a
 // link pointing here — a same-origin prefetch fires this route (and the click log) before
 // any real click happens, logging impressions as clicks.
+//
+// An optional `?slot=<label>` query param overrides the referrer-derived placement with
+// an explicit one — use this when the same creator can appear in more than one distinct
+// widget on the same page (e.g. the search-history dropdown ad row vs. an organic card),
+// so each placement's performance can be measured separately even though the Referer is
+// identical for both.
 import type { APIRoute } from 'astro';
 import { getSponsorOverride } from '../../config/sponsors';
 
@@ -48,8 +54,9 @@ export const GET: APIRoute = async ({ params, request }) => {
 
   if (override?.clickTable && !isBot) {
     const referer = request.headers.get('referer');
-    const ownHost = new URL(request.url).host;
-    const placement = derivePlacement(referer, ownHost);
+    const requestUrl = new URL(request.url);
+    const slot = requestUrl.searchParams.get('slot');
+    const placement = slot || derivePlacement(referer, requestUrl.host);
 
     const SUPABASE_URL = import.meta.env.SUPABASE_URL?.replace(/\/+$/, '');
     const SUPABASE_KEY = import.meta.env.SUPABASE_KEY;

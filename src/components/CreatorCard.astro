@@ -40,7 +40,7 @@ const profileUrl = creator.profileUrl || `https://onlyfans.com/${encodeURICompon
 const rel = profileUrl.startsWith('/go/') ? 'noopener nofollow sponsored' : 'noopener noreferrer';
 ---
 
-<div class="creator-card">
+<div class="creator-card" data-href={profileUrl}>
   <div class="card-img-wrap">
     <img
       src={imgSrc}
@@ -77,6 +77,7 @@ const rel = profileUrl.startsWith('/go/') ? 'noopener nofollow sponsored' : 'noo
     border: 1px solid var(--border);
     transition: transform 0.28s cubic-bezier(0.22,1,0.36,1), box-shadow 0.28s ease, border-color 0.28s ease;
   }
+  .creator-card[data-href] { cursor: pointer; }
 
   /* Gradient ring on hover */
   .creator-card::after {

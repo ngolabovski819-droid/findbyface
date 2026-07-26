@@ -148,7 +148,7 @@ const jsonLd = JSON.stringify({
     const isSponsored = profileUrl.startsWith('/go/');
     const rel = isSponsored ? 'noopener nofollow sponsored' : 'noopener';
     const badge = c.sponsored ? '<span class="sponsored-badge">Ad · Sponsored</span>' : '';
-    return `<div class="creator-card">
+    return `<div class="creator-card" data-href="${profileUrl}">
       <div class="card-img-wrap">
         <img src="${imgSrc}" alt="${c.name || c.username}" loading="lazy" decoding="async" referrerpolicy="no-referrer"
           onerror="if(this.src!=='/no-image.png'){this.removeAttribute('srcset');this.src='/no-image.png';}">
@@ -183,6 +183,11 @@ const jsonLd = JSON.stringify({
     }
     isLoading = false;
   });
+</script>
+
+<script>
+  import { initCardClickThrough } from '../../lib/cardClickThrough';
+  initCardClickThrough();
 </script>
 
 <style>

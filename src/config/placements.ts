@@ -1,6 +1,9 @@
 // WHERE a creator appears — paid placement config.
-// Scopes: 'home', 'category:<slug>' (slugs come from src/config/categories.ts), and
-// 'face-search' (the AI face-match results in UploadBox.astro / api/face-search.ts).
+// Scopes: 'home', 'category:<slug>' (slugs come from src/config/categories.ts),
+// 'face-search' (the AI face-match results in UploadBox.astro / api/face-search.ts), and
+// 'search-dropdown' (the pinned ad row in every recent-searches dropdown, see
+// api/search-ad.ts). 'search-dropdown' only ever uses pinned[0] — position is ignored,
+// there's exactly one ad slot, not a ranked list.
 //
 // For 'home' and 'category:<slug>', pinned positions are 1-based and GLOBAL across the
 // full paginated list for that scope — e.g. position 21 is page 2, item 1 at
@@ -25,6 +28,7 @@ export interface Placement {
 export const placements: Record<string, Placement> = {
   home: { pinned: [{ username: 'emilylopz', position: 1 }], excluded: [] },
   'face-search': { pinned: [{ username: 'emilylopz', position: 1 }], excluded: [] },
+  'search-dropdown': { pinned: [{ username: 'emilylopz', position: 1 }], excluded: [] },
 };
 
 export function getPlacement(scope: string): Placement {

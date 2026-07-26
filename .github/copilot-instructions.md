@@ -526,6 +526,19 @@ that's an undisclosed ad, and unclickable to boot. Two things enforce this:
    the sponsored slot's visual position stable and intentional rather than relying solely
    on the `!isSponsored` override.
 
+### The `search-dropdown` scope (recent-searches ad row)
+`api/search-ad.ts` serves the single pinned row shown above recent searches in every
+search-history dropdown (see "Recent Searches Dropdown" below). It reads
+`getPlacement('search-dropdown').pinned[0]` — only the first entry is ever used, there's
+one ad slot, not a ranked list — fetches that creator's live row, and runs it through
+`applySponsorOverrides` like everywhere else. The one twist: its `profileUrl` gets
+`?slot=search-dropdown` appended (only when it's a `/go/` link) before being sent to the
+client, so `/go/[username].ts` records these clicks under a distinct `placement` value
+instead of whatever the hosting page's Referer would otherwise produce — see the `slot`
+param note in that file. This is how the same creator's dropdown-ad performance stays
+measurable separately from their other placements even when both appear on, say, the
+homepage.
+
 ### Two gotchas that will silently break attribution
 1. **Never `rel="noreferrer"` on a `/go/` link.** It stops the browser from sending a
    Referer to our own route, zeroing out placement data even for internal traffic. Use
@@ -568,6 +581,47 @@ link, and optionally a custom image:
    `clickTable` is needed, write and hand off the migration first.
 4. Verify locally in a real browser (position, badge, override, and — if tracked — the
    Playwright prefetch/click check above) before reporting back or pushing.
+
+## Recent Searches Dropdown
+Every live search bar on the site (the homepage hero mini-form in `UploadBox.astro`, and
+the main input on `/onlyfans-search`) shares one dropdown implementation instead of each
+maintaining its own copy:
+- `src/lib/searchHistory.ts` — `localStorage` persistence under the `fbf_search_queries`
+  key (unrelated to `fbf_history`, which is the *face-search result* history dashboard.astro
+  reads for "Latest Searches" — don't conflate the two). Keeps the last 8 terms, newest
+  first, case-insensitive dedupe (`"Blonde"` then `"blonde"` collapses to one entry).
+- `src/lib/searchDropdown.ts` — `initSearchDropdown(refs)` wires open-on-focus-when-empty,
+  outside-click/Escape-to-close, per-row remove, clear-all, and fetches/renders the pinned
+  ad row (see `search-dropdown` scope above) once per page via `/api/search-ad`. The host
+  page supplies its own DOM refs and an `onSelect(q)` callback — `onlyfans-search.astro` re-runs
+  the in-place search, `UploadBox.astro`'s mini-form navigates to `/onlyfans-search/?q=...`
+  since it has no results grid of its own.
+- The recent-searches list itself is capped to ~3 visible rows (`max-height` + `overflow-y:
+  auto` on `.dd-history`, keyed off the existing 44px row height) — the rest scroll. The ad
+  row sits outside that scrollable area, always visible, never counted against the cap.
+- No search bar exists in the nav today (`SearchBar.astro` is dead/unused code, not
+  rendered anywhere) — don't assume one when reasoning about "every search bar."
+- Dropdown markup (`.dd-row`, `.dd-ad-row`, etc.) is injected via `innerHTML`, so — same
+  footgun as everywhere else on this site — its styles must live in an `is:global` block
+  keyed off a container id (`#historyList`, `#homeHistoryList`, `#ddAdSlot`,
+  `#homeDdAdSlot`), never Astro's default scoped `<style>`.
+
+## Whole-card Click-Through
+Every `.creator-card` (and the face-search `UploadBox.astro` variant) carries a
+`data-href` attribute holding the same URL as its "View Profile" link.
+`src/lib/cardClickThrough.ts` — `initCardClickThrough()` — delegates one `click` listener
+on `document` per page: a click that didn't land on a nested `<a>`/`<button>` (so the
+view-btn, and any future wishlist/favorite icon button, still behave natively) opens
+`data-href` in a new tab via `window.open(href, '_blank', 'noopener')`. Locked face-search
+cards (blurred, not signed in) open the sign-in modal instead of navigating — there's
+nothing to view yet.
+The function is idempotent (guarded by a module-level flag) because a page and a
+component it renders can both call it — e.g. `index.astro` and the `UploadBox.astro` it
+includes both do, and without the guard the click handler would double-fire and open two
+tabs per click. Call it once per page/component that renders cards; don't worry about
+calling it redundantly.
+`dashboard.astro`'s "Latest Searches" mini-cards are already a single `<a>` wrapping the
+whole card — no `data-href` needed there. `ai-discover.astro` is excluded, as always.
 
 ## Guardrails for AI
 - NEVER use Bootstrap or Tailwind — custom CSS with the design tokens above only

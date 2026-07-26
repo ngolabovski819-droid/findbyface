@@ -178,10 +178,20 @@ if (SUPABASE_URL && SUPABASE_KEY) {
 
   <p class="upload-error" id="uploadError" style="display:none"></p>
   <div class="search-divider"><span>— or search by name —</span></div>
-  <form class="search-bar-inline" action="/onlyfans-search/" method="get">
-    <input type="text" name="q" placeholder="Search creators..." autocomplete="off" />
-    <button type="submit">Search</button>
-  </form>
+  <div class="home-search-wrap" id="homeSearchWrap">
+    <form class="search-bar-inline" id="homeSearchForm" action="/onlyfans-search/" method="get">
+      <input type="text" name="q" id="homeSearchInput" placeholder="Search creators..." autocomplete="off" />
+      <button type="submit">Search</button>
+    </form>
+    <div class="search-dropdown home-search-dropdown" id="homeSearchDropdown" style="display:none">
+      <div class="dd-ad-slot" id="homeDdAdSlot" style="display:none"></div>
+      <div class="dd-header">
+        <span class="dd-label">Recent searches</span>
+        <button class="dd-clear-all" id="homeClearAllBtn" type="button" style="display:none">Clear all</button>
+      </div>
+      <div class="dd-history" id="homeHistoryList"></div>
+    </div>
+  </div>
 </div>
 
 <!-- Results -->
@@ -213,6 +223,10 @@ if (SUPABASE_URL && SUPABASE_KEY) {
 </div>
 
 <script>
+  import { pushHistory } from '../lib/searchHistory';
+  import { initSearchDropdown } from '../lib/searchDropdown';
+  import { initCardClickThrough } from '../lib/cardClickThrough';
+
   // Build Google OAuth URL dynamically so localhost dev doesn't redirect to production
   function getGoogleAuthUrl(): string {
     const redirectTo = `${window.location.origin}/auth/callback`;
@@ -249,6 +263,28 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   const faceResultsCount = document.getElementById('faceResultsCount')!;
   const copyResultsBtn   = document.getElementById('copyResultsBtn') as HTMLButtonElement;
   const shareCta         = document.getElementById('shareCta')!;
+
+  initCardClickThrough();
+
+  // ── Homepage mini search bar: recent-searches dropdown ──────────────────────
+  const homeSearchForm  = document.getElementById('homeSearchForm') as HTMLFormElement;
+  const homeSearchInput = document.getElementById('homeSearchInput') as HTMLInputElement;
+  initSearchDropdown({
+    wrapper: document.getElementById('homeSearchWrap')!,
+    input: homeSearchInput,
+    dropdown: document.getElementById('homeSearchDropdown')!,
+    adSlot: document.getElementById('homeDdAdSlot')!,
+    historyList: document.getElementById('homeHistoryList')!,
+    clearAllBtn: document.getElementById('homeClearAllBtn')!,
+    onSelect(q) {
+      window.location.href = `/onlyfans-search/?q=${encodeURIComponent(q)}`;
+    },
+  });
+  // Explicit form submit (Enter / Search button) is a real page navigation, not a fetch
+  // — record it to history synchronously before the browser navigates away.
+  homeSearchForm.addEventListener('submit', () => {
+    pushHistory(homeSearchInput.value);
+  });
 
   // Pagination state for face-search results
   let allFaceResults: Record<string, unknown>[] = [];
@@ -594,7 +630,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     const locked = !signedIn && index % 2 === 1 && !isSponsored;
 
     if (locked) {
-      return `<div class="creator-card locked">
+      return `<div class="creator-card locked" data-href="${profileUrl}">
         <div class="card-img-wrap">
           <img src="${imgSrc}" alt="Locked creator" loading="lazy" decoding="async" referrerpolicy="no-referrer"
             style="filter:blur(10px);transform:scale(1.08);"
@@ -613,7 +649,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
       </div>`;
     }
 
-    return `<div class="creator-card">
+    return `<div class="creator-card" data-href="${profileUrl}">
       <div class="card-img-wrap">
         <img src="${imgSrc}" alt="${(c.name || c.username) as string}" loading="${index === 0 ? 'eager' : 'lazy'}"
           decoding="async" referrerpolicy="no-referrer"
@@ -1130,6 +1166,43 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   }
   .search-bar-inline button:hover { background: var(--accent-light); }
 
+  /* Recent-searches dropdown for the homepage mini search bar — same visual language as
+     /onlyfans-search's .search-dropdown, sized for this smaller inline bar. */
+  .home-search-wrap { position: relative; max-width: 480px; width: 100%; }
+  .home-search-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0; right: 0;
+    background: #13132a;
+    border: 1px solid rgba(124,58,237,0.22);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.65), 0 0 0 1px rgba(124,58,237,0.06);
+    padding: 8px 0 10px;
+    z-index: 30;
+    overflow: hidden;
+  }
+  .home-search-dropdown .dd-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 16px 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    margin-bottom: 4px;
+  }
+  .home-search-dropdown .dd-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--text-muted); opacity: 0.6;
+  }
+  .home-search-dropdown .dd-clear-all {
+    appearance: none; background: none; border: none; outline: none;
+    color: var(--text-muted); font-size: 12px; font-weight: 500; font-family: inherit;
+    cursor: pointer; padding: 2px 6px; border-radius: 6px; transition: color 0.15s, background 0.15s;
+  }
+  .home-search-dropdown .dd-clear-all:hover { color: #f87171; background: rgba(248,113,113,0.08); }
+  .home-search-dropdown .dd-history {
+    padding: 4px 6px 0;
+    max-height: 148px; /* ~3 rows (44px each) + breathing room; rest scrolls */
+    overflow-y: auto;
+  }
+
   .face-results { width: 100%; max-width: 1200px; padding: 0 20px; margin: 0 auto; }
   .results-heading { font-size: 1.5rem; margin-bottom: 24px; text-align: center; }
   .face-results-grid {
@@ -1319,6 +1392,49 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     transform: translateY(-1px);
     box-shadow: 0 6px 20px rgba(255,69,0,0.3);
   }
+
+  /* History/ad rows injected via innerHTML by src/lib/searchDropdown.ts — need global
+     (un-scoped) styles the same way #faceResults cards do above. */
+  #homeHistoryList .dd-row {
+    display: flex; align-items: center; width: 100%; box-sizing: border-box;
+    padding: 0 8px 0 12px; cursor: pointer; border-radius: 10px;
+    transition: background 0.12s; min-height: 44px;
+  }
+  #homeHistoryList .dd-row:hover { background: rgba(124,58,237,0.12); }
+  #homeHistoryList .dd-row-ico { flex-shrink: 0; color: var(--text-muted); opacity: 0.5; margin-right: 12px; }
+  #homeHistoryList .dd-row-text {
+    flex: 1 1 auto; min-width: 0; font-size: 14.5px; font-weight: 500; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2;
+    transition: color 0.12s;
+  }
+  #homeHistoryList .dd-row:hover .dd-row-text { color: #fff; }
+  #homeHistoryList .dd-row-del {
+    appearance: none; display: flex; align-items: center; justify-content: center;
+    background: none; border: none; outline: none; color: var(--text-muted); cursor: pointer;
+    padding: 0; width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    opacity: 0; transition: opacity 0.15s, background 0.15s, color 0.15s; margin-left: 8px;
+  }
+  #homeHistoryList .dd-row:hover .dd-row-del { opacity: 0.85; }
+  #homeHistoryList .dd-row-del:hover { opacity: 1; background: rgba(248,113,113,0.15); color: #f87171; }
+
+  #homeDdAdSlot .dd-ad-row {
+    display: flex; align-items: center; gap: 12px; width: 100%; box-sizing: border-box;
+    padding: 8px 16px 12px; margin-bottom: 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    cursor: pointer; transition: background 0.12s;
+  }
+  #homeDdAdSlot .dd-ad-row:hover { background: rgba(124,58,237,0.1); }
+  #homeDdAdSlot .dd-ad-avatar {
+    width: 36px; height: 36px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+    background: var(--surface-raised);
+  }
+  #homeDdAdSlot .dd-ad-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #homeDdAdSlot .dd-ad-body { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  #homeDdAdSlot .dd-ad-name {
+    font-size: 14.5px; font-weight: 700; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #homeDdAdSlot .sponsored-badge { position: static; flex-shrink: 0; }
 </style>
 
 <style is:global>
@@ -1335,6 +1451,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     width: 100%;
     min-width: 0;
   }
+  #faceResults .creator-card[data-href] { cursor: pointer; }
   #faceResults .creator-card::after {
     content: '';
     position: absolute; inset: 0;

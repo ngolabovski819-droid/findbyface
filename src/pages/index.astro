@@ -261,6 +261,10 @@ const faqJsonLd = JSON.stringify({
 </Base>
 
 <script>
+  import { initCardClickThrough } from '../lib/cardClickThrough';
+
+  initCardClickThrough();
+
   let currentPage = 2;
   let isLoading = false;
   let hasMoreResults = true;
@@ -281,7 +285,7 @@ const faqJsonLd = JSON.stringify({
     const isSponsored = profileUrl.startsWith('/go/');
     const rel = isSponsored ? 'noopener nofollow sponsored' : 'noopener';
     const badge = c.sponsored ? '<span class="sponsored-badge">Ad · Sponsored</span>' : '';
-    return `<div class="creator-card">
+    return `<div class="creator-card" data-href="${profileUrl}">
       <div class="card-img-wrap">
         <img src="${imgSrc}" alt="${c.name || c.username}" loading="lazy" decoding="async"
           referrerpolicy="no-referrer"

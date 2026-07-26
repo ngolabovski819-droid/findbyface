@@ -10,19 +10,55 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
 
 <Base title={SEARCH_SEO.title} description={SEARCH_SEO.description}>
   <div class="search-page">
+
     <div class="search-header">
       <h1>OnlyFans Search Engine</h1>
       <p class="search-sub">Search and filter from millions of creators</p>
     </div>
 
+    <!-- Search bar with history dropdown -->
+    <div class="search-hero" id="searchHero">
+      <div class="search-wrap" id="searchWrap">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input
+          type="text"
+          id="searchInput"
+          class="search-main-input"
+          placeholder="Search creators..."
+          value={q}
+          autocomplete="off"
+          aria-label="Search creators"
+          aria-autocomplete="list"
+          aria-controls="searchDropdown"
+          aria-expanded="false"
+        />
+        <button class="search-clear-btn" id="searchClearBtn" aria-label="Clear search" style="display:none">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- Dropdown -->
+      <div class="search-dropdown" id="searchDropdown" style="display:none">
+        <div class="dd-ad-slot" id="ddAdSlot" style="display:none"></div>
+        <div class="dd-header">
+          <span class="dd-label">Recent searches</span>
+          <button class="dd-clear-all" id="clearAllBtn" type="button" style="display:none">Clear all</button>
+        </div>
+        <div class="dd-history" id="historyList"></div>
+      </div>
+    </div>
+
+    <!-- Mode tab -->
+    <div class="mode-tabs">
+      <a href="/" class="mode-tab">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        Face Match
+      </a>
+    </div>
+
     <div class="search-layout">
       <aside class="filters">
         <h3 class="filters-title">Filters</h3>
-
-        <div class="filter-group">
-          <label class="filter-label" for="searchInput">Search</label>
-          <input type="text" id="searchInput" placeholder="Search creators..." value={q} autocomplete="off" />
-        </div>
 
         <div class="filter-group">
           <label class="filter-label toggle-label">
@@ -78,6 +114,49 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
 </Base>
 
 <script>
+  import { pushHistory } from '../lib/searchHistory';
+  import { initSearchDropdown } from '../lib/searchDropdown';
+  import { initCardClickThrough } from '../lib/cardClickThrough';
+
+  // ── DOM refs ──────────────────────────────────────────────────────────────
+  const searchHero     = document.getElementById('searchHero')!;
+  const searchInput    = document.getElementById('searchInput') as HTMLInputElement;
+  const searchClearBtn = document.getElementById('searchClearBtn') as HTMLButtonElement;
+  const dropdown       = document.getElementById('searchDropdown')!;
+  const ddAdSlot       = document.getElementById('ddAdSlot')!;
+  const historyList    = document.getElementById('historyList')!;
+  const clearAllBtn    = document.getElementById('clearAllBtn') as HTMLButtonElement;
+
+  initCardClickThrough();
+  initSearchDropdown({
+    wrapper: searchHero,
+    input: searchInput,
+    dropdown,
+    adSlot: ddAdSlot,
+    historyList,
+    clearAllBtn,
+    onSelect(q) {
+      searchInput.value = q;
+      activeFilters.q = q;
+      fetchCreators(false);
+    },
+  });
+
+  // ── Clear button ──────────────────────────────────────────────────────────
+  searchInput.addEventListener('input', () => {
+    searchClearBtn.style.display = searchInput.value ? 'flex' : 'none';
+  });
+  if (searchInput.value) searchClearBtn.style.display = 'flex';
+
+  searchClearBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    searchClearBtn.style.display = 'none';
+    searchInput.focus();
+    activeFilters.q = '';
+    doSearch();
+  });
+
+  // ── Search / filter logic ─────────────────────────────────────────────────
   let currentPage = 1;
   let isLoading = false;
   let hasMoreResults = false;
@@ -91,7 +170,6 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
     bundles:  '',
   };
 
-  const searchInput    = document.getElementById('searchInput') as HTMLInputElement;
   const verifiedToggle = document.getElementById('verifiedToggle') as HTMLInputElement;
   const bundlesToggle  = document.getElementById('bundlesToggle') as HTMLInputElement;
   const resultsGrid    = document.getElementById('resultsGrid')!;
@@ -117,19 +195,36 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
   });
 
   let debounceTimer: ReturnType<typeof setTimeout>;
-  searchInput?.addEventListener('input', () => {
+  searchInput.addEventListener('input', () => {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       activeFilters.q = searchInput.value.trim();
-      doSearch();
+      // Debounce auto-search does NOT save to history — only explicit submits do
+      fetchCreators(false);
     }, 350);
   });
 
+  // Enter key = explicit submit → save to history
+  searchInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      clearTimeout(debounceTimer);
+      const q = searchInput.value.trim();
+      activeFilters.q = q;
+      if (q) pushHistory(q);
+      dropdown.style.display = 'none';
+      fetchCreators(false);
+    }
+  });
+
   applyBtn.addEventListener('click', () => {
-    activeFilters.q        = searchInput?.value.trim() ?? '';
-    activeFilters.verified = verifiedToggle?.checked ? 'true' : '';
-    activeFilters.bundles  = bundlesToggle?.checked ? 'true' : '';
-    doSearch();
+    clearTimeout(debounceTimer);
+    const q = searchInput.value.trim();
+    activeFilters.q        = q;
+    activeFilters.verified = verifiedToggle.checked ? 'true' : '';
+    activeFilters.bundles  = bundlesToggle.checked ? 'true' : '';
+    if (q) pushHistory(q);
+    closeDropdown();
+    fetchCreators(false);
   });
 
   loadMoreBtn.addEventListener('click', () => fetchCreators(true));
@@ -147,7 +242,7 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
     const isSponsored = profileUrl.startsWith('/go/');
     const rel = isSponsored ? 'noopener nofollow sponsored' : 'noopener';
     const badge = c.sponsored ? '<span class="sponsored-badge">Ad · Sponsored</span>' : '';
-    return `<div class="creator-card">
+    return `<div class="creator-card" data-href="${profileUrl}">
       <div class="card-img-wrap">
         <img src="${imgSrc}" alt="${c.name || c.username}" loading="${index < 8 ? 'eager' : 'lazy'}"
           decoding="async" referrerpolicy="no-referrer"
@@ -208,7 +303,6 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
       loadMoreBtn.textContent = 'Load More';
       loadMoreBtn.disabled = false;
 
-      // sync ?q= into URL
       const urlObj = new URL(window.location.href);
       if (activeFilters.q) urlObj.searchParams.set('q', activeFilters.q);
       else urlObj.searchParams.delete('q');
@@ -224,34 +318,167 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
     isLoading = false;
   }
 
-  function doSearch() {
-    currentPage = 1;
-    fetchCreators(false);
-  }
-
-  // Initial load
   fetchCreators(false);
 </script>
 
 <style>
+  .mode-tabs {
+    display: flex;
+    justify-content: flex-end;
+    max-width: 720px;
+    margin: 14px auto 0;
+  }
+
+  .mode-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 18px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: rgba(124,58,237,0.1);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .mode-tab:hover {
+    border-color: var(--accent);
+    background: rgba(124,58,237,0.18);
+  }
+  .mode-tab svg { color: var(--accent-light); }
+
   .search-page {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 100px 20px 60px;
+    padding: 80px 20px 60px; /* top clears the 64px fixed nav */
   }
 
   .search-header {
     text-align: center;
-    margin-bottom: 48px;
+    margin: 12px 0 22px;
   }
-
-  .search-header h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); margin-bottom: 12px; }
+  .search-header h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); margin-bottom: 8px; }
   .search-sub { color: var(--text-muted); }
 
+  /* ── Hero search bar ──────────────────────────────────────────────────────── */
+  .search-hero {
+    position: relative;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .search-wrap {
+    display: flex;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0 18px;
+    gap: 10px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .search-wrap:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .search-icon { color: var(--text-muted); flex-shrink: 0; }
+
+  .search-main-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 14px 0;
+    font-size: 15px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+  }
+  .search-main-input::placeholder { color: var(--text-muted); }
+
+  .search-clear-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.08);
+    border: none;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: background 0.15s, color 0.15s;
+  }
+  .search-clear-btn:hover { background: rgba(255,255,255,0.15); color: var(--text); }
+
+  /* ── Dropdown ─────────────────────────────────────────────────────────────── */
+  .search-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0; right: 0;
+    background: #13132a;
+    border: 1px solid rgba(124,58,237,0.22);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.65), 0 0 0 1px rgba(124,58,237,0.06);
+    padding: 8px 0 10px;
+    z-index: 300;
+    animation: ddIn 0.15s cubic-bezier(0.22,1,0.36,1);
+    overflow: hidden;
+  }
+  @keyframes ddIn { from { opacity:0; transform:translateY(-6px) scale(0.99); } to { opacity:1; transform:none; } }
+
+  .dd-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 16px 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    margin-bottom: 4px;
+  }
+
+  .dd-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    opacity: 0.6;
+  }
+
+  .dd-clear-all {
+    -webkit-appearance: none;
+    appearance: none;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .dd-clear-all:hover { color: #f87171; background: rgba(248,113,113,0.08); }
+
+  .dd-history {
+    padding: 4px 6px 0;
+    max-height: 148px; /* ~3 rows (44px each) + breathing room; rest scrolls */
+    overflow-y: auto;
+  }
+  /* NOTE: .dd-row and .dd-ad-row live in the is:global block below — they're injected by
+     src/lib/searchDropdown.ts via innerHTML, so Astro's scoped styles would never match
+     them (scoping only tags elements present in the template at build time). */
+
+  /* ── Filters + results (unchanged from before) ───────────────────────────── */
   .search-layout {
     display: grid;
     grid-template-columns: 260px 1fr;
     gap: 32px;
+    margin-top: 36px;
   }
 
   .filters {
@@ -285,22 +512,6 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
     margin-bottom: 0;
   }
 
-  .filter-group input[type="text"] {
-    width: 100%;
-    background: var(--surface-raised);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 10px 12px;
-    color: var(--text);
-    font-size: 14px;
-    font-family: 'Inter', sans-serif;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-
-  .filter-group input[type="text"]:focus { border-color: var(--accent); }
-  .filter-group input[type="text"]::placeholder { color: var(--text-muted); }
-
   .pill-group { display: flex; flex-wrap: wrap; gap: 6px; }
 
   .pill {
@@ -314,7 +525,6 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
     font-family: 'Inter', sans-serif;
     transition: all 0.2s;
   }
-
   .pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
   .toggle { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
@@ -337,7 +547,6 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
     font-family: 'Inter', sans-serif;
     transition: background 0.2s;
   }
-
   .apply-btn:hover { background: var(--accent-light); }
 
   .results-meta { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
@@ -359,7 +568,6 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
     font-size: 15px; font-weight: 500; cursor: pointer;
     font-family: 'Inter', sans-serif; transition: all 0.2s;
   }
-
   .load-more-btn:hover { border-color: var(--accent); color: var(--accent); }
 
   @media (max-width: 1000px) {
@@ -367,13 +575,118 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
     .filters { position: static; }
     .results-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
-  @media (max-width: 640px) { .results-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; } }
+  @media (max-width: 640px) {
+    .results-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .mode-tabs { margin-top: 72px; }
+  }
   @media (max-width: 380px) { .results-grid { gap: 10px; } }
 </style>
 
 <style is:global>
-  /* Cards are injected via insertAdjacentHTML, so they don't get Astro's
-     scoped attribute — these must be global to apply. */
+  /* History rows are injected via innerHTML by renderHistory(), so they need
+     global (un-scoped) styles. Keyed off #historyList so nothing leaks. */
+  #historyList .dd-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0 8px 0 12px;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: background 0.12s;
+    min-height: 44px;
+  }
+  #historyList .dd-row:hover { background: rgba(124,58,237,0.12); }
+
+  #historyList .dd-row-ico {
+    flex-shrink: 0;
+    color: var(--text-muted);
+    opacity: 0.5;
+    margin-right: 12px;
+  }
+
+  #historyList .dd-row-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 14.5px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+    transition: color 0.12s;
+  }
+  #historyList .dd-row:hover .dd-row-text { color: #fff; }
+
+  #historyList .dd-row-del {
+    -webkit-appearance: none;
+    appearance: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s, color 0.15s;
+    margin-left: 8px;
+  }
+  #historyList .dd-row:hover .dd-row-del { opacity: 0.85; }
+  #historyList .dd-row-del:hover { opacity: 1; background: rgba(248,113,113,0.15); color: #f87171; }
+
+  /* Pinned sponsored row above recent searches, injected via innerHTML by
+     src/lib/searchDropdown.ts. Reuses the same .sponsored-badge token as everywhere
+     else on the site — just positioned inline instead of over an image corner. */
+  #ddAdSlot .dd-ad-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 16px 12px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  #ddAdSlot .dd-ad-row:hover { background: rgba(124,58,237,0.1); }
+  #ddAdSlot .dd-ad-avatar {
+    width: 36px; height: 36px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+    background: var(--surface-raised);
+  }
+  #ddAdSlot .dd-ad-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #ddAdSlot .dd-ad-body { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  #ddAdSlot .dd-ad-name {
+    font-size: 14.5px; font-weight: 700; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #ddAdSlot .sponsored-badge { position: static; flex-shrink: 0; }
+
+  /* .sponsored-badge is normally defined globally by CreatorCard.astro, but this page
+     never imports that component, so its styles are never bundled here — define our
+     own copy (identical token) rather than relying on it leaking in from elsewhere. */
+  .sponsored-badge {
+    display: inline-flex;
+    background: rgba(10,10,15,0.75);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #fff;
+    font-size: 10px; font-weight: 700;
+    padding: 3px 8px; border-radius: 999px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+  #resultsGrid .card-img-wrap .sponsored-badge {
+    position: absolute; top: 10px; left: 10px; z-index: 2;
+  }
+
   #resultsGrid .creator-card {
     background: var(--surface); border-radius: var(--radius-lg);
     overflow: hidden; border: 1px solid var(--border);
@@ -381,14 +694,9 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
     display: flex; flex-direction: column; width: 100%; min-width: 0;
   }
   #resultsGrid .creator-card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px var(--accent-glow); }
+  #resultsGrid .creator-card[data-href] { cursor: pointer; }
   #resultsGrid .card-img-wrap { aspect-ratio: 3/4; overflow: hidden; position: relative; background: var(--surface-raised); }
   #resultsGrid .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  #resultsGrid .match-badge {
-    position: absolute; top: 8px; left: 8px;
-    background: #22c55e; color: #fff;
-    font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
-    letter-spacing: 0.02em; pointer-events: none;
-  }
   #resultsGrid .card-body { padding: 12px 14px; display: flex; flex-direction: column; flex: 1; }
   #resultsGrid .creator-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
   #resultsGrid .username { color: var(--text-muted); font-size: 12px; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
