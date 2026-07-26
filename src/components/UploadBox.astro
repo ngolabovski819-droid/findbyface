@@ -584,9 +584,14 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     const priceLabel = (!price || isNaN(Number(price))) ? 'FREE' : `$${parseFloat(String(price)).toFixed(2)}`;
     const matchPct = c.matchPct != null ? (c.matchPct as number) : null;
     const matchBadge = matchPct != null && matchPct > 0 ? `<span class="match-badge">Match: ${matchPct}%</span>` : '';
-    const profileUrl = `https://onlyfans.com/${encodeURIComponent(c.username as string)}`;
-    // Alternating pattern: every other card is blurred until signed in (1 shown, 1 locked)
-    const locked = !signedIn && index % 2 === 1;
+    const isSponsored = !!c.sponsored;
+    const sponsoredBadge = isSponsored ? '<span class="sponsored-badge">Ad · Sponsored</span>' : '';
+    const profileUrl = (c.profileUrl as string) || `https://onlyfans.com/${encodeURIComponent(c.username as string)}`;
+    const rel = (profileUrl as string).startsWith('/go/') ? 'noopener nofollow sponsored' : 'noopener noreferrer';
+    // Alternating pattern: every other card is blurred until signed in (1 shown, 1 locked).
+    // A sponsored card is never blurred — an ad must stay visible/disclosed regardless of
+    // sign-in state, never hidden behind the "sign in to unlock" paywall.
+    const locked = !signedIn && index % 2 === 1 && !isSponsored;
 
     if (locked) {
       return `<div class="creator-card locked">
@@ -614,12 +619,13 @@ if (SUPABASE_URL && SUPABASE_KEY) {
           decoding="async" referrerpolicy="no-referrer"
           onerror="if(this.src!=='/no-image.png'){this.src='/no-image.png';}">
         ${matchBadge}
+        ${sponsoredBadge}
       </div>
       <div class="card-body">
         <p class="creator-name">${(c.name || c.username) as string}</p>
         <p class="username">@${c.username as string}</p>
         <p class="price ${priceLabel === 'FREE' ? 'price-free' : ''}">${priceLabel}</p>
-        <a href="${profileUrl}" class="view-btn" target="_blank" rel="noopener noreferrer">View Profile</a>
+        <a href="${profileUrl}" class="view-btn" target="_blank" rel="${rel}">View Profile</a>
       </div>
     </div>`;
   }

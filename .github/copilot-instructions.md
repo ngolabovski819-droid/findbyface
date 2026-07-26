@@ -464,12 +464,13 @@ fulfilling an order should be a config edit, not a code change.
 
 ### Config files
 - `src/config/placements.ts` — **WHERE** a creator appears. `placements: Record<scope,
-  { pinned: {username, position}[], excluded: string[] }>`. Scopes are `'home'` and
-  `'category:<slug>'` only — there is no `country` concept in this codebase, don't invent
-  one. `position` is 1-based and **global** across the full paginated list (position 21 =
-  page 2, item 1 at page_size 20). Use `pinAcrossCategories(username, position, slugs?)` to
-  pin the same creator across every category (or an explicit subset) instead of
-  hand-listing 38 entries.
+  { pinned: {username, position}[], excluded: string[] }>`. Scopes are `'home'`,
+  `'category:<slug>'`, and `'face-search'` — there is no `country` concept in this
+  codebase, don't invent one. For `home`/`category:<slug>`, `position` is 1-based and
+  **global** across the full paginated list (position 21 = page 2, item 1 at page_size
+  20). Use `pinAcrossCategories(username, position, slugs?)` to pin the same creator
+  across every category (or an explicit subset) instead of hand-listing 38 entries.
+  `face-search` is different — see below.
 - `src/config/sponsors.ts` — what a creator's card **links to / shows**, independent of
   whether they're pinned anywhere. `sponsors: Record<username, { linkOverride?,
   imageOverride?, clickTable? }>`, case-insensitive lookup via `getSponsorOverride()`.
@@ -502,6 +503,29 @@ fulfilling an order should be a config edit, not a code change.
   `internal:<path>`), other hosts become `external:<hostname>`, and a missing referrer is
   `null` — legitimate (pasted links, in-app browsers strip it), not an error.
 
+### The `face-search` scope (AI upload results) is a different shape
+`UploadBox.astro` → `api/face-search.ts` results are a single ranked list generated fresh
+per uploaded photo, not a paginated offset query — there's no stable "global position" to
+slot into. `applyFaceSearchPlacements()` in `creatorFetch.ts` **inserts** the pinned
+creator at the configured 1-based position instead, bumping the total match count (it does
+not replace or reorder organic matches). It intentionally omits `matchPct` on the inserted
+row — it isn't a real similarity score, and the `sponsored: true` → "Ad · Sponsored" badge
+is what discloses that. Called from all three `api/face-search.ts` branches (`vector` /
+`cosine` / `fallback`) via `finalizeResults()`, before `applySponsorOverrides`.
+
+**Sign-in gating interacts with this.** `UploadBox.astro` blurs every odd 0-based result
+index (1, 3, 5…) behind a "sign in to unlock" paywall until the visitor signs in
+(`isSignedIn()` checks `fbf_user` in `localStorage`) — real auth via Supabase Auth
+(`api/auth/session.ts`), not a placeholder. A sponsored card must never render blurred —
+that's an undisclosed ad, and unclickable to boot. Two things enforce this:
+1. `renderCard()` in `UploadBox.astro` never blurs a card where `c.sponsored` is true,
+   regardless of index (`locked = !signedIn && index % 2 === 1 && !isSponsored`) — this is
+   the actual guarantee and holds for any configured position.
+2. Even so, prefer **odd** 1-based positions (1, 3, 5…) when configuring a pin here — those
+   land on the 0-based indexes (0, 2, 4…) that were already unblurred by design, keeping
+   the sponsored slot's visual position stable and intentional rather than relying solely
+   on the `!isSponsored` override.
+
 ### Two gotchas that will silently break attribution
 1. **Never `rel="noreferrer"` on a `/go/` link.** It stops the browser from sending a
    Referer to our own route, zeroing out placement data even for internal traffic. Use
@@ -515,10 +539,11 @@ fulfilling an order should be a config edit, not a code change.
    with Playwright (curl can't see this — it's a browser-only behavior).
 
 ### Render sites that must stay in sync
-Card markup is duplicated in 6 places, not centralized — if you change how a card renders
+Card markup is duplicated in 7 places, not centralized — if you change how a card renders
 (the sponsored badge, the `rel` logic, etc.), update all of them: `CreatorCard.astro`,
 `index.astro` (load-more), `categories/[slug].astro` (load-more), `onlyfans-search.astro`,
-`dashboard.astro` (cached "Latest Searches" mini-cards). `ai-discover.astro` is explicitly
+`dashboard.astro` (cached "Latest Searches" mini-cards), `UploadBox.astro` (AI face-search
+results — also owns the sign-in blur logic above). `ai-discover.astro` is explicitly
 excluded — it's a draft page, leave it alone.
 
 ### Click-tracking tables

@@ -134,6 +134,36 @@ export async function fetchCreatorsByUsernames(usernames: string[]): Promise<Map
   }
 }
 
+// Inserts sponsored creators into a ranked, non-paginated result list (face-search
+// matches) at their configured 1-based position, bumping the total count rather than
+// slotting into a global offset — see the 'face-search' scope comment in
+// src/config/placements.ts for why. Excluded usernames are dropped from the organic
+// list first so a pinned/excluded creator never appears twice or in the wrong slot.
+export async function applyFaceSearchPlacements<T extends { username: string; matchPct?: number | null }>(
+  results: T[],
+): Promise<T[]> {
+  const { pinned, excluded } = getPlacement('face-search');
+  const dropSet = new Set([...excluded, ...pinned.map(p => p.username)].map(u => u.toLowerCase()));
+  const organic = dropSet.size ? results.filter(r => !dropSet.has(r.username.toLowerCase())) : results;
+
+  if (!pinned.length) return organic;
+
+  const pinnedRows = await fetchCreatorsByUsernames(pinned.map(p => p.username));
+  const pinnedByUsername = new Map(pinnedRows.map(r => [r.username.toLowerCase(), r]));
+
+  const out = [...organic];
+  const sortedPins = [...pinned].sort((a, b) => a.position - b.position);
+  for (const pin of sortedPins) {
+    const row = pinnedByUsername.get(pin.username.toLowerCase());
+    if (!row) continue; // misconfigured username — skip rather than crash the page
+    const insertAt = Math.min(Math.max(pin.position - 1, 0), out.length);
+    // matchPct intentionally omitted — this isn't a real similarity score, and the
+    // "Ad · Sponsored" badge (driven by `sponsored: true`) is what discloses it.
+    out.splice(insertAt, 0, { ...row, sponsored: true } as unknown as T);
+  }
+  return out;
+}
+
 export interface ResolvePlacementsParams {
   page: number;
   pageSize: number;
