@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { spawn } from 'node:child_process';
+import { createHash, createHmac } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -10,6 +11,9 @@ export const prerender = false;
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const MAX_OUTPUT_BYTES = 1024 * 1024;
 const SEARCH_TIMEOUT_MS = 60_000;
+const REMOTE_SEARCH_TIMEOUT_MS = 25_000;
+const DEFAULT_MATCHER_URL =
+  'https://ngolabovski819--findbyface-video-face-matcher-matcher-api.modal.run';
 const ALLOWED_TYPES = new Map([
   ['image/jpeg', '.jpg'],
   ['image/png', '.png'],
@@ -22,6 +26,63 @@ type SearchPayload = {
   error?: string;
   [key: string]: unknown;
 };
+
+async function runRemoteMatcher(
+  imageBytes: Buffer,
+  contentType: string,
+): Promise<{ payload: SearchPayload; status: number }> {
+  const matcherUrl =
+    process.env.VIDEO_FACE_MATCHER_URL?.replace(/\/+$/, '') ||
+    DEFAULT_MATCHER_URL;
+  const signingKey =
+    import.meta.env.SUPABASE_KEY || process.env.SUPABASE_KEY;
+  if (!signingKey) {
+    throw new Error('SUPABASE_KEY is unavailable for matcher authentication.');
+  }
+
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const bodyHash = createHash('sha256').update(imageBytes).digest('hex');
+  const signature = createHmac('sha256', signingKey)
+    .update(`${timestamp}.${bodyHash}`)
+    .digest('hex');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REMOTE_SEARCH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${matcherUrl}/search`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': contentType,
+        'X-FBF-Timestamp': timestamp,
+        'X-FBF-Signature': signature,
+      },
+      body: imageBytes,
+      signal: controller.signal,
+    });
+    const remotePayload = (await response.json()) as SearchPayload & {
+      detail?: unknown;
+    };
+    if (!response.ok) {
+      const detail =
+        typeof remotePayload.error === 'string'
+          ? remotePayload.error
+          : typeof remotePayload.detail === 'string'
+            ? remotePayload.detail
+            : 'The cloud face matcher could not process this image.';
+      return {
+        status: response.status === 422 ? 422 : 502,
+        payload: {
+          ok: false,
+          code: response.status === 422 ? 'invalid_image' : 'search_failed',
+          error: detail,
+        },
+      };
+    }
+    return { payload: remotePayload, status: 200 };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 function json(payload: SearchPayload, status = 200): Response {
   return new Response(JSON.stringify(payload), {
@@ -147,13 +208,33 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ ok: false, code: 'unsupported_type', error: 'Use a JPEG, PNG, or WebP image.' }, 415);
   }
 
+  const imageBytes = Buffer.from(await image.arrayBuffer());
+  if (process.env.VIDEO_FACE_USE_LOCAL !== '1') {
+    try {
+      const remote = await runRemoteMatcher(imageBytes, image.type);
+      return json(remote.payload, remote.status);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown cloud matcher error.';
+      console.error('video-face-search remote:', message);
+      return json(
+        {
+          ok: false,
+          code: 'search_failed',
+          error: 'Video face search is temporarily unavailable. Please try again.',
+        },
+        502,
+      );
+    }
+  }
+
   const root = process.cwd();
   const uploadDirectory = await mkdtemp(join(tmpdir(), 'findbyface-query-'));
   const safeExtension = extension || extname(image.name).toLowerCase();
   const imagePath = join(uploadDirectory, `query${safeExtension}`);
 
   try {
-    await writeFile(imagePath, Buffer.from(await image.arrayBuffer()));
+    await writeFile(imagePath, imageBytes);
     const execution = await runMatcher(root, imagePath);
     const payload = parseMatcherPayload(execution.stdout);
     if (!payload.ok) {
