@@ -90,7 +90,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   </div>
 </div>
 
-<div class="upload-section">
+<div class="upload-section" id="onlyfans-finder">
   <div class="upload-box" id="uploadBox">
 
     <!-- State 1: Idle -->
@@ -211,6 +211,16 @@ if (SUPABASE_URL && SUPABASE_KEY) {
       <span aria-hidden="true">👽</span> Post to Reddit
     </a>
   </div>
+  <a class="cross-finder-cta" href="/pornstar-finder-by-face/">
+    <span class="cross-finder-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m10 9 5 3-5 3z" /></svg>
+    </span>
+    <span class="cross-finder-copy">
+      <strong>Could this face appear in adult videos?</strong>
+      <small>Search the growing indexed video library with Pornstar Finder.</small>
+    </span>
+    <span class="cross-finder-action">Try Pornstar Finder <b>→</b></span>
+  </a>
   <div id="faceResultsGrid" class="face-results-grid"></div>
   <div id="faceLoadMoreWrap" class="face-load-more-wrap" style="display:none">
     <button id="faceLoadMoreBtn" class="face-load-more-btn" type="button">Load 12 more matches</button>
@@ -874,6 +884,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   .upload-section {
     display: flex; flex-direction: column;
     align-items: center; gap: 20px; padding: 0 20px; width: 100%;
+    scroll-margin-top: 88px;
   }
   .upload-box {
     width: 100%; max-width: 600px;
@@ -1208,6 +1219,34 @@ if (SUPABASE_URL && SUPABASE_KEY) {
 
   .face-results { width: 100%; max-width: 1200px; padding: 0 20px; margin: 0 auto; }
   .results-heading { font-size: 1.5rem; margin-bottom: 24px; text-align: center; }
+  .cross-finder-cta {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 20px;
+    padding: 12px 14px;
+    border: 1px solid rgba(168,85,247,0.24);
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.09), rgba(236,72,153,0.06));
+    color: var(--text);
+    text-decoration: none;
+    transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+  }
+  .cross-finder-cta:hover {
+    border-color: rgba(217,70,239,0.48);
+    background: linear-gradient(135deg, rgba(124,58,237,0.15), rgba(236,72,153,0.1));
+    transform: translateY(-1px);
+  }
+  .cross-finder-icon {
+    display: grid; width: 36px; height: 36px; place-items: center;
+    border-radius: 10px; background: rgba(139,92,246,0.14); color: #c4b5fd;
+  }
+  .cross-finder-icon svg { width: 18px; stroke: currentColor; stroke-width: 1.8; }
+  .cross-finder-copy { display: grid; gap: 2px; min-width: 0; }
+  .cross-finder-copy strong { font-size: 13px; }
+  .cross-finder-copy small { color: var(--text-muted); font-size: 11px; line-height: 1.4; }
+  .cross-finder-action { color: #d8b4fe; font-size: 12px; font-weight: 800; white-space: nowrap; }
   .face-results-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1215,7 +1254,12 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     align-items: start;
   }
   @media (max-width: 1024px) { .face-results-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-  @media (max-width: 680px)  { .face-results-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; } }
+  @media (max-width: 680px)  {
+    .face-results-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .cross-finder-cta { grid-template-columns: 32px minmax(0, 1fr); gap: 10px; padding: 11px; }
+    .cross-finder-icon { width: 32px; height: 32px; }
+    .cross-finder-action { grid-column: 2; }
+  }
   @media (max-width: 380px)  { .face-results-grid { gap: 10px; } }
 
   .creator-card {

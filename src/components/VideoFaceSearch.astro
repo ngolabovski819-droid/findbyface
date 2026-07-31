@@ -148,7 +148,7 @@
 
       <div class="metric-grid">
         <div class="metric">
-          <strong>1K+</strong>
+          <strong id="indexedVideoCount" aria-live="polite">—</strong>
           <span>indexed videos</span>
         </div>
         <div class="metric">
@@ -205,6 +205,16 @@
       </div>
       <div class="search-meta" id="searchMeta"></div>
     </div>
+    <a class="cross-finder-cta" href="/#onlyfans-finder">
+      <span class="cross-finder-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="10" cy="10" r="5" /><path d="m14 14 5 5M8 8.5h4M10 6.5v4" /></svg>
+      </span>
+      <span class="cross-finder-copy">
+        <strong>Looking for similar OnlyFans creators?</strong>
+        <small>Run the same kind of face search across creator profiles.</small>
+      </span>
+      <span class="cross-finder-action">Try OnlyFans Finder <b>→</b></span>
+    </a>
     <div class="results-grid" id="resultsGrid"></div>
     <button class="load-more" id="loadMore" type="button" hidden>
       Load more results
@@ -228,8 +238,8 @@
     <button class="search-limit-close" id="pornstarLimitClose" type="button" aria-label="Close">×</button>
     <span class="search-limit-icon" aria-hidden="true">∞</span>
     <h2 id="pornstarLimitTitle">Unlock unlimited searches</h2>
-    <p>You’ve used today’s free Pornstar Finder search. Sign in to continue searching without a daily limit.</p>
-    <a class="search-limit-signin" id="pornstarLimitSignIn" href="#">Sign in with Google</a>
+    <p>You’ve used today’s free Pornstar Finder search. Create a free account with any email to continue without a daily limit.</p>
+    <a class="search-limit-signin" id="pornstarLimitSignIn" href="/signup/?next=/pornstar-finder-by-face/">Create free account</a>
     <button class="search-limit-later" id="pornstarLimitLater" type="button">Maybe later</button>
   </div>
 </div>
@@ -279,6 +289,7 @@
   const limitClose = document.querySelector<HTMLButtonElement>('#pornstarLimitClose')!;
   const limitLater = document.querySelector<HTMLButtonElement>('#pornstarLimitLater')!;
   const limitSignIn = document.querySelector<HTMLAnchorElement>('#pornstarLimitSignIn')!;
+  const indexedVideoCount = document.querySelector<HTMLElement>('#indexedVideoCount')!;
 
   const RESULTS_PAGE_SIZE = 24;
   const HISTORY_KEY = 'fbf_pornstar_history';
@@ -288,6 +299,30 @@
   let searching = false;
   let allResults: VideoResult[] = [];
   let visibleResultCount = 0;
+
+  function displayIndexedVideoCount(value: number): void {
+    if (!Number.isSafeInteger(value) || value < 0) return;
+    indexedVideoCount.textContent = new Intl.NumberFormat().format(value);
+    indexedVideoCount.title = `${value.toLocaleString()} videos currently indexed`;
+  }
+
+  async function refreshIndexedVideoCount(): Promise<void> {
+    try {
+      const response = await fetch('/api/video-index-stats');
+      if (!response.ok) return;
+      const payload = await response.json() as { indexedVideos?: number };
+      if (typeof payload.indexedVideos === 'number') {
+        displayIndexedVideoCount(payload.indexedVideos);
+      }
+    } catch {
+      // Keep the last known count when the network is temporarily unavailable.
+    }
+  }
+
+  void refreshIndexedVideoCount();
+  const indexCountTimer = window.setInterval(() => {
+    if (document.visibilityState === 'visible') void refreshIndexedVideoCount();
+  }, 30_000);
 
   function currentUser(): { access_token?: string } | null {
     try {
@@ -301,15 +336,6 @@
     return new Date().toISOString().slice(0, 10);
   }
 
-  function signInUrl(): string {
-    const redirectTo = `${window.location.origin}/auth/callback`;
-    return `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
-  }
-
-  function prepareSignIn(): void {
-    localStorage.setItem('fbf_auth_return', '/pornstar-finder-by-face/');
-  }
-
   function openLimitModal(): void {
     limitModal.hidden = false;
     document.body.style.overflow = 'hidden';
@@ -321,9 +347,6 @@
     document.body.style.overflow = '';
   }
 
-  const oauthUrl = signInUrl();
-  limitSignIn.href = oauthUrl;
-  limitSignIn.addEventListener('click', prepareSignIn);
   limitBackdrop.addEventListener('click', closeLimitModal);
   limitClose.addEventListener('click', closeLimitModal);
   limitLater.addEventListener('click', closeLimitModal);
@@ -629,6 +652,9 @@
         throw new Error(payload.error || 'The local face search failed.');
       }
       if (!user?.access_token) localStorage.setItem(GUEST_DAY_KEY, todayUtc());
+      if (typeof payload.indexedVideos === 'number') {
+        displayIndexedVideoCount(payload.indexedVideos);
+      }
       savePornstarHistory(payload);
       renderResults(payload);
     } catch (error) {
@@ -646,6 +672,7 @@
   });
 
   window.addEventListener('beforeunload', () => {
+    window.clearInterval(indexCountTimer);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
   });
 </script>
@@ -1318,6 +1345,43 @@
     font-size: 12px;
   }
 
+  .cross-finder-cta {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 12px 14px;
+    border: 1px solid rgba(168, 85, 247, 0.24);
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.09), rgba(236, 72, 153, 0.06));
+    color: #f5f3ff;
+    text-decoration: none;
+    transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+  }
+
+  .cross-finder-cta:hover {
+    border-color: rgba(217, 70, 239, 0.48);
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(236, 72, 153, 0.1));
+    transform: translateY(-1px);
+  }
+
+  .cross-finder-icon {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border-radius: 10px;
+    background: rgba(139, 92, 246, 0.14);
+    color: #c4b5fd;
+  }
+
+  .cross-finder-icon svg { width: 18px; stroke: currentColor; stroke-width: 1.8; }
+  .cross-finder-copy { display: grid; gap: 2px; min-width: 0; }
+  .cross-finder-copy strong { font-size: 13px; }
+  .cross-finder-copy small { color: #9393aa; font-size: 11px; line-height: 1.4; }
+  .cross-finder-action { color: #d8b4fe; font-size: 12px; font-weight: 800; white-space: nowrap; }
+
   .results-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1631,6 +1695,15 @@
       align-items: flex-start;
       flex-direction: column;
     }
+
+    .cross-finder-cta {
+      grid-template-columns: 32px minmax(0, 1fr);
+      gap: 10px;
+      padding: 11px;
+    }
+
+    .cross-finder-icon { width: 32px; height: 32px; }
+    .cross-finder-action { grid-column: 2; }
 
     .results-grid {
       grid-template-columns: 1fr;

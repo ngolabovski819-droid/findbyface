@@ -20,7 +20,9 @@ const isPromote = pathname.startsWith('/promote');
       {/* Discover is under development — hidden from nav until ready */}
       {false && <a href="/ai-discover/" class={isDiscover ? 'active' : ''}>Discover</a>}
       <a href="/onlyfans-search/" class={isSearch ? 'active' : ''}>OnlyFans Search</a>
-      <a href="/pornstar-finder-by-face/" class={isVideoSearch ? 'active' : ''}>Pornstar Finder</a>
+      <a href="/pornstar-finder-by-face/" class={`nav-feature-link ${isVideoSearch ? 'active' : ''}`}>
+        <span>Pornstar Finder</span><small class="nav-new-badge">New</small>
+      </a>
       <a href="/promote/" class={isPromote ? 'active' : ''}>Promote Your OnlyFans</a>
       <div class="mobile-auth-actions" id="mobileAuthActions">
         <a href="/login/" class="mobile-login">Log in</a>
@@ -208,6 +210,20 @@ const isPromote = pathname.startsWith('/promote');
 
   .nav-links a:hover { color: var(--text); background: rgba(124,58,237,0.1); }
   .nav-links a.active { color: var(--text); }
+  .nav-links .nav-feature-link { display: inline-flex; align-items: center; gap: 6px; }
+  .nav-new-badge {
+    padding: 2px 5px;
+    border: 1px solid rgba(244,114,182,0.32);
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.22), rgba(236,72,153,0.22));
+    color: #f0abfc;
+    font-size: 8px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    box-shadow: 0 0 14px rgba(236,72,153,0.14);
+  }
 
   .nav-right {
     display: flex;
@@ -346,6 +362,7 @@ const isPromote = pathname.startsWith('/promote');
       gap: 4px;
     }
     .nav-links.open { display: flex; }
+    .nav-links .nav-feature-link { justify-content: flex-start; }
     .mobile-auth-actions {
       display: grid;
       grid-template-columns: 1fr 1fr;
