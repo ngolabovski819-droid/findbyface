@@ -1,0 +1,228 @@
+---
+import Base from '../layouts/Base.astro';
+
+const canonical = 'https://findbyface.org/sitemap/';
+const title = 'HTML Sitemap | findbyface';
+const description =
+  'Browse the main search tools, guides, category pages, and legal resources available on findbyface.';
+
+const primaryLinks = [
+  { href: '/', label: 'Home' },
+  { href: '/onlyfans-search/', label: 'OnlyFans Search' },
+  { href: '/pornstar-finder-by-face/', label: 'Pornstar Finder by Face' },
+  { href: '/promote/', label: 'Promote Your OnlyFans' },
+];
+
+const resourceLinks = [
+  { href: '/blog/', label: 'Blog' },
+  { href: '/blog/welcome/', label: 'Welcome to findbyface' },
+  { href: '/about/', label: 'About' },
+  { href: '/contact/', label: 'Contact' },
+];
+
+const legalLinks = [
+  { href: '/privacy-policy/', label: 'Privacy Policy' },
+  { href: '/terms-of-use/', label: 'Terms of Use' },
+  { href: '/dmca/', label: 'DMCA' },
+];
+
+const categorySlugs = [
+  'top',
+  'blonde',
+  'milf',
+  'trans',
+  'feet',
+  'bbw',
+  'latina',
+  'asian',
+  'ebony',
+  'redhead',
+  'petite',
+  'free',
+  'models',
+  'white-girls',
+  'blowjob',
+  'footjob',
+  'indian',
+  'korean',
+  'japanese',
+  'greek',
+  'serbian',
+  'bondage',
+  'bbc',
+  'anal',
+  'small-tits',
+  'big-tits',
+  'mature',
+  'hentai',
+  'old-young',
+  'threesome',
+  'bukkake',
+  'celebrity',
+  'strap-on',
+  'italian',
+  'dutch',
+  'rough-sex',
+  'solo-male',
+  'pussy-licking',
+];
+
+const categoryLinks = categorySlugs.map((slug) => ({
+  href: `/categories/${slug}/`,
+  label: slug
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' '),
+}));
+---
+
+<Base title={title} description={description} canonical={canonical}>
+  <section class="sitemap-page">
+    <header>
+      <span>Site directory</span>
+      <h1>HTML Sitemap</h1>
+      <p>Browse the public pages and search tools available on findbyface.</p>
+    </header>
+
+    <div class="sitemap-grid">
+      <section>
+        <h2>Search tools</h2>
+        <ul>
+          {primaryLinks.map((link) => (
+            <li><a href={link.href}>{link.label}</a></li>
+          ))}
+        </ul>
+      </section>
+
+      <section>
+        <h2>Resources</h2>
+        <ul>
+          {resourceLinks.map((link) => (
+            <li><a href={link.href}>{link.label}</a></li>
+          ))}
+        </ul>
+      </section>
+
+      <section>
+        <h2>Legal</h2>
+        <ul>
+          {legalLinks.map((link) => (
+            <li><a href={link.href}>{link.label}</a></li>
+          ))}
+          <li><a href="/sitemap.xml">XML Sitemap</a></li>
+        </ul>
+      </section>
+
+      <section class="categories">
+        <h2>Categories</h2>
+        <ul>
+          {categoryLinks.map((link) => (
+            <li><a href={link.href}>{link.label}</a></li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .sitemap-page {
+    width: min(1080px, calc(100% - 40px));
+    margin: 0 auto;
+    padding: 130px 0 50px;
+  }
+
+  header {
+    max-width: 680px;
+    margin-bottom: 48px;
+  }
+
+  header > span {
+    color: #a78bfa;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    margin-top: 10px;
+    font-size: clamp(2.4rem, 6vw, 4.5rem);
+    line-height: 1;
+    letter-spacing: -0.045em;
+  }
+
+  header p {
+    margin-top: 18px;
+    color: var(--text-muted);
+  }
+
+  .sitemap-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .sitemap-grid section {
+    padding: 26px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--surface);
+  }
+
+  .sitemap-grid .categories {
+    grid-column: 1 / -1;
+  }
+
+  h2 {
+    margin-bottom: 18px;
+    font-size: 1.1rem;
+  }
+
+  ul {
+    display: grid;
+    gap: 10px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .categories ul {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px 18px;
+  }
+
+  a {
+    color: var(--text-muted);
+    font-size: 14px;
+    transition: color 160ms ease;
+  }
+
+  a:hover {
+    color: #c4b5fd;
+  }
+
+  @media (max-width: 760px) {
+    .sitemap-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .sitemap-grid .categories {
+      grid-column: auto;
+    }
+
+    .categories ul {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 440px) {
+    .sitemap-page {
+      width: min(100% - 24px, 1080px);
+      padding-top: 104px;
+    }
+
+    .categories ul {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

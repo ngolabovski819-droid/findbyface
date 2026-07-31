@@ -28,6 +28,12 @@
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
+  <url>
+    <loc>https://findbyface.org/sitemap/</loc>
+    <lastmod>2026-07-31</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
 
   <!-- Category pages -->
   <url><loc>https://findbyface.org/categories/top/</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
