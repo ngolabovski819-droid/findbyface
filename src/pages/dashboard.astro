@@ -143,7 +143,7 @@ import Base from '../layouts/Base.astro';
           const matchTag = r.matchPct ? `<span class="mini-match">${r.matchPct}% match</span>` : '';
           const profileUrl = r.profileUrl || `https://onlyfans.com/${encodeURIComponent(r.username)}`;
           const isSponsored = profileUrl.startsWith('/go/');
-          const rel = isSponsored ? 'noopener nofollow sponsored' : 'noopener noreferrer';
+          const rel = isSponsored ? 'noopener nofollow sponsored' : 'noopener nofollow';
           const adTag = r.sponsored ? '<span class="mini-ad">Ad</span>' : '';
           return `<a class="mini-card" href="${profileUrl}" target="_blank" rel="${rel}">
             <span class="mini-rank">${ci + 1}</span>

@@ -117,6 +117,7 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
   import { pushHistory } from '../lib/searchHistory';
   import { initSearchDropdown } from '../lib/searchDropdown';
   import { initCardClickThrough } from '../lib/cardClickThrough';
+  import { creatorCardDataAttributes } from '../lib/creatorCardUi';
 
   // ── DOM refs ──────────────────────────────────────────────────────────────
   const searchHero     = document.getElementById('searchHero')!;
@@ -235,19 +236,18 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
   }
 
   function renderCard(c: any, index: number): string {
-    const imgSrc = c.avatar?.startsWith('http') ? proxyImg(c.avatar, 320, 427) : '/no-image.png';
+    const imgSrc = c.avatar?.startsWith('/') ? c.avatar : c.avatar?.startsWith('http') ? proxyImg(c.avatar, 320, 427) : '/no-image.png';
     const price = c.subscribePrice ?? c.subscribeprice;
     const priceLabel = (!price || isNaN(price)) ? 'FREE' : `$${parseFloat(price).toFixed(2)}`;
     const profileUrl = c.profileUrl || `https://onlyfans.com/${encodeURIComponent(c.username)}`;
     const isSponsored = profileUrl.startsWith('/go/');
-    const rel = isSponsored ? 'noopener nofollow sponsored' : 'noopener';
-    const badge = c.sponsored ? '<span class="sponsored-badge">Ad · Sponsored</span>' : '';
-    return `<div class="creator-card" data-href="${profileUrl}">
+    const rel = isSponsored ? 'noopener nofollow sponsored' : 'noopener nofollow';
+    const cardData = creatorCardDataAttributes(c);
+    return `<div class="creator-card" data-href="${profileUrl}" ${cardData}>
       <div class="card-img-wrap">
         <img src="${imgSrc}" alt="${c.name || c.username}" loading="${index < 8 ? 'eager' : 'lazy'}"
           decoding="async" referrerpolicy="no-referrer"
           onerror="if(this.src!=='/no-image.png'){this.removeAttribute('srcset');this.src='/no-image.png';}">
-        ${badge}
       </div>
       <div class="card-body">
         <p class="creator-name">${c.name || c.username}</p>

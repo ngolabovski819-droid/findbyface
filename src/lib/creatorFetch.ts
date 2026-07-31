@@ -19,6 +19,7 @@ interface RawCreatorRow {
   username: string;
   name?: string;
   avatar?: string;
+  header?: string;
   isverified?: boolean;
   subscribeprice?: number | null;
   favoritedcount?: number | null;
@@ -29,6 +30,7 @@ export interface MappedCreator {
   username: string;
   name?: string;
   avatar?: string;
+  header?: string;
   isVerified?: boolean;
   subscribePrice?: number | null;
   favoritedCount?: number | null;
@@ -41,6 +43,7 @@ function mapRow(c: RawCreatorRow): MappedCreator {
     username: c.username,
     name: c.name,
     avatar: c.avatar,
+    header: c.header,
     isVerified: c.isverified,
     subscribePrice: c.subscribeprice,
     favoritedCount: c.favoritedcount,
@@ -77,7 +80,7 @@ export async function fetchOrganicCreators(params: FetchOrganicParams): Promise<
   if (limit <= 0) return { rows: [], total: 0, failed: false };
 
   const qp = new URLSearchParams();
-  qp.set('select', 'id,username,name,avatar,isverified,subscribeprice,favoritedcount');
+  qp.set('select', 'id,username,name,avatar,header,isverified,subscribeprice,favoritedcount');
   qp.set('order', order ?? 'favoritedcount.desc');
   qp.set('limit', String(limit));
   qp.set('offset', String(offset));
@@ -119,7 +122,7 @@ export async function fetchCreatorsByUsernames(usernames: string[]): Promise<Map
   if (!SUPABASE_URL || !SUPABASE_KEY) return [];
 
   const qp = new URLSearchParams();
-  qp.set('select', 'id,username,name,avatar,isverified,subscribeprice,favoritedcount');
+  qp.set('select', 'id,username,name,avatar,header,isverified,subscribeprice,favoritedcount');
   qp.set('username', `in.(${usernames.join(',')})`);
 
   try {
@@ -158,7 +161,7 @@ export async function applyFaceSearchPlacements<T extends { username: string; ma
     if (!row) continue; // misconfigured username — skip rather than crash the page
     const insertAt = Math.min(Math.max(pin.position - 1, 0), out.length);
     // matchPct intentionally omitted — this isn't a real similarity score, and the
-    // "Ad · Sponsored" badge (driven by `sponsored: true`) is what discloses it.
+    // The card-level "Ad" label (driven by `sponsored: true`) discloses the placement.
     out.splice(insertAt, 0, { ...row, sponsored: true } as unknown as T);
   }
   return out;

@@ -226,6 +226,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   import { pushHistory } from '../lib/searchHistory';
   import { initSearchDropdown } from '../lib/searchDropdown';
   import { initCardClickThrough } from '../lib/cardClickThrough';
+  import { creatorCardDataAttributes } from '../lib/creatorCardUi';
 
   // Build Google OAuth URL dynamically so localhost dev doesn't redirect to production
   function getGoogleAuthUrl(): string {
@@ -615,15 +616,15 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   }
 
   function renderCard(c: Record<string, unknown>, index: number, signedIn: boolean): string {
-    const imgSrc = (c.avatar as string)?.startsWith('http') ? proxyImg(c.avatar as string, 320, 427) : '/no-image.png';
+    const avatar = c.avatar as string;
+    const imgSrc = avatar?.startsWith('/') ? avatar : avatar?.startsWith('http') ? proxyImg(avatar, 320, 427) : '/no-image.png';
     const price = (c.subscribePrice ?? c.subscribeprice) as number;
     const priceLabel = (!price || isNaN(Number(price))) ? 'FREE' : `$${parseFloat(String(price)).toFixed(2)}`;
     const matchPct = c.matchPct != null ? (c.matchPct as number) : null;
     const matchBadge = matchPct != null && matchPct > 0 ? `<span class="match-badge">Match: ${matchPct}%</span>` : '';
     const isSponsored = !!c.sponsored;
-    const sponsoredBadge = isSponsored ? '<span class="sponsored-badge">Ad · Sponsored</span>' : '';
     const profileUrl = (c.profileUrl as string) || `https://onlyfans.com/${encodeURIComponent(c.username as string)}`;
-    const rel = (profileUrl as string).startsWith('/go/') ? 'noopener nofollow sponsored' : 'noopener noreferrer';
+    const rel = (profileUrl as string).startsWith('/go/') ? 'noopener nofollow sponsored' : 'noopener nofollow';
     // Alternating pattern: every other card is blurred until signed in (1 shown, 1 locked).
     // A sponsored card is never blurred — an ad must stay visible/disclosed regardless of
     // sign-in state, never hidden behind the "sign in to unlock" paywall.
@@ -649,13 +650,13 @@ if (SUPABASE_URL && SUPABASE_KEY) {
       </div>`;
     }
 
-    return `<div class="creator-card" data-href="${profileUrl}">
+    const cardData = creatorCardDataAttributes(c);
+    return `<div class="creator-card" data-href="${profileUrl}" ${cardData}>
       <div class="card-img-wrap">
         <img src="${imgSrc}" alt="${(c.name || c.username) as string}" loading="${index === 0 ? 'eager' : 'lazy'}"
           decoding="async" referrerpolicy="no-referrer"
           onerror="if(this.src!=='/no-image.png'){this.src='/no-image.png';}">
         ${matchBadge}
-        ${sponsoredBadge}
       </div>
       <div class="card-body">
         <p class="creator-name">${(c.name || c.username) as string}</p>

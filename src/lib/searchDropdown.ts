@@ -58,7 +58,7 @@ export function initSearchDropdown(refs: SearchDropdownRefs): void {
         <span class="dd-ad-avatar">${img ? `<img src="${img}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : ''}</span>
         <span class="dd-ad-body">
           <span class="dd-ad-name">${escHtml(ad.name || ad.username)}</span>
-          <span class="sponsored-badge">Ad · Sponsored</span>
+          <span class="sponsored-badge" aria-label="Advertisement" title="Paid placement">Ad</span>
         </span>
       </a>`;
   }

@@ -1,11 +1,13 @@
 ---
 import { proxyImg } from '../utils/image';
+import { creatorCardImages } from '../lib/creatorCardUi';
 
 interface Props {
   creator: {
     username: string;
     name?: string;
     avatar?: string;
+    header?: string;
     subscribePrice?: number;
     subscribeprice?: number;
     isVerified?: boolean;
@@ -15,6 +17,9 @@ interface Props {
     favoritedcount?: number;
     profileUrl?: string;
     sponsored?: boolean;
+    tags?: string[];
+    additionalTagCount?: number;
+    galleryImages?: string[];
   };
   index: number;
 }
@@ -23,11 +28,16 @@ const { creator, index } = Astro.props;
 const name = creator.name || creator.username || 'Unknown';
 const username = creator.username || '';
 const avatar = creator.avatar || '';
+const images = creatorCardImages(creator);
 const price = creator.subscribePrice ?? creator.subscribeprice;
 const isVerified = creator.isVerified ?? creator.isverified;
 const matchPct = creator.matchPct;
 
-const imgSrc = avatar?.startsWith('http') ? proxyImg(avatar, 320, 427) : '/no-image.png';
+const imgSrc = avatar?.startsWith('/')
+  ? avatar
+  : avatar?.startsWith('http')
+    ? proxyImg(avatar, 320, 427)
+    : '/no-image.png';
 const imgSrcset = avatar?.startsWith('http')
   ? [144, 240, 320, 480].map(w => `${proxyImg(avatar, w, Math.round(w * 4 / 3))} ${w}w`).join(', ')
   : '';
@@ -37,10 +47,19 @@ const priceLabel = (!price || isNaN(Number(price))) ? 'FREE' : `$${parseFloat(St
 const profileUrl = creator.profileUrl || `https://onlyfans.com/${encodeURIComponent(username)}`;
 // GOTCHA: never use rel="noreferrer" on a /go/ link — it zeroes out the Referer that
 // route depends on for placement attribution. noopener + nofollow(+sponsored) instead.
-const rel = profileUrl.startsWith('/go/') ? 'noopener nofollow sponsored' : 'noopener noreferrer';
+const rel = profileUrl.startsWith('/go/') ? 'noopener nofollow sponsored' : 'noopener nofollow';
 ---
 
-<div class="creator-card" data-href={profileUrl}>
+<div
+  class="creator-card"
+  data-href={profileUrl}
+  data-card-username={username}
+  data-card-images={JSON.stringify(images)}
+  data-card-sponsored={creator.sponsored ? 'true' : 'false'}
+  data-card-tags={JSON.stringify(creator.tags ?? [])}
+  data-card-extra-tags={creator.additionalTagCount ?? 0}
+  data-card-verified={isVerified ? 'true' : 'false'}
+>
   <div class="card-img-wrap">
     <img
       src={imgSrc}
@@ -54,12 +73,9 @@ const rel = profileUrl.startsWith('/go/') ? 'noopener nofollow sponsored' : 'noo
       onerror="if(this.src!=='/no-image.png'){this.removeAttribute('srcset');this.src='/no-image.png';}"
     />
     {matchPct && <span class="match-badge">{matchPct}% match</span>}
-    {creator.sponsored && <span class="sponsored-badge">Ad · Sponsored</span>}
   </div>
   <div class="card-body">
-    <p class="creator-name">
-      {isVerified && <span class="verified" title="Verified">✓</span>}{name}
-    </p>
+    <p class="creator-name">{name}</p>
     <p class="username">@{username}</p>
     <p class={`price ${priceLabel === 'FREE' ? 'price-free' : ''}`}>{priceLabel}</p>
     <a href={profileUrl} class="view-btn" target="_blank" rel={rel}>
@@ -135,18 +151,6 @@ const rel = profileUrl.startsWith('/go/') ? 'noopener nofollow sponsored' : 'noo
     box-shadow: 0 4px 14px rgba(124,58,237,0.45);
   }
 
-  .creator-card .sponsored-badge {
-    position: absolute; top: 10px; left: 10px;
-    z-index: 2;
-    background: rgba(10,10,15,0.75);
-    border: 1px solid rgba(255,255,255,0.25);
-    color: #fff;
-    font-size: 10px; font-weight: 700;
-    padding: 3px 8px; border-radius: 999px;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-  }
-
   .creator-card .card-body { padding: 14px 15px 15px; }
 
   .creator-card .creator-name {
@@ -158,13 +162,6 @@ const rel = profileUrl.startsWith('/go/') ? 'noopener nofollow sponsored' : 'noo
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
-  .creator-card .verified {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 15px; height: 15px; flex: 0 0 15px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent), var(--accent-pink));
-    color: #fff; font-size: 9px; font-weight: 900;
-  }
   .creator-card .username { color: var(--text-muted); font-size: 12px; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .creator-card .price { font-weight: 800; font-size: 15px; margin-bottom: 12px; color: var(--text-muted); }
   .creator-card .price-free { color: var(--success); }

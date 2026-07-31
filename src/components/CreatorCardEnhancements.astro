@@ -1,0 +1,307 @@
+<script>
+  import { initCardClickThrough } from '../lib/cardClickThrough';
+
+  const STORAGE_KEY = 'findbyface:wishlist';
+
+  // Keep whole-card navigation active even when Astro hot-reloads this component
+  // after the visual enhancement layer has already been initialized.
+  initCardClickThrough();
+
+  function parseList(value: string | undefined): string[] {
+    if (!value) return [];
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.filter(item => typeof item === 'string' && item) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function getWishlist(): string[] {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
+      return Array.isArray(parsed) ? parsed.filter(item => typeof item === 'string') : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function setWishlist(usernames: string[]): void {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(usernames));
+  }
+
+  function imageUrl(url: string): string {
+    if (!url || url.startsWith('/')) return url || '/no-image.png';
+    const clean = url.replace(/^https?:\/\//, '');
+    return `https://images.weserv.nl/?url=${encodeURIComponent(clean)}&w=480&h=640&fit=cover&output=webp`;
+  }
+
+  function renderDots(card: HTMLElement, activeIndex: number, total: number): void {
+    const dots = card.querySelector<HTMLElement>('.card-carousel-dots');
+    if (!dots) return;
+    const size = Math.min(7, total);
+    const start = Math.min(
+      Math.max(activeIndex - Math.floor(size / 2), 0),
+      Math.max(total - size, 0),
+    );
+    dots.innerHTML = Array.from({ length: size }, (_, offset) => {
+      const index = start + offset;
+      return `<button type="button" class="card-carousel-dot${index === activeIndex ? ' active' : ''}" data-card-slide="${index}" aria-label="Show creator image ${index + 1}"></button>`;
+    }).join('');
+    dots.setAttribute('aria-label', `Image ${activeIndex + 1} of ${total}`);
+  }
+
+  function setSlide(card: HTMLElement, requestedIndex: number): void {
+    const images = parseList(card.dataset.cardImages);
+    if (images.length < 2) return;
+    const index = (requestedIndex + images.length) % images.length;
+    const img = card.querySelector<HTMLImageElement>('.card-img-wrap > img');
+    if (!img) return;
+    img.removeAttribute('srcset');
+    img.removeAttribute('sizes');
+    img.src = imageUrl(images[index]);
+    card.dataset.cardSlide = String(index);
+    renderDots(card, index, images.length);
+  }
+
+  function enhanceCard(card: HTMLElement): void {
+    if (card.dataset.cardEnhanced === 'true' || card.classList.contains('locked')) return;
+    card.dataset.cardEnhanced = 'true';
+    const wrap = card.querySelector<HTMLElement>('.card-img-wrap');
+    if (!wrap) return;
+
+    const username = card.dataset.cardUsername ?? '';
+    const images = parseList(card.dataset.cardImages);
+    const tags = parseList(card.dataset.cardTags);
+    const sponsored = card.dataset.cardSponsored === 'true';
+    const verified = card.dataset.cardVerified === 'true';
+
+    wrap.querySelectorAll('.sponsored-badge').forEach(node => node.remove());
+
+    if (username && !wrap.querySelector('.card-wishlist')) {
+      const selected = getWishlist().some(value => value.toLowerCase() === username.toLowerCase());
+      wrap.insertAdjacentHTML('beforeend', `<button type="button" class="card-wishlist${selected ? ' active' : ''}" data-wishlist-username="${username.replace(/"/g, '&quot;')}" aria-label="${selected ? 'Remove from wishlist' : 'Add to wishlist'}">${selected ? '♥' : '♡'}</button>`);
+    }
+
+    if (sponsored && tags.length > 0 && !wrap.querySelector('.card-content-tags')) {
+      const extra = Number(card.dataset.cardExtraTags ?? 0);
+      const pills = tags.map(tag => `<span class="card-content-tag">${tag.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`);
+      if (extra > 0) pills.push(`<span class="card-content-tag card-content-tag-more">+${extra}</span>`);
+      wrap.insertAdjacentHTML('beforeend', `<div class="card-content-tags" aria-label="Creator content tags">${pills.join('')}</div>`);
+    }
+
+    if (sponsored && !wrap.querySelector('.card-ad-label')) {
+      wrap.insertAdjacentHTML('beforeend', '<span class="card-ad-label" aria-label="Advertisement" title="Paid placement">Ad</span>');
+    }
+
+    if (images.length > 1 && !wrap.querySelector('.card-carousel-arrow')) {
+      wrap.insertAdjacentHTML('beforeend', `
+        <button type="button" class="card-carousel-arrow card-carousel-arrow-prev" data-card-direction="-1" aria-label="Previous creator image">‹</button>
+        <button type="button" class="card-carousel-arrow card-carousel-arrow-next" data-card-direction="1" aria-label="Next creator image">›</button>
+        <div class="card-carousel-dots"></div>
+      `);
+      card.dataset.cardSlide = '0';
+      renderDots(card, 0, images.length);
+    }
+
+    if (verified) {
+      const name = card.querySelector<HTMLElement>('.creator-name');
+      name?.querySelectorAll('.verified').forEach(node => node.remove());
+      if (name && !name.querySelector('.card-name-verified')) {
+        name.insertAdjacentHTML('beforeend', '<span class="card-name-verified" aria-label="Verified creator" title="Verified">✓</span>');
+      }
+    }
+  }
+
+  function enhanceWithin(root: ParentNode): void {
+    if (root instanceof HTMLElement && root.matches('.creator-card')) enhanceCard(root);
+    root.querySelectorAll<HTMLElement>('.creator-card').forEach(enhanceCard);
+  }
+
+  if (!(window as typeof window & { __creatorCardUi?: boolean }).__creatorCardUi) {
+    (window as typeof window & { __creatorCardUi?: boolean }).__creatorCardUi = true;
+    enhanceWithin(document);
+    new MutationObserver(records => {
+      records.forEach(record => record.addedNodes.forEach(node => {
+        if (node instanceof HTMLElement) enhanceWithin(node);
+      }));
+    }).observe(document.body, { childList: true, subtree: true });
+
+    document.addEventListener('click', event => {
+      const target = event.target as HTMLElement;
+      const control = target.closest<HTMLElement>('[data-card-direction], [data-card-slide], [data-wishlist-username]');
+      if (!control) return;
+      event.preventDefault();
+      event.stopPropagation();
+
+      const card = control.closest<HTMLElement>('.creator-card');
+      if (!card) return;
+
+      if (control.dataset.cardDirection) {
+        const current = Number(card.dataset.cardSlide ?? 0);
+        setSlide(card, current + Number(control.dataset.cardDirection));
+        return;
+      }
+      if (control.dataset.cardSlide !== undefined) {
+        setSlide(card, Number(control.dataset.cardSlide));
+        return;
+      }
+
+      const username = control.dataset.wishlistUsername;
+      if (!username) return;
+      const current = getWishlist();
+      const exists = current.some(value => value.toLowerCase() === username.toLowerCase());
+      const next = exists
+        ? current.filter(value => value.toLowerCase() !== username.toLowerCase())
+        : [...current, username];
+      setWishlist(next);
+      control.classList.toggle('active', !exists);
+      control.textContent = exists ? '♡' : '♥';
+      control.setAttribute('aria-label', exists ? 'Add to wishlist' : 'Remove from wishlist');
+    }, true);
+  }
+</script>
+
+<style is:global>
+  .creator-card .card-wishlist {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 5;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid rgba(255,255,255,.34);
+    border-radius: 50%;
+    background: linear-gradient(145deg, rgba(42,42,46,.76), rgba(12,12,14,.64));
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.12);
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform .18s, background .18s, border-color .18s, box-shadow .18s;
+    backdrop-filter: blur(6px);
+  }
+  .creator-card .card-wishlist:hover { transform: scale(1.06); border-color: rgba(255,255,255,.62); }
+  .creator-card .card-wishlist.active {
+    border-color: rgba(255,255,255,.72);
+    background: linear-gradient(145deg, #38bdf8, #0284c7);
+    box-shadow: 0 3px 12px rgba(14,165,233,.38), inset 0 1px 0 rgba(255,255,255,.28);
+  }
+  .creator-card .card-wishlist:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+  .creator-card .card-content-tags {
+    position: absolute;
+    top: 13px;
+    left: 44px;
+    right: 6px;
+    z-index: 4;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 2px;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .creator-card .card-content-tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    padding: 2px 4px;
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 999px;
+    background: rgba(43,39,42,.74);
+    color: rgba(255,255,255,.96);
+    font-size: 8.5px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    text-shadow: 0 1px 2px rgba(0,0,0,.45);
+    backdrop-filter: blur(5px);
+  }
+
+  .creator-card .card-ad-label {
+    position: absolute;
+    right: 8px;
+    bottom: 7px;
+    z-index: 4;
+    color: rgba(255,255,255,.68);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    text-shadow: 0 1px 3px rgba(0,0,0,.72);
+  }
+
+  .creator-card .card-name-verified {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-left: 5px;
+    border-radius: 50%;
+    background: #0ea5e9;
+    color: #fff;
+    font-family: Inter, sans-serif;
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+  .creator-card .card-carousel-arrow {
+    position: absolute;
+    top: 50%;
+    z-index: 5;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    padding: 0 0 1px;
+    transform: translateY(-50%);
+    border: 1px solid rgba(255,255,255,.5);
+    border-radius: 50%;
+    background: rgba(255,255,255,.86);
+    color: #242429;
+    box-shadow: 0 1px 5px rgba(0,0,0,.24);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .18s, transform .18s;
+  }
+  .creator-card .card-carousel-arrow:hover { transform: translateY(-50%) scale(1.06); }
+  .creator-card .card-carousel-arrow-prev { left: 6px; }
+  .creator-card .card-carousel-arrow-next { right: 6px; }
+  .creator-card .card-img-wrap:hover .card-carousel-arrow,
+  .creator-card .card-carousel-arrow:focus-visible { opacity: 1; }
+
+  .creator-card .card-carousel-dots {
+    position: absolute;
+    left: 50%;
+    bottom: 9px;
+    z-index: 5;
+    display: flex;
+    gap: 3px;
+    transform: translateX(-50%);
+  }
+  .creator-card .card-carousel-dot {
+    width: 5px;
+    height: 5px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255,255,255,.5);
+    box-shadow: 0 1px 3px rgba(0,0,0,.42);
+    cursor: pointer;
+  }
+  .creator-card .card-carousel-dot.active { background: #fff; transform: scale(1.2); }
+
+  @media (hover: none) {
+    .creator-card .card-carousel-arrow-next { opacity: .92; }
+  }
+  @media (max-width: 480px) {
+    .creator-card .card-content-tags { top: 12px; left: 43px; right: 3px; gap: 1px; }
+    .creator-card .card-content-tag { min-height: 22px; padding: 2px 3px; background: rgba(43,39,42,.82); font-size: 9px; }
+  }
+</style>

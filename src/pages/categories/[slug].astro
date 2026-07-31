@@ -140,19 +140,35 @@ const jsonLd = JSON.stringify({
     return `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//, ''))}&w=${w}&h=${h}&fit=cover&output=webp`;
   }
 
+  function cardDataAttributes(c) {
+    const escapeAttribute = value => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    const images = [...new Set([c.avatar, c.header, ...(c.galleryImages || [])].filter(Boolean))];
+    return [
+      `data-card-username="${escapeAttribute(c.username || '')}"`,
+      `data-card-images="${escapeAttribute(JSON.stringify(images))}"`,
+      `data-card-sponsored="${c.sponsored ? 'true' : 'false'}"`,
+      `data-card-tags="${escapeAttribute(JSON.stringify(c.tags || []))}"`,
+      `data-card-extra-tags="${c.additionalTagCount || 0}"`,
+      `data-card-verified="${c.isVerified || c.isverified ? 'true' : 'false'}"`,
+    ].join(' ');
+  }
+
   function renderCard(c) {
-    const imgSrc = c.avatar?.startsWith('http') ? proxyImg(c.avatar, 320, 427) : '/no-image.png';
+    const imgSrc = c.avatar?.startsWith('/') ? c.avatar : c.avatar?.startsWith('http') ? proxyImg(c.avatar, 320, 427) : '/no-image.png';
     const price = c.subscribePrice ?? c.subscribeprice;
     const priceLabel = (!price || isNaN(price)) ? 'FREE' : `$${parseFloat(price).toFixed(2)}`;
     const profileUrl = c.profileUrl || `https://onlyfans.com/${encodeURIComponent(c.username)}`;
     const isSponsored = profileUrl.startsWith('/go/');
-    const rel = isSponsored ? 'noopener nofollow sponsored' : 'noopener';
-    const badge = c.sponsored ? '<span class="sponsored-badge">Ad · Sponsored</span>' : '';
-    return `<div class="creator-card" data-href="${profileUrl}">
+    const rel = isSponsored ? 'noopener nofollow sponsored' : 'noopener nofollow';
+    const cardData = cardDataAttributes(c);
+    return `<div class="creator-card" data-href="${profileUrl}" ${cardData}>
       <div class="card-img-wrap">
         <img src="${imgSrc}" alt="${c.name || c.username}" loading="lazy" decoding="async" referrerpolicy="no-referrer"
           onerror="if(this.src!=='/no-image.png'){this.removeAttribute('srcset');this.src='/no-image.png';}">
-        ${badge}
       </div>
       <div class="card-body">
         <p class="creator-name">${c.name || c.username}</p>

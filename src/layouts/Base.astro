@@ -1,5 +1,6 @@
 ---
 import Nav from '../components/Nav.astro';
+import CreatorCardEnhancements from '../components/CreatorCardEnhancements.astro';
 
 interface Props {
   title: string;
@@ -55,6 +56,7 @@ const canonicalUrl = canonical ?? new URL(Astro.url.pathname, 'https://findbyfac
 </head>
 <body>
   <Nav />
+  <CreatorCardEnhancements />
   <main>
     <slot />
   </main>

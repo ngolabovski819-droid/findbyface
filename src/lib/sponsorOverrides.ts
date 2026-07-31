@@ -7,6 +7,7 @@ import { getSponsorOverride } from '../config/sponsors';
 interface OverridableCreator {
   username: string;
   avatar?: string;
+  header?: string;
 }
 
 export function applySponsorOverrides<T extends OverridableCreator>(
@@ -22,7 +23,11 @@ export function applySponsorOverrides<T extends OverridableCreator>(
 
     return {
       ...c,
+      sponsored: true,
       avatar: override.imageOverride ?? c.avatar,
+      tags: override.tags,
+      additionalTagCount: override.additionalTagCount,
+      galleryImages: override.galleryImages,
       // Only route through the tracked redirect when there's something to track —
       // a pure image swap with no link/click config keeps the default outbound link.
       profileUrl: override.linkOverride || override.clickTable ? `/go/${encodeURIComponent(c.username)}` : defaultUrl,

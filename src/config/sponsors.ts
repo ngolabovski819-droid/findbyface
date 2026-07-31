@@ -14,12 +14,21 @@ export interface SponsorOverride {
   linkOverride?: string;
   imageOverride?: string;
   clickTable?: string;
+  tags?: string[];
+  additionalTagCount?: number;
+  galleryImages?: string[];
 }
 
 export const sponsors: Record<string, SponsorOverride> = {
   emilylopz: {
     linkOverride: 'https://onlyfans.com/emilylopz/c545',
     clickTable: 'sponsor_clicks_emilylopz_fbf',
+    tags: ['GFE', 'Feet fetish', 'Squirting'],
+    additionalTagCount: 9,
+    galleryImages: Array.from(
+      { length: 24 },
+      (_, index) => `/uploads/sponsors/emilylopz/emily-${String(index + 1).padStart(2, '0')}.jpg`,
+    ),
   },
 };
 

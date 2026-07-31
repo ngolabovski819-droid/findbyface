@@ -4,15 +4,15 @@
 // handle themselves natively via event delegation's closest('a, button') bail-out.
 // Safe to call from multiple components on the same page (e.g. a page's own script and
 // a component it renders, like UploadBox.astro on index.astro) — guarded so the listener
-// is only ever registered once per page, since a second registration would fire
-// window.open() twice per click. Delegates from `document` so it also covers cards
+// is only ever registered once per page. Delegates from `document` so it also covers cards
 // inserted later (load more, face-search results) without re-binding.
 let initialized = false;
 export function initCardClickThrough(): void {
   if (initialized) return;
   initialized = true;
   document.addEventListener('click', e => {
-    const target = e.target as HTMLElement;
+    const target = e.target;
+    if (!(target instanceof Element)) return;
     if (target.closest('a, button')) return; // let real interactive elements behave natively
 
     const card = target.closest<HTMLElement>('.creator-card[data-href]');
@@ -27,6 +27,9 @@ export function initCardClickThrough(): void {
     }
 
     const href = card.dataset.href;
-    if (href) window.open(href, '_blank', 'noopener');
-  });
+    if (href) {
+      e.preventDefault();
+      window.location.assign(href);
+    }
+  }, true);
 }

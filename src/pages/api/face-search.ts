@@ -62,6 +62,7 @@ export const POST: APIRoute = async ({ request }) => {
             username:       c.username,
             name:           c.name,
             avatar:         c.avatar,
+            header:         c.header,
             isVerified:     c.isverified,
             subscribePrice: c.subscribeprice,
             favoritedCount: c.favoritedcount,
@@ -78,7 +79,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Fallback: fetch creators with embeddings and compute cosine similarity server-side
     const embParams = new URLSearchParams({
-      select: 'id,username,name,avatar,isverified,subscribeprice,favoritedcount,face_embedding',
+      select: 'id,username,name,avatar,header,isverified,subscribeprice,favoritedcount,face_embedding',
       'face_embedding': 'not.is.null',
       order: 'favoritedcount.desc',
       limit: '1000',
@@ -109,6 +110,7 @@ export const POST: APIRoute = async ({ request }) => {
           username:       c.username,
           name:           c.name,
           avatar:         c.avatar,
+          header:         c.header,
           isVerified:     c.isverified,
           subscribePrice: c.subscribeprice,
           favoritedCount: c.favoritedcount,
@@ -124,7 +126,7 @@ export const POST: APIRoute = async ({ request }) => {
 
   // Final fallback: no embeddings in DB yet — return popular creators, no match %
   const params = new URLSearchParams({
-    select: 'id,username,name,avatar,isverified,subscribeprice,favoritedcount',
+    select: 'id,username,name,avatar,header,isverified,subscribeprice,favoritedcount',
     order:  'favoritedcount.desc',
     limit:  '100',
   });
@@ -143,6 +145,7 @@ export const POST: APIRoute = async ({ request }) => {
     username:       c.username,
     name:           c.name,
     avatar:         c.avatar,
+    header:         c.header,
     isVerified:     c.isverified,
     subscribePrice: c.subscribeprice,
     favoritedCount: c.favoritedcount,

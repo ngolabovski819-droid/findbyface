@@ -7,7 +7,7 @@ const CACHE_TTL = 60_000;
 const cache = new Map<string, { data: unknown; ts: number }>();
 
 const CARD_COLS = [
-  'id', 'username', 'name', 'about', 'avatar',
+  'id', 'username', 'name', 'about', 'avatar', 'header',
   'isverified', 'subscribeprice', 'favoritedcount', 'subscriberscount',
   'photoscount', 'videoscount',
   'bundle1_price', 'bundle1_discount',
@@ -110,6 +110,7 @@ export const GET: APIRoute = async ({ url }) => {
     name:             c.name,
     about:            c.about,
     avatar:           c.avatar as string | undefined,
+    header:           c.header as string | undefined,
     isVerified:       c.isverified,
     subscribePrice:   c.subscribeprice,
     favoritedCount:   c.favoritedcount,
