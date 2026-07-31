@@ -31,6 +31,7 @@ matcher_image = (
         "insightface==0.7.3",
         "requests==2.32.3",
         "fastapi==0.115.6",
+        "pornhub-api==0.4.0",
     )
     .run_commands(
         "mkdir -p /root/.insightface/models/buffalo_l",
@@ -59,6 +60,8 @@ def matcher_api():
     import hmac
     import os
     import time
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from urllib.parse import quote
 
     import cv2
     import numpy as np
@@ -66,11 +69,14 @@ def matcher_api():
     from fastapi import FastAPI, HTTPException, Request
     from fastapi.responses import JSONResponse
     from insightface.app import FaceAnalysis
+    from pornhub_api import PornhubApi
 
     max_upload_bytes = 8 * 1024 * 1024
     max_image_pixels = 20_000_000
     threshold = 0.324
     result_limit = 50
+    thumbnail_cache_limit = 24
+    thumbnail_bucket = "video-thumbnails"
     supabase_url = os.environ["SUPABASE_URL"].rstrip("/")
     supabase_key = os.environ["SUPABASE_KEY"]
 
@@ -116,6 +122,180 @@ def matcher_api():
 
     def vector_literal(vector: np.ndarray) -> str:
         return "[" + ",".join(f"{float(value):.8f}" for value in vector) + "]"
+
+    def stable_thumbnail_url(video_id: int, extension: str) -> str:
+        path = quote(f"videos/{video_id}.{extension}", safe="/")
+        return (
+            f"{supabase_url}/storage/v1/object/public/"
+            f"{thumbnail_bucket}/{path}"
+        )
+
+    def is_stable_thumbnail(url: str | None) -> bool:
+        return bool(
+            url
+            and f"/storage/v1/object/public/{thumbnail_bucket}/" in url
+        )
+
+    def ensure_thumbnail_bucket() -> None:
+        storage_headers = {
+            "apikey": supabase_key,
+            "Authorization": f"Bearer {supabase_key}",
+        }
+        response = requests.get(
+            f"{supabase_url}/storage/v1/bucket/{thumbnail_bucket}",
+            headers=storage_headers,
+            timeout=15,
+        )
+        if response.ok:
+            return
+        create_response = requests.post(
+            f"{supabase_url}/storage/v1/bucket",
+            headers={**storage_headers, "Content-Type": "application/json"},
+            json={
+                "id": thumbnail_bucket,
+                "name": thumbnail_bucket,
+                "public": True,
+                "file_size_limit": 5 * 1024 * 1024,
+                "allowed_mime_types": [
+                    "image/jpeg",
+                    "image/png",
+                    "image/webp",
+                ],
+            },
+            timeout=15,
+        )
+        # A concurrent request may have created the bucket first.
+        if not create_response.ok and create_response.status_code != 409:
+            create_response.raise_for_status()
+
+    def fresh_thumbnail_source(external_id: str) -> str | None:
+        prefix = "pornhub:"
+        if not external_id.startswith(prefix):
+            return None
+        result = PornhubApi().video.get_by_id(external_id.removeprefix(prefix))
+        video = getattr(result, "__root__", None)
+        if video is None:
+            return None
+        for value in (
+            getattr(video, "thumb", None),
+            getattr(video, "default_thumb", None),
+        ):
+            if value:
+                return str(value)
+        return None
+
+    def fetch_thumbnail_bytes(url: str | None) -> tuple[bytes, str] | None:
+        if not url:
+            return None
+        response = requests.get(
+            url,
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 Chrome/126.0 Safari/537.36"
+                ),
+                "Referer": "https://www.pornhub.com/",
+                "Accept": "image/avif,image/webp,image/png,image/jpeg,*/*;q=0.8",
+            },
+            timeout=15,
+        )
+        content_type = response.headers.get("Content-Type", "").split(";", 1)[0]
+        if (
+            not response.ok
+            or not content_type.startswith("image/")
+            or len(response.content) < 512
+            or len(response.content) > 5 * 1024 * 1024
+        ):
+            return None
+        extension = {
+            "image/jpeg": "jpg",
+            "image/jpg": "jpg",
+            "image/png": "png",
+            "image/webp": "webp",
+        }.get(content_type)
+        if not extension:
+            return None
+        return response.content, extension
+
+    def cache_result_thumbnail(result: dict) -> tuple[int, str] | None:
+        if is_stable_thumbnail(result.get("thumbnailUrl")):
+            return None
+
+        image = None
+        try:
+            image = fetch_thumbnail_bytes(result.get("thumbnailUrl"))
+        except requests.RequestException:
+            pass
+        if image is None:
+            try:
+                source_url = fresh_thumbnail_source(result["externalId"])
+                image = fetch_thumbnail_bytes(source_url)
+            except Exception:
+                return None
+        if image is None:
+            return None
+
+        content, extension = image
+        video_id = int(result["videoId"])
+        object_path = quote(f"videos/{video_id}.{extension}", safe="/")
+        upload_response = requests.post(
+            (
+                f"{supabase_url}/storage/v1/object/"
+                f"{thumbnail_bucket}/{object_path}"
+            ),
+            headers={
+                "apikey": supabase_key,
+                "Authorization": f"Bearer {supabase_key}",
+                "Content-Type": f"image/{'jpeg' if extension == 'jpg' else extension}",
+                "x-upsert": "true",
+            },
+            data=content,
+            timeout=20,
+        )
+        upload_response.raise_for_status()
+        public_url = stable_thumbnail_url(video_id, extension)
+
+        update_response = requests.patch(
+            f"{supabase_url}/rest/v1/videos",
+            params={"id": f"eq.{video_id}"},
+            headers={**headers(), "Prefer": "return=minimal"},
+            json={"thumbnail_url": public_url},
+            timeout=15,
+        )
+        update_response.raise_for_status()
+        return video_id, public_url
+
+    def cache_result_thumbnails(results: list[dict]) -> None:
+        targets = [
+            result
+            for result in results[:thumbnail_cache_limit]
+            if not is_stable_thumbnail(result.get("thumbnailUrl"))
+        ]
+        if not targets:
+            return
+        try:
+            ensure_thumbnail_bucket()
+        except requests.RequestException:
+            return
+
+        cached_by_id: dict[int, str] = {}
+        with ThreadPoolExecutor(max_workers=min(6, len(targets))) as executor:
+            futures = [
+                executor.submit(cache_result_thumbnail, result)
+                for result in targets
+            ]
+            for future in as_completed(futures):
+                try:
+                    cached = future.result()
+                except Exception:
+                    continue
+                if cached:
+                    cached_by_id[cached[0]] = cached[1]
+
+        for result in results:
+            cached_url = cached_by_id.get(int(result["videoId"]))
+            if cached_url:
+                result["thumbnailUrl"] = cached_url
 
     def indexed_video_count(request_headers: dict[str, str]) -> int:
         response = requests.get(
@@ -236,9 +416,10 @@ def matcher_api():
             }
             for row in response.json()
         ]
+        cache_result_thumbnails(results)
         return {
             "ok": True,
-            "mode": "modal-supabase-direct",
+            "mode": "modal-supabase-thumbnail-cache",
             "model": f"insightface/{MODEL_NAME}",
             "threshold": threshold,
             "indexedVideos": indexed_video_count(request_headers),
