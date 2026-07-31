@@ -2,6 +2,9 @@
 const pathname = Astro.url.pathname;
 const isHome = pathname === '/' || pathname === '';
 const isSearch = pathname.startsWith('/onlyfans-search');
+const isVideoSearch =
+  pathname.startsWith('/pornstar-finder-by-face') ||
+  pathname.startsWith('/video-search');
 const isDiscover = pathname.startsWith('/ai-discover');
 const isPromote = pathname.startsWith('/promote');
 ---
@@ -17,6 +20,7 @@ const isPromote = pathname.startsWith('/promote');
       {/* Discover is under development — hidden from nav until ready */}
       {false && <a href="/ai-discover/" class={isDiscover ? 'active' : ''}>Discover</a>}
       <a href="/onlyfans-search/" class={isSearch ? 'active' : ''}>OnlyFans Search</a>
+      <a href="/pornstar-finder-by-face/" class={isVideoSearch ? 'active' : ''}>Pornstar Finder</a>
       <a href="/promote/" class={isPromote ? 'active' : ''}>Promote Your OnlyFans</a>
     </nav>
 
@@ -149,7 +153,7 @@ const isPromote = pathname.startsWith('/promote');
   }
 
   .nav-logo {
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Syne', sans-serif;
     font-weight: 800;
     font-size: 1.25rem;
     display: flex;
