@@ -72,7 +72,7 @@ const rel = profileUrl.startsWith('/go/') ? 'noopener nofollow sponsored' : 'noo
       referrerpolicy="no-referrer"
       onerror="if(this.src!=='/no-image.png'){this.removeAttribute('srcset');this.src='/no-image.png';}"
     />
-    {matchPct && <span class="match-badge">{matchPct}% match</span>}
+    {matchPct && <span class="match-badge"><strong>{matchPct}%</strong><span>match</span></span>}
   </div>
   <div class="card-body">
     <p class="creator-name">{name}</p>
@@ -141,14 +141,20 @@ const rel = profileUrl.startsWith('/go/') ? 'noopener nofollow sponsored' : 'noo
   }
 
   .creator-card .match-badge {
-    position: absolute; top: 10px; right: 10px;
+    position: absolute; left: 10px; bottom: 10px;
     z-index: 2;
-    background: linear-gradient(135deg, var(--accent), var(--accent-pink));
+    display: inline-flex; align-items: center; gap: 5px;
+    border: 1px solid rgba(255,255,255,0.24);
+    background: linear-gradient(135deg, rgba(91,33,182,0.9), rgba(219,39,119,0.86));
     color: #fff;
-    font-size: 11px; font-weight: 800;
-    padding: 4px 10px; border-radius: 999px;
-    letter-spacing: 0.02em;
-    box-shadow: 0 4px 14px rgba(124,58,237,0.45);
+    padding: 5px 9px; border-radius: 999px;
+    box-shadow: 0 5px 18px rgba(46,16,101,0.42), inset 0 1px 0 rgba(255,255,255,0.16);
+    backdrop-filter: blur(8px);
+  }
+  .creator-card .match-badge strong { font-size: 12px; font-weight: 900; line-height: 1; }
+  .creator-card .match-badge span {
+    color: rgba(255,255,255,0.82); font-size: 9px; font-weight: 700;
+    line-height: 1; letter-spacing: 0.06em; text-transform: uppercase;
   }
 
   .creator-card .card-body { padding: 14px 15px 15px; }

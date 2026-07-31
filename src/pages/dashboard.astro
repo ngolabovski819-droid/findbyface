@@ -72,6 +72,21 @@ import Base from '../layouts/Base.astro';
           <a href="/" class="empty-btn">Start a search</a>
         </div>
       </div>
+
+      <div class="dash-panel pornstar-history-panel">
+        <div class="panel-head">
+          <h2>Pornstar Finder History</h2>
+          <span class="panel-count" id="pornstarSearchCount">0</span>
+          <a class="panel-action" href="/pornstar-finder-by-face/">New search</a>
+        </div>
+        <div class="pornstar-history-list" id="pornstarSearchList"></div>
+        <div class="search-empty" id="pornstarSearchEmpty">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m10 9 5 3-5 3z"></path></svg>
+          <p>No Pornstar Finder searches yet</p>
+          <span>Your recent video-face matches will appear here.</span>
+          <a href="/pornstar-finder-by-face/" class="empty-btn">Find a pornstar</a>
+        </div>
+      </div>
     </div>
   </section>
 </Base>
@@ -99,6 +114,91 @@ import Base from '../layouts/Base.astro';
     return `https://images.weserv.nl/?url=${encodeURIComponent(String(url).replace(/^https?:\/\//, ''))}&w=${w}&h=${h}&fit=cover&output=webp`;
   }
 
+  function videoDuration(value) {
+    if (!value || value < 0) return '';
+    const total = Math.round(value);
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const seconds = total % 60;
+    return hours > 0
+      ? `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+      : `${minutes}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  function renderPornstarHistory() {
+    let history = [];
+    try {
+      const stored = JSON.parse(localStorage.getItem('fbf_pornstar_history') || '[]');
+      history = Array.isArray(stored) ? stored : [];
+    } catch { /* noop */ }
+
+    const list = document.getElementById('pornstarSearchList');
+    const empty = document.getElementById('pornstarSearchEmpty');
+    const count = document.getElementById('pornstarSearchCount');
+    count.textContent = String(history.length);
+
+    if (!history.length) {
+      list.style.display = 'none';
+      empty.style.display = 'flex';
+      return;
+    }
+
+    empty.style.display = 'none';
+    list.style.display = 'flex';
+    list.innerHTML = history.map((entry, index) => {
+      const results = (Array.isArray(entry.results) ? entry.results : []).slice(0, 10);
+      const cards = results.map((result, rank) => {
+        const href = String(result.sourceUrl || '');
+        const clickable = href.startsWith('https://');
+        const tag = clickable ? 'a' : 'div';
+        const linkAttrs = clickable ? ` href="${escapeHtml(href)}" target="_blank" rel="noopener nofollow"` : '';
+        const thumbnail = String(result.thumbnailUrl || '');
+        const similarity = Number(result.similarity || 0);
+        const match = Math.round(Math.max(0, Math.min(1, similarity)) * 100);
+        const duration = videoDuration(Number(result.durationSeconds || 0));
+        return `<${tag} class="porn-result-card"${linkAttrs}>
+          <span class="porn-result-media">
+            ${thumbnail.startsWith('http') ? `<img src="${escapeHtml(thumbnail)}" alt="" loading="lazy" referrerpolicy="origin">` : ''}
+            <span class="porn-result-rank">#${rank + 1}</span>
+            ${duration ? `<span class="porn-result-duration">${duration}</span>` : ''}
+            <span class="porn-result-match">${match}% match</span>
+          </span>
+          <span class="porn-result-title">${escapeHtml(result.title || 'Video match')}</span>
+        </${tag}>`;
+      }).join('');
+      const hasResults = results.length > 0;
+      const panel = hasResults
+        ? `<div class="porn-history-results" id="phr-${index}" hidden><div class="mini-grid-head">Top ${results.length} video matches</div><div class="porn-result-grid">${cards}</div></div>`
+        : '';
+      return `<div class="search-entry porn-history-entry">
+        <button class="search-row${hasResults ? '' : ' no-preview'}" type="button" data-porn-idx="${index}" data-has="${hasResults ? '1' : '0'}" aria-expanded="false">
+          <span class="search-ico porn-search-ico">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m10 9 5 3-5 3z"></path></svg>
+          </span>
+          <span class="search-meta">
+            <span class="search-label">Pornstar face search</span>
+            <span class="search-date">${relTime(entry.date)} · ${Number(entry.count || 0)} matches · ${Number(entry.indexedVideos || 0)} indexed</span>
+          </span>
+          ${hasResults ? `<span class="search-chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span>` : `<span class="search-rerun">Search again ›</span>`}
+        </button>
+        ${panel}
+      </div>`;
+    }).join('');
+
+    list.querySelectorAll('[data-porn-idx]').forEach(row => {
+      row.addEventListener('click', () => {
+        if (row.getAttribute('data-has') !== '1') {
+          window.location.href = '/pornstar-finder-by-face/';
+          return;
+        }
+        const panel = document.getElementById(`phr-${row.getAttribute('data-porn-idx')}`);
+        const open = row.getAttribute('aria-expanded') === 'true';
+        row.setAttribute('aria-expanded', String(!open));
+        if (panel) panel.hidden = open;
+      });
+    });
+  }
+
   function init() {
     let user = null;
     try { user = JSON.parse(localStorage.getItem('fbf_user') || 'null'); } catch { /* noop */ }
@@ -117,6 +217,7 @@ import Base from '../layouts/Base.astro';
 
     const firstName = (user.name || user.email || 'there').split(' ')[0];
     document.getElementById('dashName').textContent = firstName;
+    renderPornstarHistory();
 
     // History
     let history = [];
@@ -292,6 +393,13 @@ import Base from '../layouts/Base.astro';
   }
   .panel-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
   .panel-head h2 { font-size: 1.1rem; }
+  .pornstar-history-panel { margin-top: 20px; }
+  .panel-action {
+    margin-left: auto;
+    color: var(--accent-light);
+    font-size: 12px;
+    font-weight: 700;
+  }
   .panel-count {
     background: rgba(124,58,237,0.15); color: var(--accent-light);
     font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px;
@@ -320,6 +428,7 @@ import Base from '../layouts/Base.astro';
      styles must be global (scoped styles don't reach innerHTML-injected nodes). -->
 <style is:global>
   .dash .search-list { display: flex; flex-direction: column; gap: 8px; }
+  .dash .pornstar-history-list { display: flex; flex-direction: column; gap: 8px; }
   .dash .search-entry {
     border-radius: 14px; overflow: hidden;
     background: var(--surface);
@@ -417,10 +526,90 @@ import Base from '../layouts/Base.astro';
   .dash .mini-price { font-size: 11.5px; font-weight: 800; color: var(--text-muted); }
   .dash .mini-price.free { color: var(--success); }
 
+  .dash .porn-search-ico {
+    background: linear-gradient(135deg, rgba(219,39,119,0.2), rgba(124,58,237,0.2));
+    color: #f0abfc;
+  }
+  .dash .porn-history-results {
+    padding: 4px 15px 18px;
+    animation: srFade 0.25s ease;
+  }
+  .dash .porn-result-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .dash .porn-result-card {
+    overflow: hidden;
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: var(--surface-raised);
+    color: var(--text);
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  }
+  .dash a.porn-result-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(217,70,239,0.58);
+    box-shadow: 0 10px 26px rgba(124,58,237,0.18);
+  }
+  .dash .porn-result-media {
+    position: relative;
+    display: block;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: #09090f;
+  }
+  .dash .porn-result-media::after {
+    content: '';
+    position: absolute;
+    inset: 35% 0 0;
+    background: linear-gradient(to top, rgba(5,5,10,0.82), transparent);
+    pointer-events: none;
+  }
+  .dash .porn-result-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .dash .porn-result-rank,
+  .dash .porn-result-duration,
+  .dash .porn-result-match {
+    position: absolute;
+    z-index: 2;
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 999px;
+    background: rgba(8,8,13,0.76);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1;
+    backdrop-filter: blur(6px);
+  }
+  .dash .porn-result-rank { top: 7px; left: 7px; padding: 4px 6px; }
+  .dash .porn-result-duration { top: 7px; right: 7px; padding: 4px 7px; }
+  .dash .porn-result-match {
+    left: 7px;
+    bottom: 7px;
+    padding: 5px 8px;
+    border-color: rgba(255,255,255,0.24);
+    background: linear-gradient(135deg, rgba(91,33,182,0.9), rgba(219,39,119,0.88));
+    box-shadow: 0 4px 14px rgba(46,16,101,0.35);
+  }
+  .dash .porn-result-title {
+    display: -webkit-box;
+    min-height: 48px;
+    padding: 9px 10px 10px;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
   @media (max-width: 760px) {
     .dash .mini-grid { grid-template-columns: repeat(3, 1fr); }
+    .dash .porn-result-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media (max-width: 460px) {
     .dash .mini-grid { grid-template-columns: repeat(2, 1fr); }
+    .dash .porn-result-grid { grid-template-columns: 1fr; }
   }
 </style>

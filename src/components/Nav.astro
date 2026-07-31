@@ -22,11 +22,18 @@ const isPromote = pathname.startsWith('/promote');
       <a href="/onlyfans-search/" class={isSearch ? 'active' : ''}>OnlyFans Search</a>
       <a href="/pornstar-finder-by-face/" class={isVideoSearch ? 'active' : ''}>Pornstar Finder</a>
       <a href="/promote/" class={isPromote ? 'active' : ''}>Promote Your OnlyFans</a>
+      <div class="mobile-auth-actions" id="mobileAuthActions">
+        <a href="/login/" class="mobile-login">Log in</a>
+        <a href="/signup/" class="mobile-signup">Sign up free</a>
+      </div>
     </nav>
 
     <div class="nav-right">
       <!-- Signed-out state (default, overridden by JS if signed in) -->
-      <a href="https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/authorize?provider=google&redirect_to=https%3A%2F%2Ffindbyface.org%2Fauth%2Fcallback" class="sign-in-btn" id="signInBtn">Sign in</a>
+      <div class="auth-actions" id="authActions">
+        <a href="/login/" class="login-btn">Log in</a>
+        <a href="/signup/" class="signup-btn">Sign up</a>
+      </div>
       <!-- Signed-in state (hidden until JS sets it) -->
       <div class="user-menu" id="userMenu" style="display:none">
         <button class="user-trigger" id="userTrigger" aria-haspopup="true" aria-expanded="false">
@@ -57,7 +64,7 @@ const isPromote = pathname.startsWith('/promote');
           </button>
         </div>
       </div>
-      <button class="hamburger" id="hamburger" aria-label="Open menu">
+      <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks">
         <span></span>
         <span></span>
         <span></span>
@@ -69,10 +76,18 @@ const isPromote = pathname.startsWith('/promote');
 <script>
   const hamburger = document.getElementById('hamburger');
   const navLinks = document.getElementById('navLinks');
-  hamburger?.addEventListener('click', () => navLinks?.classList.toggle('open'));
+  hamburger?.addEventListener('click', () => {
+    const open = navLinks?.classList.toggle('open') ?? false;
+    hamburger.setAttribute('aria-expanded', String(open));
+  });
+  navLinks?.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
+    navLinks.classList.remove('open');
+    hamburger?.setAttribute('aria-expanded', 'false');
+  }));
 
   // Auth state hydration
-  const signInBtn = document.getElementById('signInBtn') as HTMLAnchorElement;
+  const authActions = document.getElementById('authActions')!;
+  const mobileAuthActions = document.getElementById('mobileAuthActions')!;
   const userMenu  = document.getElementById('userMenu')!;
   const userTrigger = document.getElementById('userTrigger')!;
   const userDropdown = document.getElementById('userDropdown')!;
@@ -95,7 +110,8 @@ const isPromote = pathname.startsWith('/promote');
       const raw = localStorage.getItem('fbf_user');
       if (!raw) return;
       const user = JSON.parse(raw) as { name: string; email: string; avatar?: string };
-      signInBtn.style.display = 'none';
+      authActions.style.display = 'none';
+      mobileAuthActions.style.display = 'none';
       setAvatar(userAvatar, user);
       setAvatar(ddAvatar, user);
       userName.textContent = user.name?.split(' ')[0] || user.email.split('@')[0];
@@ -125,6 +141,7 @@ const isPromote = pathname.startsWith('/promote');
     localStorage.removeItem('fbf_user');
     localStorage.removeItem('fbf_searches');
     localStorage.removeItem('fbf_history');
+    localStorage.removeItem('fbf_pornstar_history');
     window.location.href = '/';
   });
 
@@ -199,20 +216,21 @@ const isPromote = pathname.startsWith('/promote');
     margin-left: auto;
   }
 
-  .sign-in-btn {
-    padding: 8px 20px;
-    border: 1px solid var(--accent);
-    background: transparent;
-    color: var(--text);
+  .auth-actions { display: flex; align-items: center; gap: 8px; }
+  .login-btn,
+  .signup-btn {
+    padding: 8px 16px;
     border-radius: 999px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s;
-    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    transition: background 0.2s, border-color 0.2s, transform 0.2s;
   }
-
-  .sign-in-btn:hover { background: rgba(124,58,237,0.15); }
+  .login-btn { border: 1px solid var(--border); color: var(--text); background: rgba(255,255,255,0.025); }
+  .login-btn:hover { border-color: rgba(167,139,250,0.55); background: rgba(124,58,237,0.11); }
+  .signup-btn { border: 1px solid transparent; background: linear-gradient(135deg, var(--accent), var(--accent-pink)); color: #fff; box-shadow: 0 6px 20px rgba(124,58,237,0.24); }
+  .signup-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(124,58,237,0.35); }
+  .mobile-auth-actions { display: none; }
 
   .user-menu { position: relative; }
 
@@ -314,9 +332,9 @@ const isPromote = pathname.startsWith('/promote');
     border-radius: 2px;
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: 960px) {
     .hamburger { display: flex; }
-    .sign-in-btn { display: none; }
+    .auth-actions { display: none; }
     .nav-links {
       display: none;
       position: absolute;
@@ -328,5 +346,16 @@ const isPromote = pathname.startsWith('/promote');
       gap: 4px;
     }
     .nav-links.open { display: flex; }
+    .mobile-auth-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+      margin-top: 8px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+    .nav-links .mobile-auth-actions a { padding: 10px 12px; text-align: center; font-weight: 700; }
+    .nav-links .mobile-login { border: 1px solid var(--border); color: var(--text); }
+    .nav-links .mobile-signup { background: linear-gradient(135deg, var(--accent), var(--accent-pink)); color: #fff; }
   }
 </style>

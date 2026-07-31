@@ -57,9 +57,16 @@
         }));
         // Clear search count — signed-in users get unlimited
         localStorage.removeItem('fbf_searches');
+        localStorage.removeItem('fbf_pornstar_guest_search_day');
+
+        const requestedReturn = localStorage.getItem('fbf_auth_return') || '/';
+        localStorage.removeItem('fbf_auth_return');
+        const returnTo = requestedReturn.startsWith('/') && !requestedReturn.startsWith('//')
+          ? requestedReturn
+          : '/';
 
         statusMsg.textContent = `Welcome, ${user.name?.split(' ')[0] || user.email}!`;
-        setTimeout(() => { window.location.href = '/'; }, 800);
+        setTimeout(() => { window.location.href = returnTo; }, 800);
       } catch (err) {
         statusMsg.textContent = 'Sign-in failed — redirecting...';
         setTimeout(() => { window.location.href = '/'; }, 1500);

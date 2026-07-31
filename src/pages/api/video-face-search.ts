@@ -12,6 +12,7 @@ const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const MAX_OUTPUT_BYTES = 1024 * 1024;
 const SEARCH_TIMEOUT_MS = 60_000;
 const REMOTE_SEARCH_TIMEOUT_MS = 25_000;
+const GUEST_SEARCH_COOKIE = 'fbf_pornstar_guest_search';
 const DEFAULT_MATCHER_URL =
   'https://ngolabovski819--findbyface-video-face-matcher-matcher-api.modal.run';
 const ALLOWED_TYPES = new Map([
@@ -26,6 +27,38 @@ type SearchPayload = {
   error?: string;
   [key: string]: unknown;
 };
+
+function utcDay(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function guestToken(day: string, secret: string): string {
+  const signature = createHmac('sha256', secret)
+    .update(`pornstar-guest-search:${day}`)
+    .digest('hex');
+  return `${day}.${signature}`;
+}
+
+async function hasValidSession(request: Request): Promise<boolean> {
+  const authorization = request.headers.get('authorization') ?? '';
+  if (!authorization.startsWith('Bearer ')) return false;
+
+  const supabaseUrl = import.meta.env.SUPABASE_URL?.replace(/\/+$/, '');
+  const supabaseKey = import.meta.env.SUPABASE_KEY || process.env.SUPABASE_KEY;
+  if (!supabaseUrl || !supabaseKey) return false;
+
+  try {
+    const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: {
+        apikey: supabaseKey,
+        Authorization: authorization,
+      },
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
 
 async function runRemoteMatcher(
   imageBytes: Buffer,
@@ -183,7 +216,35 @@ function parseMatcherPayload(stdout: string): SearchPayload {
   throw new Error('The face matcher returned no valid JSON response.');
 }
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
+  const signedIn = await hasValidSession(request);
+  const signingKey = import.meta.env.SUPABASE_KEY || process.env.SUPABASE_KEY;
+  const today = utcDay();
+
+  if (!signedIn && signingKey) {
+    const existing = cookies.get(GUEST_SEARCH_COOKIE)?.value;
+    if (existing === guestToken(today, signingKey)) {
+      return json({
+        ok: false,
+        code: 'guest_daily_limit',
+        error: 'You have used today\'s free Pornstar Finder search. Sign in for unlimited searches.',
+      }, 429);
+    }
+  }
+
+  const markGuestSearchUsed = (): void => {
+    if (signedIn || !signingKey) return;
+    const nextUtcDay = Date.parse(`${today}T00:00:00.000Z`) + 86_400_000;
+    const maxAge = Math.max(60, Math.ceil((nextUtcDay - Date.now()) / 1000));
+    cookies.set(GUEST_SEARCH_COOKIE, guestToken(today, signingKey), {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: new URL(request.url).protocol === 'https:',
+      path: '/',
+      maxAge,
+    });
+  };
+
   const declaredLength = Number(request.headers.get('content-length') ?? 0);
   if (declaredLength > MAX_UPLOAD_BYTES + 64 * 1024) {
     return json({ ok: false, code: 'file_too_large', error: 'Use an image smaller than 8 MB.' }, 413);
@@ -212,6 +273,7 @@ export const POST: APIRoute = async ({ request }) => {
   if (process.env.VIDEO_FACE_USE_LOCAL !== '1') {
     try {
       const remote = await runRemoteMatcher(imageBytes, image.type);
+      if (remote.status === 200 && remote.payload.ok) markGuestSearchUsed();
       return json(remote.payload, remote.status);
     } catch (error) {
       const message =
@@ -247,6 +309,7 @@ export const POST: APIRoute = async ({ request }) => {
         500,
       );
     }
+    markGuestSearchUsed();
     return json(payload);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown local search error.';

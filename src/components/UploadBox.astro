@@ -621,7 +621,9 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     const price = (c.subscribePrice ?? c.subscribeprice) as number;
     const priceLabel = (!price || isNaN(Number(price))) ? 'FREE' : `$${parseFloat(String(price)).toFixed(2)}`;
     const matchPct = c.matchPct != null ? (c.matchPct as number) : null;
-    const matchBadge = matchPct != null && matchPct > 0 ? `<span class="match-badge">Match: ${matchPct}%</span>` : '';
+    const matchBadge = matchPct != null && matchPct > 0
+      ? `<span class="match-badge"><strong>${matchPct}%</strong><span>match</span></span>`
+      : '';
     const isSponsored = !!c.sponsored;
     const profileUrl = (c.profileUrl as string) || `https://onlyfans.com/${encodeURIComponent(c.username as string)}`;
     const rel = (profileUrl as string).startsWith('/go/') ? 'noopener nofollow sponsored' : 'noopener nofollow';
@@ -1224,11 +1226,16 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   .card-img-wrap { aspect-ratio: 3/4; overflow: hidden; position: relative; background: var(--surface-raised); }
   .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .match-badge {
-    position: absolute; top: 8px; left: 8px;
-    background: #22c55e; color: #fff;
-    font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
-    letter-spacing: 0.02em;
+    position: absolute; left: 8px; bottom: 8px; z-index: 2;
+    display: inline-flex; align-items: center; gap: 5px;
+    border: 1px solid rgba(255,255,255,0.24);
+    border-radius: 999px; padding: 5px 9px;
+    background: linear-gradient(135deg, rgba(91,33,182,0.9), rgba(219,39,119,0.86));
+    color: #fff; box-shadow: 0 5px 18px rgba(46,16,101,0.42);
+    backdrop-filter: blur(8px);
   }
+  .match-badge strong { font-size: 12px; font-weight: 900; line-height: 1; }
+  .match-badge span { color: rgba(255,255,255,0.82); font-size: 9px; font-weight: 700; line-height: 1; letter-spacing: 0.06em; text-transform: uppercase; }
   .card-body { padding: 12px 14px; }
   .creator-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .username { color: var(--text-muted); font-size: 12px; margin-bottom: 6px; }
@@ -1492,15 +1499,18 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     pointer-events: none;
   }
   #faceResults .match-badge {
-    position: absolute; top: 10px; left: 10px;
+    position: absolute; left: 10px; bottom: 10px;
     z-index: 2;
-    background: linear-gradient(135deg, var(--accent), var(--accent-pink));
+    display: inline-flex; align-items: center; gap: 5px;
+    border: 1px solid rgba(255,255,255,0.24);
+    background: linear-gradient(135deg, rgba(91,33,182,0.9), rgba(219,39,119,0.86));
     color: #fff;
-    font-size: 12px; font-weight: 800;
-    padding: 4px 10px; border-radius: 999px;
-    letter-spacing: 0.02em; pointer-events: none;
-    box-shadow: 0 4px 14px rgba(124,58,237,0.45);
+    padding: 5px 9px; border-radius: 999px; pointer-events: none;
+    box-shadow: 0 5px 18px rgba(46,16,101,0.42), inset 0 1px 0 rgba(255,255,255,0.16);
+    backdrop-filter: blur(8px);
   }
+  #faceResults .match-badge strong { font-size: 12px; font-weight: 900; line-height: 1; }
+  #faceResults .match-badge span { color: rgba(255,255,255,0.82); font-size: 9px; font-weight: 700; line-height: 1; letter-spacing: 0.06em; text-transform: uppercase; }
   #faceResults .card-body { padding: 14px 15px 15px; display: flex; flex-direction: column; flex: 1; }
   #faceResults .creator-name {
     font-family: 'Syne', sans-serif; font-weight: 700;

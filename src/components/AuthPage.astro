@@ -1,0 +1,257 @@
+---
+import Base from '../layouts/Base.astro';
+
+interface Props {
+  mode: 'login' | 'signup';
+}
+
+const { mode } = Astro.props;
+const isSignup = mode === 'signup';
+const title = isSignup ? 'Create your free account' : 'Welcome back';
+const subtitle = isSignup
+  ? 'Use any email address to unlock unlimited searches and keep your history.'
+  : 'Use your email and password, or choose the optional Google shortcut.';
+---
+
+<Base
+  title={`${isSignup ? 'Sign up' : 'Log in'} — findbyface`}
+  description={isSignup ? 'Create a free findbyface account.' : 'Log in to your findbyface account.'}
+  canonical={`https://findbyface.org/${mode}/`}
+>
+  <main class="auth-page">
+    <div class="auth-glow auth-glow-one"></div>
+    <div class="auth-glow auth-glow-two"></div>
+
+    <section class="auth-shell" aria-labelledby="authTitle">
+      <div class="auth-brand" aria-hidden="true">
+        <span class="auth-brand-find">find</span><span>byface</span>
+      </div>
+
+      <div class="auth-card">
+        <header class="auth-card-head">
+          <span class={`auth-heading-icon ${isSignup ? 'signup' : ''}`}>
+            {isSignup ? (
+              <svg viewBox="0 0 24 24" fill="none"><path d="M15 19v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V19M8.5 9.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM18 8v6M15 11h6" /></svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none"><path d="M10 17l5-5-5-5M15 12H3M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5" /></svg>
+            )}
+          </span>
+          <div>
+            <h1 id="authTitle">{title}</h1>
+            <p>{subtitle}</p>
+          </div>
+        </header>
+
+        <form class="auth-form" id="authForm" novalidate>
+          <label>
+            <span>Email address</span>
+            <span class="auth-input-wrap">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 5h16v14H4zM4 7l8 6 8-6" /></svg>
+              <input id="authEmail" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" required />
+            </span>
+          </label>
+
+          <label>
+            <span>Password</span>
+            <span class="auth-input-wrap">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
+              <input id="authPassword" name="password" type="password" autocomplete={isSignup ? 'new-password' : 'current-password'} placeholder={isSignup ? 'At least 8 characters' : 'Enter your password'} minlength="8" required />
+              <button class="password-toggle" id="passwordToggle" type="button" aria-label="Show password">Show</button>
+            </span>
+          </label>
+
+          {isSignup && (
+            <label>
+              <span>Confirm password</span>
+              <span class="auth-input-wrap">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
+                <input id="authConfirm" name="confirmPassword" type="password" autocomplete="new-password" placeholder="Repeat your password" minlength="8" required />
+              </span>
+            </label>
+          )}
+
+          <div class="auth-message" id="authMessage" role="alert" hidden></div>
+
+          <button class="auth-submit" id="authSubmit" type="submit">
+            <span>{isSignup ? 'Create account' : 'Log in'}</span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+          </button>
+        </form>
+
+        {isSignup && (
+          <div class="verification-note">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 10v6M12 7h.01" /></svg>
+            <span>You may need to verify your email before your first login.</span>
+          </div>
+        )}
+
+        <div class="auth-divider"><span>or use Google (optional)</span></div>
+
+        <a class="google-auth" id="googleAuth" href="#">
+          <span class="google-g" aria-hidden="true">G</span>
+          Continue with Google
+        </a>
+
+        <p class="auth-switch">
+          {isSignup ? 'Already have an account?' : 'New to findbyface?'}
+          <a href={isSignup ? '/login/' : '/signup/'}>{isSignup ? 'Log in' : 'Create one free'}</a>
+        </p>
+      </div>
+
+      <p class="auth-legal">
+        By continuing, you agree to our <a href="/terms-of-use/">Terms</a> and <a href="/privacy-policy/">Privacy Policy</a>.
+      </p>
+    </section>
+  </main>
+</Base>
+
+<script define:vars={{ mode }}>
+  const form = document.getElementById('authForm');
+  const email = document.getElementById('authEmail');
+  const password = document.getElementById('authPassword');
+  const confirm = document.getElementById('authConfirm');
+  const submit = document.getElementById('authSubmit');
+  const message = document.getElementById('authMessage');
+  const toggle = document.getElementById('passwordToggle');
+  const google = document.getElementById('googleAuth');
+
+  const safePath = value => value && value.startsWith('/') && !value.startsWith('//') ? value : '/dashboard/';
+  const queryReturn = new URLSearchParams(window.location.search).get('next');
+  const returnTo = safePath(queryReturn || localStorage.getItem('fbf_auth_return'));
+
+  localStorage.setItem('fbf_auth_return', returnTo);
+  const callbackUrl = `${window.location.origin}/auth/callback`;
+  google.href = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(callbackUrl)}`;
+
+  toggle.addEventListener('click', () => {
+    const reveal = password.type === 'password';
+    password.type = reveal ? 'text' : 'password';
+    if (confirm) confirm.type = reveal ? 'text' : 'password';
+    toggle.textContent = reveal ? 'Hide' : 'Show';
+    toggle.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
+  });
+
+  function showMessage(text, kind = 'error') {
+    message.textContent = text;
+    message.dataset.kind = kind;
+    message.hidden = false;
+  }
+
+  function storeSession(payload) {
+    localStorage.setItem('fbf_user', JSON.stringify({
+      ...payload.user,
+      access_token: payload.access_token,
+      refresh_token: payload.refresh_token,
+      expires_at: Date.now() + Number(payload.expires_in || 3600) * 1000,
+    }));
+    localStorage.removeItem('fbf_pornstar_guest_search_day');
+    localStorage.removeItem('fbf_auth_return');
+  }
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    message.hidden = true;
+    const emailValue = email.value.trim();
+    const passwordValue = password.value;
+
+    if (!emailValue || !passwordValue) {
+      showMessage('Enter your email and password.');
+      return;
+    }
+    if (mode === 'signup' && passwordValue.length < 8) {
+      showMessage('Use at least 8 characters for your password.');
+      return;
+    }
+    if (mode === 'signup' && confirm?.value !== passwordValue) {
+      showMessage('Your passwords do not match.');
+      return;
+    }
+
+    submit.disabled = true;
+    submit.classList.add('loading');
+    submit.querySelector('span').textContent = mode === 'signup' ? 'Creating account…' : 'Logging in…';
+    try {
+      const response = await fetch(`/api/auth/${mode === 'signup' ? 'register' : 'login'}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailValue, password: passwordValue }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Authentication failed.');
+
+      if (payload.requiresConfirmation) {
+        showMessage('Account created. Check your email and click the verification link to continue.', 'success');
+        form.reset();
+        submit.hidden = true;
+        return;
+      }
+
+      storeSession(payload);
+      window.location.href = returnTo;
+    } catch (error) {
+      showMessage(error instanceof Error ? error.message : 'Authentication failed.');
+    } finally {
+      submit.disabled = false;
+      submit.classList.remove('loading');
+      const text = submit.querySelector('span');
+      if (text) text.textContent = mode === 'signup' ? 'Create account' : 'Log in';
+    }
+  });
+</script>
+
+<style>
+  .auth-page {
+    position: relative;
+    display: grid;
+    min-height: 100svh;
+    overflow: hidden;
+    place-items: center;
+    padding: 104px 20px 48px;
+    background: radial-gradient(circle at 50% 12%, rgba(124,58,237,0.12), transparent 34%), #09090f;
+  }
+  .auth-glow { position: absolute; width: 360px; height: 360px; border-radius: 50%; filter: blur(100px); opacity: .16; pointer-events: none; }
+  .auth-glow-one { top: 8%; left: -160px; background: #7c3aed; }
+  .auth-glow-two { right: -180px; bottom: 2%; background: #ec4899; }
+  .auth-shell { position: relative; z-index: 1; width: min(410px, 100%); }
+  .auth-brand { display: flex; justify-content: center; margin-bottom: 22px; font: 800 1.55rem/1 'Syne', sans-serif; letter-spacing: -.04em; background: linear-gradient(135deg,#a78bfa,#ec4899); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .auth-brand-find { color: #fff; -webkit-text-fill-color: #fff; }
+  .auth-card { overflow: hidden; border: 1px solid rgba(148,163,184,.17); border-radius: 18px; background: rgba(20,20,30,.94); box-shadow: 0 28px 80px rgba(0,0,0,.44); backdrop-filter: blur(18px); }
+  .auth-card-head { display: flex; gap: 13px; align-items: center; padding: 22px 22px 20px; border-bottom: 1px solid rgba(148,163,184,.12); }
+  .auth-heading-icon { display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center; border-radius: 11px; background: linear-gradient(135deg,#7c3aed,#a855f7); box-shadow: 0 7px 20px rgba(124,58,237,.3); }
+  .auth-heading-icon.signup { background: linear-gradient(135deg,#059669,#22c55e); box-shadow: 0 7px 20px rgba(34,197,94,.24); }
+  .auth-heading-icon svg { width: 20px; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .auth-card-head h1 { font: 800 1.08rem/1.2 'Manrope', sans-serif; }
+  .auth-card-head p { margin-top: 3px; color: #8e8ea7; font-size: 11.5px; line-height: 1.4; }
+  .auth-form { display: flex; flex-direction: column; gap: 16px; padding: 21px 22px 4px; }
+  .auth-form label > span:first-child { display: block; margin-bottom: 7px; color: #d9d9e5; font-size: 11.5px; font-weight: 700; }
+  .auth-input-wrap { position: relative; display: flex; align-items: center; }
+  .auth-input-wrap > svg { position: absolute; left: 12px; width: 17px; stroke: #71718a; stroke-width: 1.7; pointer-events: none; }
+  .auth-input-wrap input { width: 100%; height: 46px; padding: 0 54px 0 39px; border: 1px solid rgba(148,163,184,.22); border-radius: 10px; outline: none; background: #1c2230; color: #f7f7fb; font: 500 13px/1 'Inter', sans-serif; transition: border-color .18s, box-shadow .18s, background .18s; }
+  .auth-input-wrap input::placeholder { color: #666d82; }
+  .auth-input-wrap input:focus { border-color: #8b5cf6; background: #1c2131; box-shadow: 0 0 0 3px rgba(124,58,237,.14); }
+  .password-toggle { position: absolute; right: 8px; padding: 6px 7px; border: 0; background: transparent; color: #9f91d3; font: 700 10px/1 'Inter', sans-serif; cursor: pointer; }
+  .auth-submit { display: flex; width: 100%; min-height: 46px; align-items: center; justify-content: center; gap: 8px; margin-top: 2px; border: 0; border-radius: 10px; background: linear-gradient(115deg,#7c3aed,#d946ef); box-shadow: 0 10px 28px rgba(124,58,237,.27); color: #fff; font: 800 13px/1 'Inter', sans-serif; cursor: pointer; transition: transform .18s, filter .18s, opacity .18s; }
+  .auth-submit:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
+  .auth-submit:disabled { opacity: .65; cursor: wait; }
+  .auth-submit svg { width: 17px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .auth-message { padding: 11px 12px; border: 1px solid rgba(248,113,113,.28); border-radius: 9px; background: rgba(127,29,29,.16); color: #fca5a5; font-size: 12px; line-height: 1.45; }
+  .auth-message[data-kind='success'] { border-color: rgba(74,222,128,.28); background: rgba(20,83,45,.17); color: #86efac; }
+  .verification-note { display: flex; gap: 9px; margin: 16px 22px 0; padding: 11px 12px; border: 1px solid rgba(96,165,250,.25); border-radius: 9px; background: rgba(30,64,175,.14); color: #93c5fd; font-size: 11px; line-height: 1.45; }
+  .verification-note svg { width: 17px; flex: 0 0 auto; stroke: currentColor; stroke-width: 1.7; }
+  .auth-divider { display: flex; align-items: center; gap: 12px; margin: 20px 22px 15px; color: #6f6f87; font-size: 10.5px; }
+  .auth-divider::before,.auth-divider::after { content: ''; height: 1px; flex: 1; background: rgba(148,163,184,.16); }
+  .google-auth { display: flex; height: 43px; align-items: center; justify-content: center; gap: 10px; margin: 0 22px; border: 1px solid rgba(148,163,184,.25); border-radius: 10px; color: #f3f3f8; font-size: 12.5px; font-weight: 700; transition: border-color .18s, background .18s; }
+  .google-auth:hover { border-color: rgba(167,139,250,.58); background: rgba(124,58,237,.08); }
+  .google-g { font: 900 17px/1 Arial,sans-serif; background: conic-gradient(from -45deg,#4285f4 0 25%,#34a853 0 42%,#fbbc05 0 67%,#ea4335 0 83%,#4285f4 0); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .auth-switch { padding: 20px 22px 21px; color: #8e8ea7; font-size: 11.5px; text-align: center; }
+  .auth-switch a { margin-left: 3px; color: #a78bfa; font-weight: 700; }
+  .auth-legal { margin-top: 17px; color: #5f5f72; font-size: 10px; line-height: 1.5; text-align: center; }
+  .auth-legal a { color: #85859c; }
+  @media (max-width: 520px) {
+    .auth-page { padding: 86px 12px 30px; place-items: start center; }
+    .auth-brand { margin: 18px 0; }
+    .auth-card-head,.auth-form { padding-right: 18px; padding-left: 18px; }
+    .google-auth { margin-right: 18px; margin-left: 18px; }
+    .auth-divider { margin-right: 18px; margin-left: 18px; }
+  }
+</style>

@@ -111,6 +111,11 @@
         image. Matches are similarity leads, not identity proof.
       </p>
 
+      <p class="search-access-note">
+        Guests receive one search per day.
+        <a href="/signup/?next=/pornstar-finder-by-face/">Sign up for unlimited searches</a>.
+      </p>
+
       <p class="form-error" id="formError" role="alert" hidden></p>
 
       <button class="search-button" id="searchButton" type="submit" disabled>
@@ -217,6 +222,18 @@
   </section>
 </section>
 
+<div class="search-limit-modal" id="pornstarLimitModal" hidden role="dialog" aria-modal="true" aria-labelledby="pornstarLimitTitle">
+  <button class="search-limit-backdrop" id="pornstarLimitBackdrop" type="button" aria-label="Close sign-in prompt"></button>
+  <div class="search-limit-card">
+    <button class="search-limit-close" id="pornstarLimitClose" type="button" aria-label="Close">×</button>
+    <span class="search-limit-icon" aria-hidden="true">∞</span>
+    <h2 id="pornstarLimitTitle">Unlock unlimited searches</h2>
+    <p>You’ve used today’s free Pornstar Finder search. Sign in to continue searching without a daily limit.</p>
+    <a class="search-limit-signin" id="pornstarLimitSignIn" href="#">Sign in with Google</a>
+    <button class="search-limit-later" id="pornstarLimitLater" type="button">Maybe later</button>
+  </div>
+</div>
+
 <script>
   type VideoResult = {
     videoId: number;
@@ -232,6 +249,7 @@
 
   type SearchResponse = {
     ok: boolean;
+    code?: string;
     error?: string;
     indexedVideos?: number;
     elapsedSeconds?: number;
@@ -256,13 +274,87 @@
   const resultsGrid = document.querySelector<HTMLElement>('#resultsGrid')!;
   const loadMore = document.querySelector<HTMLButtonElement>('#loadMore')!;
   const emptyResults = document.querySelector<HTMLElement>('#emptyResults')!;
+  const limitModal = document.querySelector<HTMLElement>('#pornstarLimitModal')!;
+  const limitBackdrop = document.querySelector<HTMLButtonElement>('#pornstarLimitBackdrop')!;
+  const limitClose = document.querySelector<HTMLButtonElement>('#pornstarLimitClose')!;
+  const limitLater = document.querySelector<HTMLButtonElement>('#pornstarLimitLater')!;
+  const limitSignIn = document.querySelector<HTMLAnchorElement>('#pornstarLimitSignIn')!;
 
   const RESULTS_PAGE_SIZE = 24;
+  const HISTORY_KEY = 'fbf_pornstar_history';
+  const GUEST_DAY_KEY = 'fbf_pornstar_guest_search_day';
   let selectedFile: File | null = null;
   let previewUrl = '';
   let searching = false;
   let allResults: VideoResult[] = [];
   let visibleResultCount = 0;
+
+  function currentUser(): { access_token?: string } | null {
+    try {
+      return JSON.parse(localStorage.getItem('fbf_user') || 'null');
+    } catch {
+      return null;
+    }
+  }
+
+  function todayUtc(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function signInUrl(): string {
+    const redirectTo = `${window.location.origin}/auth/callback`;
+    return `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
+  }
+
+  function prepareSignIn(): void {
+    localStorage.setItem('fbf_auth_return', '/pornstar-finder-by-face/');
+  }
+
+  function openLimitModal(): void {
+    limitModal.hidden = false;
+    document.body.style.overflow = 'hidden';
+    limitSignIn.focus();
+  }
+
+  function closeLimitModal(): void {
+    limitModal.hidden = true;
+    document.body.style.overflow = '';
+  }
+
+  const oauthUrl = signInUrl();
+  limitSignIn.href = oauthUrl;
+  limitSignIn.addEventListener('click', prepareSignIn);
+  limitBackdrop.addEventListener('click', closeLimitModal);
+  limitClose.addEventListener('click', closeLimitModal);
+  limitLater.addEventListener('click', closeLimitModal);
+
+  function savePornstarHistory(payload: SearchResponse): void {
+    const results = (payload.results ?? []).slice(0, 10).map(result => ({
+      videoId: result.videoId,
+      externalId: result.externalId,
+      title: result.title,
+      sourceUrl: result.sourceUrl,
+      thumbnailUrl: result.thumbnailUrl,
+      durationSeconds: result.durationSeconds,
+      similarity: result.similarity,
+      robustSimilarity: result.robustSimilarity,
+      supportingEmbeddings: result.supportingEmbeddings,
+    }));
+    try {
+      const stored = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+      const history = Array.isArray(stored) ? stored : [];
+      history.unshift({
+        date: new Date().toISOString(),
+        count: payload.results?.length ?? 0,
+        indexedVideos: payload.indexedVideos ?? 0,
+        elapsedSeconds: payload.elapsedSeconds ?? 0,
+        results,
+      });
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 25)));
+    } catch {
+      // Search results still work if browser storage is unavailable.
+    }
+  }
 
   function showError(message: string): void {
     formError.textContent = message;
@@ -493,6 +585,11 @@
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!selectedFile || searching) return;
+    const user = currentUser();
+    if (!user?.access_token && localStorage.getItem(GUEST_DAY_KEY) === todayUtc()) {
+      openLimitModal();
+      return;
+    }
     clearError();
     setSearching(true);
     resultsSection.hidden = true;
@@ -514,15 +611,25 @@
     try {
       const body = new FormData();
       body.append('image', selectedFile);
+      const headers: HeadersInit = {};
+      if (user?.access_token) headers.Authorization = `Bearer ${user.access_token}`;
       const response = await fetch('/api/video-face-search', {
         method: 'POST',
+        headers,
         body,
         signal: controller.signal,
       });
       const payload = await response.json() as SearchResponse;
+      if (response.status === 429 && payload.code === 'guest_daily_limit') {
+        localStorage.setItem(GUEST_DAY_KEY, todayUtc());
+        openLimitModal();
+        return;
+      }
       if (!response.ok || !payload.ok) {
         throw new Error(payload.error || 'The local face search failed.');
       }
+      if (!user?.access_token) localStorage.setItem(GUEST_DAY_KEY, todayUtc());
+      savePornstarHistory(payload);
       renderResults(payload);
     } catch (error) {
       const message = error instanceof DOMException && error.name === 'AbortError'
@@ -865,6 +972,99 @@
     font-size: 10px;
     line-height: 1.55;
     text-align: center;
+  }
+
+  .search-access-note {
+    margin: -5px 0 14px;
+    color: #8d8da6;
+    font-size: 11px;
+    line-height: 1.5;
+    text-align: center;
+  }
+  .search-access-note a {
+    color: #c4b5fd;
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-color: rgba(196, 181, 253, 0.38);
+    text-underline-offset: 3px;
+  }
+
+  .search-limit-modal[hidden] { display: none; }
+  .search-limit-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+  }
+  .search-limit-backdrop {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    background: rgba(3, 3, 8, 0.78);
+    backdrop-filter: blur(8px);
+    cursor: default;
+  }
+  .search-limit-card {
+    position: relative;
+    z-index: 1;
+    width: min(430px, 100%);
+    padding: 34px 30px 26px;
+    border: 1px solid rgba(167, 139, 250, 0.32);
+    border-radius: 22px;
+    background: linear-gradient(145deg, rgba(28, 24, 42, 0.98), rgba(13, 13, 21, 0.98));
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.56), 0 0 50px rgba(124, 58, 237, 0.13);
+    text-align: center;
+  }
+  .search-limit-close {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    background: transparent;
+    color: #8d8da6;
+    font-size: 24px;
+    cursor: pointer;
+  }
+  .search-limit-icon {
+    display: grid;
+    width: 54px;
+    height: 54px;
+    margin: 0 auto 17px;
+    place-items: center;
+    border-radius: 17px;
+    background: linear-gradient(135deg, #7c3aed, #d946ef);
+    box-shadow: 0 10px 30px rgba(124, 58, 237, 0.38);
+    color: #fff;
+    font: 800 28px/1 'Manrope', sans-serif;
+  }
+  .search-limit-card h2 { font-size: 1.45rem; }
+  .search-limit-card p {
+    margin: 11px auto 22px;
+    color: #9d9db3;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .search-limit-signin {
+    display: block;
+    padding: 13px 18px;
+    border-radius: 12px;
+    background: linear-gradient(115deg, #7c3aed, #d946ef);
+    box-shadow: 0 10px 28px rgba(124, 58, 237, 0.28);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 800;
+  }
+  .search-limit-later {
+    margin-top: 13px;
+    border: 0;
+    background: transparent;
+    color: #85859e;
+    font: 600 12px/1.4 'Inter', sans-serif;
+    cursor: pointer;
   }
 
   .form-error {

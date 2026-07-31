@@ -129,6 +129,7 @@ import Base from '../layouts/Base.astro';
       localStorage.removeItem('fbf_user');
       localStorage.removeItem('fbf_searches');
       localStorage.removeItem('fbf_history');
+      localStorage.removeItem('fbf_pornstar_history');
       window.location.href = '/';
     }
 
@@ -136,6 +137,7 @@ import Base from '../layouts/Base.astro';
 
     document.getElementById('clearDataBtn')?.addEventListener('click', (e) => {
       localStorage.removeItem('fbf_history');
+      localStorage.removeItem('fbf_pornstar_history');
       localStorage.removeItem('fbf_searches');
       const btn = e.currentTarget as HTMLButtonElement;
       btn.textContent = 'Cleared ✓';
