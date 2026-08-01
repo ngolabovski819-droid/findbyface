@@ -87,6 +87,45 @@ def matcher_api():
     )
     face_app.prepare(ctx_id=-1, det_size=(640, 640))
 
+    def detect_query_face(image: np.ndarray) -> tuple[list, str]:
+        """Detect one query face, including tightly cropped portraits.
+
+        The regular 0.5-confidence pass remains authoritative. Only when it
+        finds nothing do we add canvas context and temporarily lower SCRFD's
+        detection threshold. Recognition still uses the same aligned buffalo_l
+        embedding produced from the detected five-point landmarks.
+        """
+        faces = face_app.get(image)
+        if faces:
+            return faces, "standard"
+
+        height, width = image.shape[:2]
+        original_threshold = face_app.det_model.det_thresh
+        try:
+            face_app.det_model.det_thresh = 0.20
+            for padding_fraction in (0.20, 0.40):
+                horizontal = max(24, int(round(width * padding_fraction)))
+                top = max(32, int(round(height * padding_fraction)))
+                bottom = max(16, int(round(height * padding_fraction * 0.5)))
+                expanded = cv2.copyMakeBorder(
+                    image,
+                    top,
+                    bottom,
+                    horizontal,
+                    horizontal,
+                    borderType=cv2.BORDER_REPLICATE,
+                )
+                fallback_faces = face_app.get(
+                    expanded,
+                    max_num=1,
+                )
+                if fallback_faces:
+                    return fallback_faces, "expanded-crop"
+        finally:
+            face_app.det_model.det_thresh = original_threshold
+
+        return [], "not-detected"
+
     api = FastAPI(
         title="findbyface video face matcher",
         docs_url=None,
@@ -315,9 +354,10 @@ def matcher_api():
     async def health():
         return {
             "ok": True,
-            "revision": 2,
+            "revision": 3,
             "model": f"insightface/{MODEL_NAME}",
             "dimensions": 512,
+            "partialFaceFallback": True,
         }
 
     async def search(request):
@@ -353,14 +393,17 @@ def matcher_api():
                 },
             )
 
-        faces = face_app.get(image)
+        faces, detection_mode = detect_query_face(image)
         if not faces:
             return JSONResponse(
                 status_code=422,
                 content={
                     "ok": False,
                     "code": "invalid_image",
-                    "error": "No face was detected. Try a sharper, front-facing photo with good light.",
+                    "error": (
+                        "No usable face was detected. Include both eyes, the "
+                        "nose, and mouth; tightly cropped hair or forehead is okay."
+                    ),
                 },
             )
         if len(faces) > 1:
@@ -424,6 +467,7 @@ def matcher_api():
             "threshold": threshold,
             "indexedVideos": indexed_video_count(request_headers),
             "facesDetected": 1,
+            "detectionMode": detection_mode,
             "elapsedSeconds": round(time.perf_counter() - started, 3),
             "results": results,
         }
