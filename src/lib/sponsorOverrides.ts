@@ -25,6 +25,9 @@ export function applySponsorOverrides<T extends OverridableCreator>(
       ...c,
       sponsored: true,
       avatar: override.imageOverride ?? c.avatar,
+      // A custom campaign gallery is authoritative. Do not insert the scraped
+      // profile header between its first and second supplied images.
+      header: override.imageOverride ? undefined : c.header,
       tags: override.tags,
       additionalTagCount: override.additionalTagCount,
       galleryImages: override.galleryImages,

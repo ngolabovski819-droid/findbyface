@@ -1,5 +1,5 @@
 // Shared "recent searches" dropdown wiring, used by every search bar on the site.
-// Renders a pinned sponsored row (fetched once from /api/search-ad) above the recent
+// Renders ranked sponsored rows (fetched once from /api/search-ad) above the recent
 // search history, opens on focus of an EMPTY input, and lets the caller decide what
 // happens when a history row is picked (re-run search in place vs navigate away).
 import { getHistory, pushHistory, removeHistory, clearHistory } from './searchHistory';
@@ -26,34 +26,37 @@ function escHtml(s: string): string {
 }
 
 function proxyImg(url: string, w: number, h: number): string {
+  if (url?.startsWith('/')) return url;
   if (!url || !url.startsWith('http')) return '';
   return `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//, ''))}&w=${w}&h=${h}&fit=cover&output=webp`;
 }
 
 // Fetched once per page load and shared by every dropdown instance on that page.
-let adPromise: Promise<SearchAd | null> | null = null;
-function loadAd(): Promise<SearchAd | null> {
-  if (!adPromise) {
-    adPromise = fetch('/api/search-ad')
+let adsPromise: Promise<SearchAd[]> | null = null;
+function loadAds(): Promise<SearchAd[]> {
+  if (!adsPromise) {
+    adsPromise = fetch('/api/search-ad?v=2')
       .then(r => r.json())
-      .then(d => d.ad ?? null)
-      .catch(() => null);
+      .then(d => d.ads ?? (d.ad ? [d.ad] : []))
+      .catch(() => []);
   }
-  return adPromise;
+  return adsPromise;
 }
 
 export function initSearchDropdown(refs: SearchDropdownRefs): void {
   const { wrapper, input, dropdown, adSlot, historyList, clearAllBtn, onSelect } = refs;
 
-  function renderAd(ad: SearchAd | null): void {
-    if (!ad) {
+  function renderAds(ads: SearchAd[]): void {
+    if (!ads.length) {
       adSlot.innerHTML = '';
       adSlot.style.display = 'none';
       return;
     }
-    const img = proxyImg(ad.avatar, 72, 72);
-    adSlot.style.display = 'block';
-    adSlot.innerHTML = `
+    adSlot.style.display = 'grid';
+    adSlot.style.gap = '6px';
+    adSlot.innerHTML = ads.map(ad => {
+      const img = proxyImg(ad.avatar, 72, 72);
+      return `
       <a class="dd-ad-row" href="${ad.profileUrl}" target="_blank" rel="noopener nofollow sponsored">
         <span class="dd-ad-avatar">${img ? `<img src="${img}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : ''}</span>
         <span class="dd-ad-body">
@@ -61,6 +64,7 @@ export function initSearchDropdown(refs: SearchDropdownRefs): void {
           <span class="sponsored-badge" aria-label="Advertisement" title="Paid placement">Ad</span>
         </span>
       </a>`;
+    }).join('');
   }
 
   function renderHistory(): void {
@@ -80,7 +84,7 @@ export function initSearchDropdown(refs: SearchDropdownRefs): void {
   function openDropdown(): void {
     if (input.value.trim() !== '') return; // only on an empty input
     renderHistory();
-    loadAd().then(renderAd);
+    loadAds().then(renderAds);
     dropdown.style.display = 'block';
   }
 

@@ -1,9 +1,8 @@
 // WHERE a creator appears — paid placement config.
 // Scopes: 'home', 'category:<slug>' (slugs come from src/config/categories.ts),
 // 'face-search' (the AI face-match results in UploadBox.astro / api/face-search.ts), and
-// 'search-dropdown' (the pinned ad row in every recent-searches dropdown, see
-// api/search-ad.ts). 'search-dropdown' only ever uses pinned[0] — position is ignored,
-// there's exactly one ad slot, not a ranked list.
+// 'search-dropdown' (the ranked sponsored rows in every recent-searches dropdown, see
+// api/search-ad.ts).
 //
 // For 'home' and 'category:<slug>', pinned positions are 1-based and GLOBAL across the
 // full paginated list for that scope — e.g. position 21 is page 2, item 1 at
@@ -15,9 +14,8 @@
 // paginated offset query, so pinning here INSERTS at the given 1-based position (bumping
 // the total match count) rather than slotting into a fixed global offset. UploadBox.astro
 // blurs every odd 0-based index (1, 3, 5… = every 2nd card) until the visitor signs in, so
-// a sponsored card placed on one of those could render blurred/unclickable for anonymous
-// visitors. Keep sponsored face-search positions ODD (1, 3, 5…) — 1-based position 1 =
-// 0-based index 0, which is never blurred — to stay out of the blurred slots.
+// sponsored cards explicitly bypass that sign-in blur, so paid placements remain visible
+// and clickable at every configured position.
 import { categories } from './categories';
 
 export interface Placement {
@@ -26,9 +24,30 @@ export interface Placement {
 }
 
 export const placements: Record<string, Placement> = {
-  home: { pinned: [{ username: 'emilylopz', position: 1 }], excluded: [] },
-  'face-search': { pinned: [{ username: 'emilylopz', position: 1 }], excluded: [] },
-  'search-dropdown': { pinned: [{ username: 'emilylopz', position: 1 }], excluded: [] },
+  home: {
+    pinned: [
+      { username: 'emilylopz', position: 1 },
+      { username: 'rocketreynaxo', position: 2 },
+      { username: 'hannazuki', position: 3 },
+    ],
+    excluded: [],
+  },
+  'face-search': {
+    pinned: [
+      { username: 'emilylopz', position: 1 },
+      { username: 'rocketreynaxo', position: 2 },
+      { username: 'hannazuki', position: 3 },
+    ],
+    excluded: [],
+  },
+  'search-dropdown': {
+    pinned: [
+      { username: 'emilylopz', position: 1 },
+      { username: 'rocketreynaxo', position: 2 },
+      { username: 'hannazuki', position: 3 },
+    ],
+    excluded: [],
+  },
 };
 
 export function getPlacement(scope: string): Placement {
@@ -50,3 +69,5 @@ export function pinAcrossCategories(username: string, position: number, slugs?: 
 
 // Active paid placements — one call per order.
 pinAcrossCategories('emilylopz', 1);
+pinAcrossCategories('rocketreynaxo', 2);
+pinAcrossCategories('hannazuki', 3);

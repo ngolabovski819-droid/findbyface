@@ -30,6 +30,26 @@ export const sponsors: Record<string, SponsorOverride> = {
       (_, index) => `/uploads/sponsors/emilylopz/emily-${String(index + 1).padStart(2, '0')}.jpg`,
     ),
   },
+  rocketreynaxo: {
+    linkOverride: 'https://onlyfans.com/rocketreynaxo/c58',
+    imageOverride: '/uploads/sponsors/rocketreynaxo/rocket-01.jpg',
+    clickTable: 'sponsor_clicks_rocketreynaxo_fbf',
+    tags: ['asian milf', 'busty', 'curvy'],
+    galleryImages: Array.from(
+      { length: 10 },
+      (_, index) => `/uploads/sponsors/rocketreynaxo/rocket-${String(index + 1).padStart(2, '0')}.jpg`,
+    ),
+  },
+  hannazuki: {
+    linkOverride: 'https://onlyfans.com/hannazuki/c1043',
+    imageOverride: '/uploads/sponsors/hannazuki/hanna-01.jpg',
+    clickTable: 'sponsor_clicks_hannazuki_fbf',
+    tags: ['asian', 'cosplay', 'egirl', 'GFE'],
+    galleryImages: Array.from(
+      { length: 7 },
+      (_, index) => `/uploads/sponsors/hannazuki/hanna-${String(index + 1).padStart(2, '0')}.jpg`,
+    ),
+  },
 };
 
 export function getSponsorOverride(username: string): SponsorOverride | undefined {
