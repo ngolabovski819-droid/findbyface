@@ -18,11 +18,11 @@ export function initCardClickThrough(): void {
     const card = target.closest<HTMLElement>('.creator-card[data-href]');
     if (!card) return;
 
-    // Locked (blurred, not-signed-in) face-search cards open the sign-in modal instead
-    // of navigating — there's nothing to view yet.
+    // Locked face-search cards send visitors to the full signup page. The visible
+    // Unlock link handles its own native navigation; this covers clicks elsewhere.
     if (card.classList.contains('locked')) {
-      const modal = document.getElementById('authModal');
-      if (modal) modal.style.display = 'flex';
+      e.preventDefault();
+      window.location.assign('/signup');
       return;
     }
 

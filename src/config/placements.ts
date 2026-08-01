@@ -10,12 +10,10 @@
 // separately and slots them into these exact positions, excluding them from the organic
 // query so pagination stays aligned.
 //
-// 'face-search' is different: results are a single ranked list per uploaded photo, not a
-// paginated offset query, so pinning here INSERTS at the given 1-based position (bumping
-// the total match count) rather than slotting into a fixed global offset. UploadBox.astro
-// blurs every odd 0-based index (1, 3, 5… = every 2nd card) until the visitor signs in, so
-// sponsored cards explicitly bypass that sign-in blur, so paid placements remain visible
-// and clickable at every configured position.
+// 'face-search' positions count SPONSORED SLOTS rather than literal grid cards. Each paid
+// card is followed by one organic card, which is the locked "Unlock" card for signed-out
+// visitors: sponsor position 1 renders at grid card 1, position 2 at grid card 3, position
+// 3 at grid card 5, and so on. UploadBox.astro locks every even 1-based grid card.
 import { categories } from './categories';
 
 export interface Placement {

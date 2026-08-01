@@ -138,10 +138,10 @@ export async function fetchCreatorsByUsernames(usernames: string[]): Promise<Map
 }
 
 // Inserts sponsored creators into a ranked, non-paginated result list (face-search
-// matches) at their configured 1-based position, bumping the total count rather than
-// slotting into a global offset — see the 'face-search' scope comment in
-// src/config/placements.ts for why. Excluded usernames are dropped from the organic
-// list first so a pinned/excluded creator never appears twice or in the wrong slot.
+// matches). Configured positions count sponsored slots: 1, 2, 3 become literal grid
+// positions 1, 3, 5 so every sponsor is followed by one organic/Unlock card. Excluded
+// usernames are dropped from the organic list first so a pinned/excluded creator never
+// appears twice or in the wrong slot.
 export async function applyFaceSearchPlacements<T extends { username: string; matchPct?: number | null }>(
   results: T[],
 ): Promise<T[]> {
@@ -159,7 +159,8 @@ export async function applyFaceSearchPlacements<T extends { username: string; ma
   for (const pin of sortedPins) {
     const row = pinnedByUsername.get(pin.username.toLowerCase());
     if (!row) continue; // misconfigured username — skip rather than crash the page
-    const insertAt = Math.min(Math.max(pin.position - 1, 0), out.length);
+    const gridPosition = pin.position * 2 - 1;
+    const insertAt = Math.min(Math.max(gridPosition - 1, 0), out.length);
     // matchPct intentionally omitted — this isn't a real similarity score, and the
     // The card-level "Ad" label (driven by `sponsored: true`) discloses the placement.
     out.splice(insertAt, 0, { ...row, sponsored: true } as unknown as T);

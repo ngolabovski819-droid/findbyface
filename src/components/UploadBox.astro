@@ -643,14 +643,14 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     const locked = !signedIn && index % 2 === 1 && !isSponsored;
 
     if (locked) {
-      return `<div class="creator-card locked" data-href="${profileUrl}">
+      return `<div class="creator-card locked" data-href="/signup">
         <div class="card-img-wrap">
           <img src="${imgSrc}" alt="Locked creator" loading="lazy" decoding="async" referrerpolicy="no-referrer"
             style="filter:blur(10px);transform:scale(1.08);"
             onerror="if(this.src!=='/no-image.png'){this.src='/no-image.png';}">
           ${matchBadge}
-          <div class="lock-overlay" onclick="document.getElementById('authModal').style.display='flex'">
-            <button class="unlock-btn">🔓 Unlock</button>
+          <div class="lock-overlay">
+            <a class="unlock-btn" href="/signup">🔓 Unlock</a>
           </div>
         </div>
         <div class="card-body locked-body">
@@ -1298,7 +1298,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   .unlock-btn {
     background: rgba(124,58,237,0.92); color: #fff; border: none;
     border-radius: 999px; padding: 10px 20px; font-size: 13px; font-weight: 700;
-    cursor: pointer; font-family: inherit;
+    cursor: pointer; font-family: inherit; text-decoration: none;
     box-shadow: 0 4px 16px rgba(124,58,237,0.4); transition: background 0.2s, transform 0.1s;
   }
   .unlock-btn:hover { background: var(--accent); transform: scale(1.04); }
@@ -1592,7 +1592,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   #faceResults .unlock-btn {
     background: rgba(124,58,237,0.92); color: #fff; border: none;
     border-radius: 999px; padding: 10px 20px; font-size: 13px; font-weight: 700;
-    cursor: pointer; font-family: inherit;
+    cursor: pointer; font-family: inherit; text-decoration: none;
     box-shadow: 0 4px 16px rgba(124,58,237,0.4); transition: background 0.2s, transform 0.1s;
   }
   #faceResults .unlock-btn:hover { background: var(--accent); transform: scale(1.04); }
