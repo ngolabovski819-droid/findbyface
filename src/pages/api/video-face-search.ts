@@ -39,13 +39,15 @@ function guestToken(day: string, secret: string): string {
   return `${day}.${signature}`;
 }
 
-async function hasValidSession(request: Request): Promise<boolean> {
+type SessionState = 'none' | 'valid' | 'invalid';
+
+async function sessionState(request: Request): Promise<SessionState> {
   const authorization = request.headers.get('authorization') ?? '';
-  if (!authorization.startsWith('Bearer ')) return false;
+  if (!authorization.startsWith('Bearer ')) return 'none';
 
   const supabaseUrl = import.meta.env.SUPABASE_URL?.replace(/\/+$/, '');
   const supabaseKey = import.meta.env.SUPABASE_KEY || process.env.SUPABASE_KEY;
-  if (!supabaseUrl || !supabaseKey) return false;
+  if (!supabaseUrl || !supabaseKey) return 'invalid';
 
   try {
     const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
@@ -54,9 +56,9 @@ async function hasValidSession(request: Request): Promise<boolean> {
         Authorization: authorization,
       },
     });
-    return response.ok;
+    return response.ok ? 'valid' : 'invalid';
   } catch {
-    return false;
+    return 'invalid';
   }
 }
 
@@ -217,7 +219,15 @@ function parseMatcherPayload(stdout: string): SearchPayload {
 }
 
 export const POST: APIRoute = async ({ request, cookies }) => {
-  const signedIn = await hasValidSession(request);
+  const authState = await sessionState(request);
+  if (authState === 'invalid') {
+    return json({
+      ok: false,
+      code: 'session_expired',
+      error: 'Your session expired. Log in again to continue with unlimited searches.',
+    }, 401);
+  }
+  const signedIn = authState === 'valid';
   const signingKey = import.meta.env.SUPABASE_KEY || process.env.SUPABASE_KEY;
   const today = utcDay();
 

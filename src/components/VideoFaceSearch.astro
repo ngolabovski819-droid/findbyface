@@ -238,8 +238,12 @@
     <button class="search-limit-close" id="pornstarLimitClose" type="button" aria-label="Close">×</button>
     <span class="search-limit-icon" aria-hidden="true">∞</span>
     <h2 id="pornstarLimitTitle">Unlock unlimited searches</h2>
-    <p>You’ve used today’s free Pornstar Finder search. Create a free account with any email to continue without a daily limit.</p>
+    <p id="pornstarLimitText">You’ve used today’s free Pornstar Finder search. Create a free account with any email to continue without a daily limit.</p>
     <a class="search-limit-signin" id="pornstarLimitSignIn" href="/signup/?next=/pornstar-finder-by-face/">Create free account</a>
+    <p class="search-limit-returning">
+      <span id="pornstarLimitReturningText">Already have an account?</span>
+      <a id="pornstarLimitLogin" href="/login/?next=/pornstar-finder-by-face/">Log in</a>
+    </p>
     <button class="search-limit-later" id="pornstarLimitLater" type="button">Maybe later</button>
   </div>
 </div>
@@ -266,6 +270,15 @@
     results?: VideoResult[];
   };
 
+  type AuthUser = {
+    name?: string;
+    email?: string;
+    avatar?: string;
+    access_token?: string;
+    refresh_token?: string;
+    expires_at?: number;
+  };
+
   const form = document.querySelector<HTMLFormElement>('#videoSearchForm')!;
   const input = document.querySelector<HTMLInputElement>('#faceImage')!;
   const dropZone = document.querySelector<HTMLElement>('#dropZone')!;
@@ -289,6 +302,10 @@
   const limitClose = document.querySelector<HTMLButtonElement>('#pornstarLimitClose')!;
   const limitLater = document.querySelector<HTMLButtonElement>('#pornstarLimitLater')!;
   const limitSignIn = document.querySelector<HTMLAnchorElement>('#pornstarLimitSignIn')!;
+  const limitTitle = document.querySelector<HTMLElement>('#pornstarLimitTitle')!;
+  const limitText = document.querySelector<HTMLElement>('#pornstarLimitText')!;
+  const limitReturningText = document.querySelector<HTMLElement>('#pornstarLimitReturningText')!;
+  const limitLogin = document.querySelector<HTMLAnchorElement>('#pornstarLimitLogin')!;
   const indexedVideoCount = document.querySelector<HTMLElement>('#indexedVideoCount')!;
 
   const RESULTS_PAGE_SIZE = 24;
@@ -324,7 +341,7 @@
     if (document.visibilityState === 'visible') void refreshIndexedVideoCount();
   }, 30_000);
 
-  function currentUser(): { access_token?: string } | null {
+  function currentUser(): AuthUser | null {
     try {
       return JSON.parse(localStorage.getItem('fbf_user') || 'null');
     } catch {
@@ -332,11 +349,78 @@
     }
   }
 
+  function tokenExpiry(token?: string): number {
+    if (!token) return 0;
+    try {
+      const encoded = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(atob(encoded)) as { exp?: number };
+      return Number(payload.exp || 0) * 1000;
+    } catch {
+      return 0;
+    }
+  }
+
+  async function refreshUser(user: AuthUser): Promise<AuthUser | null> {
+    if (!user.refresh_token) return null;
+    try {
+      const response = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: user.refresh_token }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.access_token || !payload.user) return null;
+      const refreshed: AuthUser = {
+        ...user,
+        ...payload.user,
+        access_token: payload.access_token,
+        refresh_token: payload.refresh_token || user.refresh_token,
+        expires_at: Date.now() + Number(payload.expires_in || 3600) * 1000,
+      };
+      localStorage.setItem('fbf_user', JSON.stringify(refreshed));
+      localStorage.removeItem(GUEST_DAY_KEY);
+      return refreshed;
+    } catch {
+      return null;
+    }
+  }
+
+  async function resolveUserForSearch(): Promise<{
+    user: AuthUser | null;
+    expired: boolean;
+  }> {
+    const stored = currentUser();
+    if (!stored?.access_token) return { user: null, expired: false };
+    const expiresAt = Number(stored.expires_at || tokenExpiry(stored.access_token));
+    if (expiresAt > Date.now() + 60_000) return { user: stored, expired: false };
+    const refreshed = await refreshUser(stored);
+    if (refreshed) return { user: refreshed, expired: false };
+    localStorage.removeItem('fbf_user');
+    return { user: null, expired: true };
+  }
+
   function todayUtc(): string {
     return new Date().toISOString().slice(0, 10);
   }
 
-  function openLimitModal(): void {
+  function openLimitModal(mode: 'guest' | 'expired' = 'guest'): void {
+    if (mode === 'expired') {
+      limitTitle.textContent = 'Log in to continue';
+      limitText.textContent = 'Your previous session expired. Log in again to continue with unlimited searches.';
+      limitSignIn.textContent = 'Log in';
+      limitSignIn.href = '/login/?next=/pornstar-finder-by-face/';
+      limitReturningText.textContent = 'New to findbyface?';
+      limitLogin.textContent = 'Create free account';
+      limitLogin.href = '/signup/?next=/pornstar-finder-by-face/';
+    } else {
+      limitTitle.textContent = 'Unlock unlimited searches';
+      limitText.textContent = 'You’ve used today’s free Pornstar Finder search. Create a free account with any email to continue without a daily limit.';
+      limitSignIn.textContent = 'Create free account';
+      limitSignIn.href = '/signup/?next=/pornstar-finder-by-face/';
+      limitReturningText.textContent = 'Already have an account?';
+      limitLogin.textContent = 'Log in';
+      limitLogin.href = '/login/?next=/pornstar-finder-by-face/';
+    }
     limitModal.hidden = false;
     document.body.style.overflow = 'hidden';
     limitSignIn.focus();
@@ -608,9 +692,14 @@
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!selectedFile || searching) return;
-    const user = currentUser();
+    const auth = await resolveUserForSearch();
+    const user = auth.user;
+    if (auth.expired) {
+      openLimitModal('expired');
+      return;
+    }
     if (!user?.access_token && localStorage.getItem(GUEST_DAY_KEY) === todayUtc()) {
-      openLimitModal();
+      openLimitModal('guest');
       return;
     }
     clearError();
@@ -643,9 +732,14 @@
         signal: controller.signal,
       });
       const payload = await response.json() as SearchResponse;
+      if (response.status === 401 && payload.code === 'session_expired') {
+        localStorage.removeItem('fbf_user');
+        openLimitModal('expired');
+        return;
+      }
       if (response.status === 429 && payload.code === 'guest_daily_limit') {
         localStorage.setItem(GUEST_DAY_KEY, todayUtc());
-        openLimitModal();
+        openLimitModal('guest');
         return;
       }
       if (!response.ok || !payload.ok) {
@@ -1085,8 +1179,22 @@
     font-size: 14px;
     font-weight: 800;
   }
+  .search-limit-card .search-limit-returning {
+    margin: 14px auto 0;
+    color: #8f8fa7;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .search-limit-returning a {
+    color: #c4b5fd;
+    font-weight: 800;
+    text-decoration: underline;
+    text-decoration-color: rgba(196, 181, 253, 0.5);
+    text-underline-offset: 3px;
+  }
+  .search-limit-returning a:hover { color: #ede9fe; }
   .search-limit-later {
-    margin-top: 13px;
+    margin-top: 12px;
     border: 0;
     background: transparent;
     color: #85859e;

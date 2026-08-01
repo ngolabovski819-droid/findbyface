@@ -107,11 +107,65 @@ const isPromote = pathname.startsWith('/promote');
     }
   }
 
-  function loadAuthState(): void {
+  type StoredUser = {
+    name?: string;
+    email: string;
+    avatar?: string;
+    access_token?: string;
+    refresh_token?: string;
+    expires_at?: number;
+  };
+
+  function tokenExpiry(token?: string): number {
+    if (!token) return 0;
+    try {
+      const encoded = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(atob(encoded)) as { exp?: number };
+      return Number(payload.exp || 0) * 1000;
+    } catch {
+      return 0;
+    }
+  }
+
+  async function refreshStoredUser(user: StoredUser): Promise<StoredUser | null> {
+    if (!user.refresh_token) return null;
+    try {
+      const response = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: user.refresh_token }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.access_token || !payload.user) return null;
+      const refreshed: StoredUser = {
+        ...user,
+        ...payload.user,
+        access_token: payload.access_token,
+        refresh_token: payload.refresh_token || user.refresh_token,
+        expires_at: Date.now() + Number(payload.expires_in || 3600) * 1000,
+      };
+      localStorage.setItem('fbf_user', JSON.stringify(refreshed));
+      localStorage.removeItem('fbf_pornstar_guest_search_day');
+      return refreshed;
+    } catch {
+      return null;
+    }
+  }
+
+  async function loadAuthState(): Promise<void> {
     try {
       const raw = localStorage.getItem('fbf_user');
       if (!raw) return;
-      const user = JSON.parse(raw) as { name: string; email: string; avatar?: string };
+      let user = JSON.parse(raw) as StoredUser;
+      const expiresAt = Number(user.expires_at || tokenExpiry(user.access_token));
+      if (!user.access_token || expiresAt <= Date.now() + 60_000) {
+        const refreshed = await refreshStoredUser(user);
+        if (!refreshed) {
+          localStorage.removeItem('fbf_user');
+          return;
+        }
+        user = refreshed;
+      }
       authActions.style.display = 'none';
       mobileAuthActions.style.display = 'none';
       setAvatar(userAvatar, user);
@@ -147,7 +201,7 @@ const isPromote = pathname.startsWith('/promote');
     window.location.href = '/';
   });
 
-  loadAuthState();
+  void loadAuthState();
 </script>
 
 <style>
