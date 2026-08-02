@@ -72,6 +72,12 @@ const subtitle = isSignup
 
           <div class="auth-message" id="authMessage" role="alert" hidden></div>
 
+          {isSignup && (
+            <a class="confirmation-login" id="confirmationLogin" href="/login/" hidden>
+              Already verified? Continue to login
+            </a>
+          )}
+
           <button class="auth-submit" id="authSubmit" type="submit">
             <span>{isSignup ? 'Create account' : 'Log in'}</span>
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
@@ -114,12 +120,15 @@ const subtitle = isSignup
   const message = document.getElementById('authMessage');
   const toggle = document.getElementById('passwordToggle');
   const google = document.getElementById('googleAuth');
+  const confirmationLogin = document.getElementById('confirmationLogin');
 
   const safePath = value => value && value.startsWith('/') && !value.startsWith('//') ? value : '/dashboard/';
   const queryReturn = new URLSearchParams(window.location.search).get('next');
   const returnTo = safePath(queryReturn || localStorage.getItem('fbf_auth_return'));
 
   localStorage.setItem('fbf_auth_return', returnTo);
+  const pendingEmail = localStorage.getItem('fbf_pending_email');
+  if (mode === 'login' && pendingEmail) email.value = pendingEmail;
   const callbackUrl = `${window.location.origin}/auth/callback`;
   google.href = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(callbackUrl)}`;
 
@@ -146,6 +155,16 @@ const subtitle = isSignup
     }));
     localStorage.removeItem('fbf_pornstar_guest_search_day');
     localStorage.removeItem('fbf_auth_return');
+    localStorage.removeItem('fbf_pending_email');
+  }
+
+  const pageStatus = new URLSearchParams(window.location.search).get('status');
+  if (mode === 'login' && pageStatus === 'verified') {
+    showMessage('Email verified. Log in with your email and password to finish.', 'success');
+  } else if (mode === 'login' && pageStatus === 'pending') {
+    showMessage('Open the verification email first, then log in here.', 'success');
+  } else if (mode === 'login' && pageStatus === 'confirmation_failed') {
+    showMessage('That verification link could not be completed. Try logging in or request a new confirmation email.');
   }
 
   form.addEventListener('submit', async event => {
@@ -180,16 +199,24 @@ const subtitle = isSignup
       if (!response.ok) throw new Error(payload.error || 'Authentication failed.');
 
       if (payload.requiresConfirmation) {
-        showMessage('Account created. Check your email and click the verification link to continue.', 'success');
+        localStorage.setItem('fbf_pending_email', emailValue);
+        showMessage(`Account created. We sent a verification link to ${emailValue}. Open it to activate your account.`, 'success');
         form.reset();
         submit.hidden = true;
+        if (confirmationLogin) {
+          confirmationLogin.href = `/login/?status=pending&next=${encodeURIComponent(returnTo)}`;
+          confirmationLogin.hidden = false;
+        }
         return;
       }
 
       storeSession(payload);
       window.location.href = returnTo;
     } catch (error) {
-      showMessage(error instanceof Error ? error.message : 'Authentication failed.');
+      const errorText = error instanceof Error ? error.message : 'Authentication failed.';
+      showMessage(/email not confirmed/i.test(errorText)
+        ? 'Verify your email using the link we sent, then try logging in again.'
+        : errorText);
     } finally {
       submit.disabled = false;
       submit.classList.remove('loading');
@@ -236,6 +263,8 @@ const subtitle = isSignup
   .auth-submit svg { width: 17px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .auth-message { padding: 11px 12px; border: 1px solid rgba(248,113,113,.28); border-radius: 9px; background: rgba(127,29,29,.16); color: #fca5a5; font-size: 12px; line-height: 1.45; }
   .auth-message[data-kind='success'] { border-color: rgba(74,222,128,.28); background: rgba(20,83,45,.17); color: #86efac; }
+  .confirmation-login { display: block; padding: 11px 14px; border: 1px solid rgba(74,222,128,.3); border-radius: 9px; background: rgba(20,83,45,.2); color: #bbf7d0; font-size: 12px; font-weight: 800; text-align: center; }
+  .confirmation-login[hidden] { display: none; }
   .verification-note { display: flex; gap: 9px; margin: 16px 22px 0; padding: 11px 12px; border: 1px solid rgba(96,165,250,.25); border-radius: 9px; background: rgba(30,64,175,.14); color: #93c5fd; font-size: 11px; line-height: 1.45; }
   .verification-note svg { width: 17px; flex: 0 0 auto; stroke: currentColor; stroke-width: 1.7; }
   .auth-divider { display: flex; align-items: center; gap: 12px; margin: 20px 22px 15px; color: #6f6f87; font-size: 10.5px; }

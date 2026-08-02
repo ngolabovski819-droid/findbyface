@@ -22,6 +22,19 @@ const canonicalUrl = canonical ?? new URL(Astro.url.pathname, 'https://findbyfac
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script is:inline>
+    // Supabase normally returns implicit-flow credentials to /auth/callback. If its
+    // Site URL or an older email template lands on another page, recover the payload
+    // before that page can render a signed-out state.
+    (() => {
+      if (window.location.pathname.startsWith('/auth/callback')) return;
+      const hash = window.location.hash.slice(1);
+      const params = new URLSearchParams(hash);
+      if (params.has('access_token') || params.has('refresh_token') || params.has('error')) {
+        window.location.replace(`/auth/callback${window.location.search}${window.location.hash}`);
+      }
+    })();
+  </script>
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-G3L4HTH15M"></script>
   <script>

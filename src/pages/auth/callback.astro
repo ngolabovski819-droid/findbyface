@@ -30,16 +30,28 @@
     async function handleCallback() {
       const statusMsg = document.getElementById('statusMsg')!;
       try {
-        // Supabase returns tokens in URL fragment after OAuth
-        const hash = window.location.hash.substring(1);
-        const params = new URLSearchParams(hash);
-        const accessToken = params.get('access_token');
-        const refreshToken = params.get('refresh_token');
-        const expiresIn = Number(params.get('expires_in') || 3600);
+        // Implicit auth normally returns tokens in the fragment. Accept query values
+        // too so older/custom email templates cannot strand a verified user.
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const queryParams = new URLSearchParams(window.location.search);
+        const readParam = (name) => hashParams.get(name) || queryParams.get(name);
+        const accessToken = readParam('access_token');
+        const refreshToken = readParam('refresh_token');
+        const expiresIn = Number(readParam('expires_in') || 3600);
+        const authError = readParam('error_description') || readParam('error');
 
         if (!accessToken) {
-          statusMsg.textContent = 'No token found — redirecting...';
-          setTimeout(() => { window.location.href = '/'; }, 1500);
+          const requestedReturn = localStorage.getItem('fbf_auth_return') || '/dashboard/';
+          const returnTo = requestedReturn.startsWith('/') && !requestedReturn.startsWith('//')
+            ? requestedReturn
+            : '/dashboard/';
+          const status = authError ? 'confirmation_failed' : 'verified';
+          statusMsg.textContent = authError
+            ? 'Verification failed — taking you to login...'
+            : 'Email verified — finish by logging in...';
+          setTimeout(() => {
+            window.location.href = `/login/?status=${status}&next=${encodeURIComponent(returnTo)}`;
+          }, 900);
           return;
         }
 
@@ -62,6 +74,7 @@
         // Clear search count — signed-in users get unlimited
         localStorage.removeItem('fbf_searches');
         localStorage.removeItem('fbf_pornstar_guest_search_day');
+        localStorage.removeItem('fbf_pending_email');
 
         const requestedReturn = localStorage.getItem('fbf_auth_return') || '/';
         localStorage.removeItem('fbf_auth_return');
@@ -72,8 +85,8 @@
         statusMsg.textContent = `Welcome, ${user.name?.split(' ')[0] || user.email}!`;
         setTimeout(() => { window.location.href = returnTo; }, 800);
       } catch (err) {
-        statusMsg.textContent = 'Sign-in failed — redirecting...';
-        setTimeout(() => { window.location.href = '/'; }, 1500);
+        statusMsg.textContent = 'Sign-in failed — taking you to login...';
+        setTimeout(() => { window.location.href = '/login/?status=confirmation_failed'; }, 1200);
       }
     }
 
