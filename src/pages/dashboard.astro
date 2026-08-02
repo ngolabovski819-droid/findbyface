@@ -11,9 +11,10 @@ import Base from '../layouts/Base.astro';
     <!-- Signed-out gate (shown until JS confirms auth) -->
     <div class="dash-gate" id="dashGate">
       <div class="gate-card">
-        <h1>Sign in to view your dashboard</h1>
-        <p>Track your searches, manage your account, and unlock more — all in one place.</p>
-        <a href="/login/?next=/dashboard/" class="gate-btn">Log in or create account</a>
+        <h1 id="gateTitle">Sign in to view your dashboard</h1>
+        <p id="gateMessage">Track your searches, manage your account, and unlock more — all in one place.</p>
+        <a href="/login/?next=/dashboard/" class="gate-btn" id="gateButton">Log in or create account</a>
+        <a href="/signup/" class="gate-secondary" id="gateSecondary" hidden>Use a different email</a>
       </div>
     </div>
 
@@ -207,6 +208,22 @@ import Base from '../layouts/Base.astro';
     const main = document.getElementById('dashMain');
 
     if (!user) {
+      const pendingEmail = localStorage.getItem('fbf_pending_email');
+      const pendingStatus = new URLSearchParams(window.location.search).get('status') === 'pending';
+      if (pendingEmail || pendingStatus) {
+        const gateTitle = document.getElementById('gateTitle');
+        const gateMessage = document.getElementById('gateMessage');
+        const gateButton = document.getElementById('gateButton');
+        const gateSecondary = document.getElementById('gateSecondary');
+        gateTitle.textContent = 'Confirm your email address';
+        gateMessage.textContent = pendingEmail
+          ? `We sent a verification link to ${pendingEmail}. Open it to activate your account. If you don't see it, check your spam or junk folder.`
+          : `Open the verification link we sent to activate your account. If you don't see it, check your spam or junk folder.`;
+        gateButton.textContent = `I've verified — continue to login`;
+        gateButton.href = '/login/?status=pending&next=/dashboard/';
+        gateSecondary.hidden = false;
+        gateSecondary.addEventListener('click', () => localStorage.removeItem('fbf_pending_email'));
+      }
       gate.style.display = 'flex';
       main.style.display = 'none';
       return;
@@ -400,6 +417,9 @@ import Base from '../layouts/Base.astro';
     font-size: 12px;
     font-weight: 700;
   }
+  .gate-secondary { display: block; margin-top: 14px; color: var(--text-muted); font-size: 12px; font-weight: 700; }
+  .gate-secondary:hover { color: var(--accent-light); }
+  .gate-secondary[hidden] { display: none; }
   .panel-count {
     background: rgba(124,58,237,0.15); color: var(--accent-light);
     font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px;
