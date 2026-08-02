@@ -164,7 +164,7 @@ const subtitle = isSignup
   } else if (mode === 'login' && pageStatus === 'pending') {
     showMessage('Open the verification email first, then log in here.', 'success');
   } else if (mode === 'login' && pageStatus === 'confirmation_failed') {
-    showMessage('That verification link could not be completed. Try logging in or request a new confirmation email.');
+    showMessage('That verification link could not be completed. Try logging in, or return to signup for a fresh link.');
   }
 
   form.addEventListener('submit', async event => {
