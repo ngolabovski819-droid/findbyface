@@ -27,7 +27,7 @@ const subtitle = isSignup
         <span class="auth-brand-find">find</span><span>byface</span>
       </div>
 
-      <div class="auth-card">
+      <div class="auth-card" id="authCard">
         <header class="auth-card-head">
           <span class={`auth-heading-icon ${isSignup ? 'signup' : ''}`}>
             {isSignup ? (
@@ -38,7 +38,7 @@ const subtitle = isSignup
           </span>
           <div>
             <h1 id="authTitle">{title}</h1>
-            <p>{subtitle}</p>
+            <p id="authSubtitle">{subtitle}</p>
           </div>
         </header>
 
@@ -79,6 +79,19 @@ const subtitle = isSignup
         </form>
 
         {isSignup && (
+          <div class="auth-confirmation" id="authConfirmation" role="status" hidden>
+            <span class="confirmation-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M4 5h16v14H4zM4 7l8 6 8-6" /><path d="m8.5 15 2 2 4.5-5" /></svg>
+            </span>
+            <h2>Verify your email address</h2>
+            <p>We sent a confirmation link to <strong id="confirmationEmail"></strong>.</p>
+            <p>Open that email and click the verification link to activate your account. If it is not in your inbox, check your spam or junk folder.</p>
+            <a class="confirmation-login" href="/login/?status=pending&next=/dashboard/">I&rsquo;ve verified my email &mdash; log in</a>
+            <a class="confirmation-restart" href="/signup/" id="confirmationRestart">Use a different email address</a>
+          </div>
+        )}
+
+        {isSignup && (
           <div class="verification-note">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 10v6M12 7h.01" /></svg>
             <span>Email verification is required before your first login.</span>
@@ -114,6 +127,12 @@ const subtitle = isSignup
   const message = document.getElementById('authMessage');
   const toggle = document.getElementById('passwordToggle');
   const google = document.getElementById('googleAuth');
+  const card = document.getElementById('authCard');
+  const title = document.getElementById('authTitle');
+  const subtitle = document.getElementById('authSubtitle');
+  const confirmationPanel = document.getElementById('authConfirmation');
+  const confirmationEmail = document.getElementById('confirmationEmail');
+  const confirmationRestart = document.getElementById('confirmationRestart');
 
   const safePath = value => value && value.startsWith('/') && !value.startsWith('//') ? value : '/dashboard/';
   const queryReturn = new URLSearchParams(window.location.search).get('next');
@@ -129,6 +148,24 @@ const subtitle = isSignup
   if (mode === 'login' && pendingEmail) email.value = pendingEmail;
   const callbackUrl = `${window.location.origin}/auth/callback`;
   google.href = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(callbackUrl)}`;
+
+  function showPendingConfirmation(emailAddress) {
+    if (mode !== 'signup' || !confirmationPanel) return;
+    card.classList.add('confirmed');
+    title.textContent = 'Check your inbox';
+    subtitle.textContent = 'Confirm your email address to activate your FindByFace account.';
+    confirmationEmail.textContent = emailAddress || 'the email address you entered';
+    confirmationPanel.hidden = false;
+  }
+
+  if (mode === 'signup' && new URLSearchParams(window.location.search).get('status') === 'pending') {
+    showPendingConfirmation(pendingEmail);
+  }
+
+  confirmationRestart?.addEventListener('click', () => {
+    try { localStorage.removeItem('fbf_pending_email'); } catch { /* noop */ }
+    document.cookie = 'fbf_pending_signup=; Path=/; Max-Age=0; SameSite=Lax; Secure';
+  });
 
   toggle.addEventListener('click', () => {
     const reveal = password.type === 'password';
@@ -206,7 +243,8 @@ const subtitle = isSignup
 
       if (payload.requiresConfirmation) {
         try { localStorage.setItem('fbf_pending_email', emailValue); } catch { /* query status is the fallback */ }
-        window.location.assign('/dashboard/?status=pending');
+        history.replaceState(null, '', '/signup/?status=pending');
+        showPendingConfirmation(emailValue);
         return;
       }
 
@@ -263,6 +301,16 @@ const subtitle = isSignup
   .auth-submit svg { width: 17px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .auth-message { padding: 11px 12px; border: 1px solid rgba(248,113,113,.28); border-radius: 9px; background: rgba(127,29,29,.16); color: #fca5a5; font-size: 12px; line-height: 1.45; }
   .auth-message[data-kind='success'] { border-color: rgba(74,222,128,.28); background: rgba(20,83,45,.17); color: #86efac; }
+  .auth-card.confirmed .auth-form,.auth-card.confirmed .verification-note,.auth-card.confirmed .auth-divider,.auth-card.confirmed .google-auth,.auth-card.confirmed .auth-switch { display: none; }
+  .auth-confirmation { display: flex; flex-direction: column; align-items: center; gap: 13px; padding: 30px 24px 28px; text-align: center; }
+  .auth-confirmation[hidden] { display: none; }
+  .confirmation-icon { display: grid; width: 54px; height: 54px; place-items: center; border-radius: 50%; background: rgba(34,197,94,.14); color: #4ade80; box-shadow: 0 0 0 8px rgba(34,197,94,.05); }
+  .confirmation-icon svg { width: 28px; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .auth-confirmation h2 { margin-top: 4px; color: #f7f7fb; font: 800 1.25rem/1.25 'Manrope', sans-serif; }
+  .auth-confirmation p { max-width: 340px; color: #a8a8bc; font-size: 12.5px; line-height: 1.6; }
+  .auth-confirmation strong { color: #f1f1f7; overflow-wrap: anywhere; }
+  .confirmation-login { width: 100%; margin-top: 7px; padding: 14px 16px; border-radius: 10px; background: linear-gradient(115deg,#7c3aed,#d946ef); color: #fff; font-size: 12.5px; font-weight: 800; box-shadow: 0 10px 28px rgba(124,58,237,.27); }
+  .confirmation-restart { color: #a78bfa; font-size: 11.5px; font-weight: 700; }
   .verification-note { display: flex; gap: 9px; margin: 16px 22px 0; padding: 11px 12px; border: 1px solid rgba(96,165,250,.25); border-radius: 9px; background: rgba(30,64,175,.14); color: #93c5fd; font-size: 11px; line-height: 1.45; }
   .verification-note svg { width: 17px; flex: 0 0 auto; stroke: currentColor; stroke-width: 1.7; }
   .auth-divider { display: flex; align-items: center; gap: 12px; margin: 20px 22px 15px; color: #6f6f87; font-size: 10.5px; }
