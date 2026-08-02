@@ -46,11 +46,21 @@ export const POST: APIRoute = async ({ request }) => {
     expires_in?: number;
     user?: { email?: string; user_metadata?: { full_name?: string; avatar_url?: string }; identities?: unknown[] };
     error_description?: string;
+    code?: string;
+    error_code?: string;
+    message?: string;
     msg?: string;
   };
 
   if (!response.ok || !payload.user) {
-    return json({ error: payload.error_description || payload.msg || 'Could not create your account.' }, response.status || 400);
+    const upstreamError = payload.error_description || payload.message || payload.msg || 'Could not create your account.';
+    if (response.status === 429 || payload.code === 'over_email_send_rate_limit' || /email rate limit/i.test(upstreamError)) {
+      return json({
+        code: 'email_rate_limited',
+        error: 'Confirmation email capacity is temporarily full. Use Google sign-in or try email signup again later.',
+      }, 429);
+    }
+    return json({ error: upstreamError }, response.status || 400);
   }
 
   const sessionReady = Boolean(payload.access_token);

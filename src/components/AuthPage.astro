@@ -87,7 +87,7 @@ const subtitle = isSignup
         {isSignup && (
           <div class="verification-note">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 10v6M12 7h.01" /></svg>
-            <span>You may need to verify your email before your first login.</span>
+            <span>Email verification is required before your first login.</span>
           </div>
         )}
 
@@ -196,7 +196,14 @@ const subtitle = isSignup
         body: JSON.stringify({ email: emailValue, password: passwordValue }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || 'Authentication failed.');
+      if (!response.ok) {
+        if (payload.code === 'email_rate_limited') {
+          showMessage('Our confirmation-email service has reached its temporary sending limit. Use Google sign-in now, or try email signup again later.');
+          google?.focus();
+          return;
+        }
+        throw new Error(payload.error || 'Authentication failed.');
+      }
 
       if (payload.requiresConfirmation) {
         localStorage.setItem('fbf_pending_email', emailValue);
