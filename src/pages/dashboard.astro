@@ -208,7 +208,8 @@ import Base from '../layouts/Base.astro';
     const main = document.getElementById('dashMain');
 
     if (!user) {
-      const pendingEmail = localStorage.getItem('fbf_pending_email');
+      let pendingEmail = null;
+      try { pendingEmail = localStorage.getItem('fbf_pending_email'); } catch { /* query status is the fallback */ }
       const pendingStatus = new URLSearchParams(window.location.search).get('status') === 'pending';
       if (pendingEmail || pendingStatus) {
         const gateTitle = document.getElementById('gateTitle');
