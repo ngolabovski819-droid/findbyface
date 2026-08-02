@@ -241,7 +241,9 @@ const subtitle = isSignup
         throw new Error(payload.error || 'Authentication failed.');
       }
 
-      if (payload.requiresConfirmation) {
+      // Email/password registration always requires the user-facing verification step.
+      // Do not treat a session-shaped signup response like a completed login.
+      if (mode === 'signup') {
         try { localStorage.setItem('fbf_pending_email', emailValue); } catch { /* query status is the fallback */ }
         history.replaceState(null, '', '/signup/?status=pending');
         showPendingConfirmation(emailValue);
