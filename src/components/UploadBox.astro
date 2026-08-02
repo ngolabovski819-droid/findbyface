@@ -301,6 +301,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   let allFaceResults: Record<string, unknown>[] = [];
   let faceShownCount = 0;
   const FACE_PAGE_SIZE = 12;
+  const FREE_REGULAR_RESULT_COUNT = 15;
 
   function isSignedIn(): boolean {
     try { return !!JSON.parse(localStorage.getItem('fbf_user') || 'null'); } catch { return false; }
@@ -625,7 +626,12 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     return `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//, ''))}&w=${w}&h=${h}&fit=cover&output=webp`;
   }
 
-  function renderCard(c: Record<string, unknown>, index: number, signedIn: boolean): string {
+  function renderCard(
+    c: Record<string, unknown>,
+    index: number,
+    regularResultPosition: number,
+    signedIn: boolean,
+  ): string {
     const avatar = c.avatar as string;
     const imgSrc = avatar?.startsWith('/') ? avatar : avatar?.startsWith('http') ? proxyImg(avatar, 320, 427) : '/no-image.png';
     const price = (c.subscribePrice ?? c.subscribeprice) as number;
@@ -637,10 +643,9 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     const isSponsored = !!c.sponsored;
     const profileUrl = (c.profileUrl as string) || `https://onlyfans.com/${encodeURIComponent(c.username as string)}`;
     const rel = (profileUrl as string).startsWith('/go/') ? 'noopener nofollow sponsored' : 'noopener nofollow';
-    // Alternating pattern: every other card is blurred until signed in (1 shown, 1 locked).
-    // A sponsored card is never blurred — an ad must stay visible/disclosed regardless of
-    // sign-in state, never hidden behind the "sign in to unlock" paywall.
-    const locked = !signedIn && index % 2 === 1 && !isSponsored;
+    // Keep the first 15 regular results visible to signed-out visitors. Sponsored cards
+    // are not part of that count and always remain visible and clearly disclosed.
+    const locked = !signedIn && !isSponsored && regularResultPosition > FREE_REGULAR_RESULT_COUNT;
 
     if (locked) {
       return `<div class="creator-card locked" data-href="/signup">
@@ -697,8 +702,15 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   function renderNextFacePage(): void {
     const signedIn = isSignedIn();
     const next = allFaceResults.slice(faceShownCount, faceShownCount + FACE_PAGE_SIZE);
+    let regularResultPosition = allFaceResults
+      .slice(0, faceShownCount)
+      .filter(c => !c.sponsored)
+      .length;
     const html = next
-      .map((c, i) => renderCard(c, faceShownCount + i, signedIn))
+      .map((c, i) => {
+        if (!c.sponsored) regularResultPosition += 1;
+        return renderCard(c, faceShownCount + i, regularResultPosition, signedIn);
+      })
       .join('');
     faceResultsGrid.insertAdjacentHTML('beforeend', html);
     faceShownCount += next.length;
@@ -720,9 +732,14 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     }
     faceResultsCount.textContent = `Showing ${faceShownCount} of ${total} matches`;
 
-    // Unlock banner: shown while blurred cards exist in the current view
-    if (!signedIn && faceShownCount > 1) {
-      unlockBannerText.innerHTML = `🔒 <strong>Half your matches are blurred</strong> — sign in free to reveal every lookalike`;
+    const shownRegularResults = allFaceResults
+      .slice(0, faceShownCount)
+      .filter(c => !c.sponsored)
+      .length;
+
+    // Unlock banner: shown once a locked regular result has been rendered.
+    if (!signedIn && shownRegularResults > FREE_REGULAR_RESULT_COUNT) {
+      unlockBannerText.innerHTML = `🔒 <strong>More matches are locked</strong> — sign in free to reveal every lookalike`;
       unlockBanner.style.display = 'flex';
     } else {
       unlockBanner.style.display = 'none';

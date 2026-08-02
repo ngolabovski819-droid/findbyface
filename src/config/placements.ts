@@ -10,10 +10,9 @@
 // separately and slots them into these exact positions, excluding them from the organic
 // query so pagination stays aligned.
 //
-// 'face-search' positions count SPONSORED SLOTS rather than literal grid cards. Each paid
-// card is followed by one organic card, which is the locked "Unlock" card for signed-out
-// visitors: sponsor position 1 renders at grid card 1, position 2 at grid card 3, position
-// 3 at grid card 5, and so on. UploadBox.astro locks every even 1-based grid card.
+// 'face-search' positions count sponsored slots. Sponsor position 1 renders as the first
+// card, position 2 as the third card, and so on, producing an ad/match/ad/match sequence.
+// UploadBox.astro counts organic results separately, so ads never consume a free slot.
 import { categories } from './categories';
 
 export interface Placement {

@@ -12,6 +12,7 @@ const isPromote = pathname.startsWith('/promote');
 <header class="nav">
   <div class="nav-inner">
     <a href="/" class="nav-logo">
+      <img class="nav-logo-mark" src="/findbyface-logo.png" alt="" width="34" height="34" />
       <span class="logo-find">find</span><span class="logo-byface">byface</span>
     </a>
 
@@ -233,6 +234,15 @@ const isPromote = pathname.startsWith('/promote');
     align-items: center;
     flex-shrink: 0;
     letter-spacing: -0.02em;
+    gap: 8px;
+  }
+
+  .nav-logo-mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    object-fit: cover;
+    flex-shrink: 0;
   }
 
   .logo-find {

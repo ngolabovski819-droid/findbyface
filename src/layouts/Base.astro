@@ -60,7 +60,8 @@ const canonicalUrl = canonical ?? new URL(Astro.url.pathname, 'https://findbyfac
   <meta name="twitter:title" content={title} />
   <meta name="twitter:description" content={description} />
 
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" type="image/png" href="/favicon.png?v=2" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://images.weserv.nl" crossorigin />
@@ -75,7 +76,10 @@ const canonicalUrl = canonical ?? new URL(Astro.url.pathname, 'https://findbyfac
   </main>
   <footer class="site-footer">
     <div class="footer-inner">
-      <a href="/" class="logo-text"><span style="color:#fff">find</span><span style="background:linear-gradient(135deg,#7c3aed,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">byface</span></a>
+      <a href="/" class="logo-text">
+        <img class="footer-logo-mark" src="/findbyface-logo.png" alt="" width="40" height="40" loading="lazy" />
+        <span><span style="color:#fff">find</span><span style="background:linear-gradient(135deg,#7c3aed,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">byface</span></span>
+      </a>
       <nav class="footer-links">
         <a href="/about/">About</a>
         <a href="/blog/">Blog</a>
@@ -133,10 +137,16 @@ const canonicalUrl = canonical ?? new URL(Astro.url.pathname, 'https://findbyfac
     font-family: 'Syne', sans-serif;
     font-weight: 800;
     font-size: 1.4rem;
-    background: linear-gradient(135deg, #7c3aed, #ec4899);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .footer-logo-mark {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    object-fit: cover;
   }
 
   .site-footer {

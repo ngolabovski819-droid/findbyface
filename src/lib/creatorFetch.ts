@@ -138,10 +138,9 @@ export async function fetchCreatorsByUsernames(usernames: string[]): Promise<Map
 }
 
 // Inserts sponsored creators into a ranked, non-paginated result list (face-search
-// matches). Configured positions count sponsored slots: 1, 2, 3 become literal grid
-// positions 1, 3, 5 so every sponsor is followed by one organic/Unlock card. Excluded
-// usernames are dropped from the organic list first so a pinned/excluded creator never
-// appears twice or in the wrong slot.
+// matches). Configured positions count sponsored slots, producing an ad/match/ad/match
+// sequence. Excluded usernames are dropped from the organic list first so a pinned or
+// excluded creator never appears twice or in the wrong slot.
 export async function applyFaceSearchPlacements<T extends { username: string; matchPct?: number | null }>(
   results: T[],
 ): Promise<T[]> {

@@ -559,7 +559,7 @@
   }
 
   function thumbnailSource(value?: string): string {
-    if (!value?.startsWith('http')) return '/favicon.svg';
+    if (!value?.startsWith('http')) return '/favicon.png';
     // These catalog thumbnails are already public CDN image URLs. The site's
     // generic weserv.nl proxy rejects this source with HTTP 403, while the
     // source CDN serves the images directly.
