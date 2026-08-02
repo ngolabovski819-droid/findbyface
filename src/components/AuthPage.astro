@@ -154,6 +154,7 @@ const subtitle = isSignup
     localStorage.removeItem('fbf_pornstar_guest_search_day');
     localStorage.removeItem('fbf_auth_return');
     localStorage.removeItem('fbf_pending_email');
+    document.cookie = 'fbf_pending_signup=; Path=/; Max-Age=0; SameSite=Lax; Secure';
   }
 
   const pageStatus = new URLSearchParams(window.location.search).get('status');

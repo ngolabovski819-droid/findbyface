@@ -210,7 +210,8 @@ import Base from '../layouts/Base.astro';
     if (!user) {
       let pendingEmail = null;
       try { pendingEmail = localStorage.getItem('fbf_pending_email'); } catch { /* query status is the fallback */ }
-      const pendingStatus = new URLSearchParams(window.location.search).get('status') === 'pending';
+      const pendingCookie = document.cookie.split(';').some(value => value.trim() === 'fbf_pending_signup=1');
+      const pendingStatus = new URLSearchParams(window.location.search).get('status') === 'pending' || pendingCookie;
       if (pendingEmail || pendingStatus) {
         const gateTitle = document.getElementById('gateTitle');
         const gateMessage = document.getElementById('gateMessage');
@@ -223,7 +224,10 @@ import Base from '../layouts/Base.astro';
         gateButton.textContent = `I've verified — continue to login`;
         gateButton.href = '/login/?status=pending&next=/dashboard/';
         gateSecondary.hidden = false;
-        gateSecondary.addEventListener('click', () => localStorage.removeItem('fbf_pending_email'));
+        gateSecondary.addEventListener('click', () => {
+          localStorage.removeItem('fbf_pending_email');
+          document.cookie = 'fbf_pending_signup=; Path=/; Max-Age=0; SameSite=Lax; Secure';
+        });
       }
       gate.style.display = 'flex';
       main.style.display = 'none';

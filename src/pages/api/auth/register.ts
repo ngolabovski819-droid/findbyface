@@ -2,14 +2,14 @@ import type { APIRoute } from 'astro';
 
 export const prerender = false;
 
-function json(payload: Record<string, unknown>, status = 200): Response {
+function json(payload: Record<string, unknown>, status = 200, extraHeaders?: HeadersInit): Response {
+  const headers = new Headers(extraHeaders);
+  headers.set('Content-Type', 'application/json; charset=utf-8');
+  headers.set('Cache-Control', 'no-store');
+  headers.set('X-Content-Type-Options', 'nosniff');
   return new Response(JSON.stringify(payload), {
     status,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'no-store',
-      'X-Content-Type-Options': 'nosniff',
-    },
+    headers,
   });
 }
 
@@ -74,5 +74,9 @@ export const POST: APIRoute = async ({ request }) => {
       name: payload.user.user_metadata?.full_name || payload.user.email,
       avatar: payload.user.user_metadata?.avatar_url || null,
     } : undefined,
+  }, 200, !sessionReady ? {
+    'Set-Cookie': 'fbf_pending_signup=1; Path=/; Max-Age=1800; SameSite=Lax; Secure',
+  } : {
+    'Set-Cookie': 'fbf_pending_signup=; Path=/; Max-Age=0; SameSite=Lax; Secure',
   });
 };
