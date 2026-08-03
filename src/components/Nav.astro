@@ -1,12 +1,12 @@
 ---
 const pathname = Astro.url.pathname;
 const isHome = pathname === '/' || pathname === '';
-const isSearch = pathname.startsWith('/onlyfans-search');
+const isOnlyFansFinder = pathname.startsWith('/onlyfans-finder-by-face');
 const isVideoSearch =
   pathname.startsWith('/pornstar-finder-by-face') ||
   pathname.startsWith('/video-search');
 const isDiscover = pathname.startsWith('/ai-discover');
-const isPromote = pathname.startsWith('/promote');
+const isSearch = pathname.startsWith('/onlyfans-search');
 ---
 
 <header class="nav">
@@ -20,11 +20,11 @@ const isPromote = pathname.startsWith('/promote');
       <a href="/" class={isHome ? 'active' : ''}>Home</a>
       {/* Discover is under development — hidden from nav until ready */}
       {false && <a href="/ai-discover/" class={isDiscover ? 'active' : ''}>Discover</a>}
-      <a href="/onlyfans-search/" class={isSearch ? 'active' : ''}>OnlyFans Search</a>
+      <a href="/onlyfans-finder-by-face/" class={isOnlyFansFinder ? 'active' : ''}>OnlyFans Finder</a>
       <a href="/pornstar-finder-by-face/" class={`nav-feature-link ${isVideoSearch ? 'active' : ''}`}>
         <span>Pornstar Finder</span><small class="nav-new-badge">New</small>
       </a>
-      <a href="/promote/" class={isPromote ? 'active' : ''}>Promote Your OnlyFans</a>
+      <a href="/onlyfans-search/" class={isSearch ? 'active' : ''}>OnlyFans Search</a>
       <div class="mobile-auth-actions" id="mobileAuthActions">
         <a href="/login/" class="mobile-login">Log in</a>
         <a href="/signup/" class="mobile-signup">Sign up free</a>
@@ -227,7 +227,7 @@ const isPromote = pathname.startsWith('/promote');
   }
 
   .nav-logo {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Manrope', sans-serif;
     font-weight: 800;
     font-size: 1.25rem;
     display: flex;

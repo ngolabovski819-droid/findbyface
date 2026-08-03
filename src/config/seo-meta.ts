@@ -152,14 +152,20 @@ export function categorySeo(slug: string, label: string, total: number): Categor
 // ---------- static page meta (hand-tuned) ----------
 
 export const HOME_SEO = {
-  title: `Find OnlyFans Lookalikes by Photo · AI Face Search ${Y}`,
+  title: `Adult Face Finder · Search Creators & Videos by Photo`,
   description:
-    'Find lookalike/exact OnlyFans creators by uploading a screenshot or image. Free and no sign-up required.',
+    'Upload a photo to search OnlyFans creator profiles and indexed adult video appearances with AI face matching. Free to start; no sign-up required.',
 };
 
 export const SEARCH_SEO = {
   title: `OnlyFans Search Engine · Filter 2.4M+ Profiles (${Y})`,
   description: `Search 2.4M+ OnlyFans creators with filters for verified, free, and bundle offers. Find your next subscription in seconds — no signup, daily refreshed in ${Y}.`,
+};
+
+export const AI_DISCOVER_SEO = {
+  title: `Build Your Ideal Type · AI Visual Preference Discovery (${Y})`,
+  description:
+    'Dial in your ideal face — eye color, jaw width, lip fullness, and more — and instantly see the OnlyFans creators who match. No photo upload required.',
 };
 
 export const BLOG_SEO = {

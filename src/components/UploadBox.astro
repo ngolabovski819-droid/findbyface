@@ -1,6 +1,12 @@
 ---
 import { proxyImg } from '../utils/image';
 
+interface Props {
+  searchMode?: 'all' | 'onlyfans';
+}
+
+const { searchMode = 'all' } = Astro.props;
+
 const SUPABASE_URL = import.meta.env.SUPABASE_URL?.replace(/\/+$/, '');
 const SUPABASE_KEY = import.meta.env.SUPABASE_KEY;
 
@@ -90,7 +96,24 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   </div>
 </div>
 
-<div class="upload-section" id="onlyfans-finder">
+<div class:list={["upload-section", { "onlyfans-mode": searchMode === 'onlyfans' }]} id="onlyfans-finder" data-search-mode={searchMode}>
+  {searchMode === 'all' ? <nav class="finder-tabs" aria-label="Sources included in every homepage face search">
+    <span class="finder-tab included">
+      <span class="finder-tab-icon" aria-hidden="true">▶</span>
+      <span>Pornstars</span>
+      <small>Included · video search</small>
+    </span>
+    <span class="finder-tab included">
+      <span class="finder-tab-icon" aria-hidden="true">♡</span>
+      <span>OnlyFans</span>
+      <small>Included · creator search</small>
+    </span>
+    <span class="finder-tab disabled" aria-disabled="true">
+      <span class="finder-tab-icon" aria-hidden="true">◉</span>
+      <span>Cam</span>
+      <small>Coming soon</small>
+    </span>
+  </nav> : <div class="dedicated-tool-badge"><span aria-hidden="true">♡</span> OnlyFans creator face search</div>}
   <div class="upload-box" id="uploadBox">
 
     <!-- State 1: Idle -->
@@ -98,8 +121,8 @@ if (SUPABASE_URL && SUPABASE_KEY) {
       <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
         <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <h3>Drop a photo here</h3>
-      <p>Upload any image — we'll find creators who look just like them</p>
+      <h3>{searchMode === 'onlyfans' ? 'Search OnlyFans creators by photo' : 'Search every live index by photo'}</h3>
+      <p>{searchMode === 'onlyfans' ? 'Upload one clear adult face and our AI will rank the closest creator profile matches' : 'Upload one clear adult face to search matching videos and creator profiles together'}</p>
       <button class="choose-btn" id="chooseBtn">Choose photo</button>
       <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" style="display:none" aria-label="Upload photo" />
       <p class="upload-hint">JPG · PNG · WEBP &nbsp;·&nbsp; Ctrl+V to paste</p>
@@ -149,18 +172,18 @@ if (SUPABASE_URL && SUPABASE_KEY) {
       </div>
 
       <p class="scanning-title">findbyface is searching</p>
-      <p class="scanning-sub">Analyzing your image and comparing with millions of profiles to find lookalikes.</p>
+      <p class="scanning-sub">{searchMode === 'onlyfans' ? 'Analyzing your image across the OnlyFans creator index.' : 'Analyzing your image across creator profiles and indexed adult videos.'}</p>
 
       <div class="progress-track">
         <div class="progress-fill"></div>
       </div>
 
-      <p class="scan-counter" id="scanCounter">Scanned <strong>0</strong> profiles</p>
+      <p class="scan-counter" id="scanCounter">Compared with <strong>0</strong> indexed faces</p>
 
       <div class="scan-steps" id="scanSteps">
         <span class="scan-step active" data-step="0"><i class="step-mark"></i>Detecting face</span>
         <span class="scan-step" data-step="1"><i class="step-mark"></i>Mapping landmarks</span>
-        <span class="scan-step" data-step="2"><i class="step-mark"></i>Comparing profiles</span>
+        <span class="scan-step" data-step="2"><i class="step-mark"></i>Searching live indexes</span>
         <span class="scan-step" data-step="3"><i class="step-mark"></i>Ranking matches</span>
       </div>
     </div>
@@ -177,66 +200,73 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   </div>
 
   <p class="upload-error" id="uploadError" style="display:none"></p>
-  <div class="search-divider"><span>— or search by name —</span></div>
-  <div class="home-search-wrap" id="homeSearchWrap">
-    <form class="search-bar-inline" id="homeSearchForm" action="/onlyfans-search/" method="get">
-      <input type="text" name="q" id="homeSearchInput" placeholder="Search creators..." autocomplete="off" />
-      <button type="submit">Search</button>
-    </form>
-    <div class="search-dropdown home-search-dropdown" id="homeSearchDropdown" style="display:none">
-      <div class="dd-ad-slot" id="homeDdAdSlot" style="display:none"></div>
-      <div class="dd-header">
-        <span class="dd-label">Recent searches</span>
-        <button class="dd-clear-all" id="homeClearAllBtn" type="button" style="display:none">Clear all</button>
-      </div>
-      <div class="dd-history" id="homeHistoryList"></div>
-    </div>
-  </div>
 </div>
 
 <!-- Results -->
 <div id="faceResults" class="face-results" style="display:none">
   <div class="results-header">
-    <h2 class="results-heading">Matching Creators</h2>
+    <div>
+      <span class="results-source-label">{searchMode === 'onlyfans' ? 'OnlyFans face search' : 'All-source face search'}</span>
+      <h2 class="results-heading">Your matches</h2>
+    </div>
     <button id="copyResultsBtn" class="copy-results-btn" type="button" title="Copy your top 10 closest matches">
       <span class="copy-ico" aria-hidden="true">📋</span>
       <span class="copy-label">Copy top 10</span>
     </button>
   </div>
-  <div id="shareCta" class="share-cta" style="display:none">
-    <span class="share-cta-step">1</span>
-    <span class="share-cta-arrow" aria-hidden="true">→</span>
-    <p class="share-cta-text">Matches copied! Now paste &amp; share your results on Reddit</p>
-    <a id="shareRedditBtn" href="https://www.reddit.com/r/OnlyfansReviewsCenter/submit" target="_blank" rel="noopener" class="share-reddit-btn">
-      <span aria-hidden="true">👽</span> Post to Reddit
-    </a>
+  <nav class="result-source-tabs" aria-label="Explore results from another source" hidden={searchMode === 'onlyfans'}>
+    <button class="result-source-tab active" id="onlyfansResultsTab" type="button" aria-selected="true">♡ OnlyFans <span id="onlyfansResultCount"></span></button>
+    <button class="result-source-tab" id="pornstarResultsTab" type="button" aria-selected="false">▶ Pornstars <span id="pornstarResultCount"></span></button>
+    <span class="result-source-tab disabled" aria-disabled="true">◉ Cam · coming soon</span>
+  </nav>
+  <div id="onlyfansResultsPanel" class="result-source-panel">
+    <div id="onlyfansPanelNotice" class="result-panel-notice" style="display:none"></div>
+    <div id="shareCta" class="share-cta" style="display:none">
+      <span class="share-cta-step">1</span>
+      <span class="share-cta-arrow" aria-hidden="true">→</span>
+      <p class="share-cta-text">Matches copied! Now paste &amp; share your results on Reddit</p>
+      <a id="shareRedditBtn" href="https://www.reddit.com/r/OnlyfansReviewsCenter/submit" target="_blank" rel="noopener" class="share-reddit-btn">
+        <span aria-hidden="true">👽</span> Post to Reddit
+      </a>
+    </div>
+    <div id="faceResultsGrid" class="face-results-grid"></div>
+    <div id="faceLoadMoreWrap" class="face-load-more-wrap" style="display:none">
+      <button id="faceLoadMoreBtn" class="face-load-more-btn" type="button">Load 12 more matches</button>
+      <p id="faceResultsCount" class="face-results-count"></p>
+    </div>
+    <div id="unlockBanner" class="unlock-banner" style="display:none">
+      <p id="unlockBannerText">🔒 <strong>8 more matches found</strong> — sign in free to see all</p>
+      <a id="unlockBannerBtn" href="#" class="unlock-banner-btn">Sign in with Google</a>
+    </div>
   </div>
-  <a class="cross-finder-cta" href="/pornstar-finder-by-face/">
-    <span class="cross-finder-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m10 9 5 3-5 3z" /></svg>
-    </span>
-    <span class="cross-finder-copy">
-      <strong>Could this face appear in adult videos?</strong>
-      <small>Search the growing indexed video library with Pornstar Finder.</small>
-    </span>
-    <span class="cross-finder-action">Try Pornstar Finder <b>→</b></span>
-  </a>
-  <div id="faceResultsGrid" class="face-results-grid"></div>
-  <div id="faceLoadMoreWrap" class="face-load-more-wrap" style="display:none">
-    <button id="faceLoadMoreBtn" class="face-load-more-btn" type="button">Load 12 more matches</button>
-    <p id="faceResultsCount" class="face-results-count"></p>
-  </div>
-  <div id="unlockBanner" class="unlock-banner" style="display:none">
-    <p id="unlockBannerText">🔒 <strong>8 more matches found</strong> — sign in free to see all</p>
-    <a id="unlockBannerBtn" href="#" class="unlock-banner-btn">Sign in with Google</a>
+  <div id="pornstarResultsPanel" class="result-source-panel" hidden>
+    <div id="pornstarPanelNotice" class="result-panel-notice" style="display:none"></div>
+    <div id="pornstarResultsMeta" class="video-results-meta"></div>
+    <div id="pornstarResultsGrid" class="video-results-grid"></div>
   </div>
 </div>
 
 <script>
-  import { pushHistory } from '../lib/searchHistory';
-  import { initSearchDropdown } from '../lib/searchDropdown';
   import { initCardClickThrough } from '../lib/cardClickThrough';
   import { creatorCardDataAttributes } from '../lib/creatorCardUi';
+
+  type HomepageVideoResult = {
+    title: string;
+    sourceUrl?: string;
+    thumbnailUrl?: string;
+    durationSeconds?: number;
+    similarity: number;
+    supportingEmbeddings: number;
+  };
+
+  type HomepageVideoResponse = {
+    ok: boolean;
+    code?: string;
+    error?: string;
+    indexedVideos?: number;
+    elapsedSeconds?: number;
+    results?: HomepageVideoResult[];
+  };
 
   // Build Google OAuth URL dynamically so localhost dev doesn't redirect to production
   function getGoogleAuthUrl(): string {
@@ -274,28 +304,21 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   const faceResultsCount = document.getElementById('faceResultsCount')!;
   const copyResultsBtn   = document.getElementById('copyResultsBtn') as HTMLButtonElement;
   const shareCta         = document.getElementById('shareCta')!;
+  const onlyfansResultsTab = document.getElementById('onlyfansResultsTab') as HTMLButtonElement;
+  const pornstarResultsTab = document.getElementById('pornstarResultsTab') as HTMLButtonElement;
+  const onlyfansResultsPanel = document.getElementById('onlyfansResultsPanel')!;
+  const pornstarResultsPanel = document.getElementById('pornstarResultsPanel')!;
+  const onlyfansResultCount = document.getElementById('onlyfansResultCount')!;
+  const pornstarResultCount = document.getElementById('pornstarResultCount')!;
+  const onlyfansPanelNotice = document.getElementById('onlyfansPanelNotice')!;
+  const pornstarPanelNotice = document.getElementById('pornstarPanelNotice')!;
+  const pornstarResultsMeta = document.getElementById('pornstarResultsMeta')!;
+  const pornstarResultsGrid = document.getElementById('pornstarResultsGrid')!;
+  const searchMode = document.getElementById('onlyfans-finder')?.dataset.searchMode === 'onlyfans'
+    ? 'onlyfans'
+    : 'all';
 
   initCardClickThrough();
-
-  // ── Homepage mini search bar: recent-searches dropdown ──────────────────────
-  const homeSearchForm  = document.getElementById('homeSearchForm') as HTMLFormElement;
-  const homeSearchInput = document.getElementById('homeSearchInput') as HTMLInputElement;
-  initSearchDropdown({
-    wrapper: document.getElementById('homeSearchWrap')!,
-    input: homeSearchInput,
-    dropdown: document.getElementById('homeSearchDropdown')!,
-    adSlot: document.getElementById('homeDdAdSlot')!,
-    historyList: document.getElementById('homeHistoryList')!,
-    clearAllBtn: document.getElementById('homeClearAllBtn')!,
-    onSelect(q) {
-      window.location.href = `/onlyfans-search/?q=${encodeURIComponent(q)}`;
-    },
-  });
-  // Explicit form submit (Enter / Search button) is a real page navigation, not a fetch
-  // — record it to history synchronously before the browser navigates away.
-  homeSearchForm.addEventListener('submit', () => {
-    pushHistory(homeSearchInput.value);
-  });
 
   // Pagination state for face-search results
   let allFaceResults: Record<string, unknown>[] = [];
@@ -528,6 +551,51 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     return result?.descriptor ?? null;
   }
 
+  function storedAccessToken(): string | null {
+    try {
+      const user = JSON.parse(localStorage.getItem('fbf_user') || 'null');
+      return typeof user?.access_token === 'string' ? user.access_token : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function searchPornstarIndex(file: File): Promise<HomepageVideoResponse> {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 65_000);
+    try {
+      const body = new FormData();
+      body.append('image', file);
+      const headers: HeadersInit = {};
+      const token = storedAccessToken();
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const response = await fetch('/api/video-face-search', {
+        method: 'POST',
+        headers,
+        body,
+        signal: controller.signal,
+      });
+      const payload = await response.json() as HomepageVideoResponse;
+      if (!response.ok || !payload.ok) {
+        return {
+          ...payload,
+          ok: false,
+          error: payload.error || 'Pornstar video search is temporarily unavailable.',
+        };
+      }
+      return payload;
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof DOMException && error.name === 'AbortError'
+          ? 'Pornstar video search timed out. Your OnlyFans results are still available.'
+          : 'Pornstar video search is temporarily unavailable. Your OnlyFans results are still available.',
+      };
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
   async function handleFile(file: File): Promise<void> {
     if (!isSignedIn() && getSearchCount() >= 2) { showAuthModal(); return; }
     uploadError.style.display = 'none';
@@ -544,6 +612,12 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     uploadIdle.style.display = 'none';
     uploadScanning.style.display = 'flex';
     startScanFX();
+
+    // The homepage searches both live indexes. Dedicated tool pages only call
+    // their own index so the result set stays specific to the page's promise.
+    const pornstarSearch: Promise<HomepageVideoResponse> = searchMode === 'all'
+      ? searchPornstarIndex(file)
+      : Promise.resolve({ ok: false, code: 'not_requested' });
 
     // Yield so the browser paints the scanning UI before heavy face work begins.
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -573,16 +647,13 @@ if (SUPABASE_URL && SUPABASE_KEY) {
       }
 
       if (!descriptor) {
-        stopScanFX();
-        uploadScanning.style.display = 'none';
-        uploadIdle.style.display = 'flex';
-        uploadError.textContent = 'No face detected — try a clearer, well-lit photo facing the camera';
-        uploadError.style.display = 'block';
-        return;
+        throw new Error('The OnlyFans matcher could not detect a face in this image.');
       }
 
       // Phase 3: search API
-      setProgressLabel('Searching for lookalikes...');
+      setProgressLabel(searchMode === 'onlyfans'
+        ? 'Searching OnlyFans creator profiles...'
+        : 'Searching creator profiles and indexed videos...');
       let data: any;
       try {
         const resp = await fetch('/api/face-search', {
@@ -599,24 +670,35 @@ if (SUPABASE_URL && SUPABASE_KEY) {
         throw new Error(`Search API failed: ${e?.message ?? e}`);
       }
 
+      const pornstarData = await pornstarSearch;
       incrementSearchCount();
       await new Promise(r => setTimeout(r, 300));
       stopScanFX();
       uploadScanning.style.display = 'none';
       uploadDone.style.display = 'flex';
-      setProgressLabel('Analyzing your image and comparing with millions of profiles to find lookalikes.');
+      setProgressLabel(searchMode === 'onlyfans'
+        ? 'Analyzing your image across the OnlyFans creator index.'
+        : 'Analyzing your image across creator profiles and indexed adult videos.');
       const results = data.results ?? [];
       const topName = results[0] ? ((results[0].name || results[0].username) as string) : undefined;
       recordSearchHistory(results, topName);
-      showResults(results, data.mode);
+      showResults(results, data.mode, pornstarData);
     } catch (err: any) {
+      const pornstarData = await pornstarSearch;
       stopScanFX();
       uploadScanning.style.display = 'none';
-      uploadIdle.style.display = 'flex';
-      setProgressLabel('Analyzing your image and comparing with millions of profiles to find lookalikes.');
+      setProgressLabel(searchMode === 'onlyfans'
+        ? 'Analyzing your image across the OnlyFans creator index.'
+        : 'Analyzing your image across creator profiles and indexed adult videos.');
       const msg = err?.message ?? String(err);
-      uploadError.textContent = msg.length > 10 ? msg : 'Search failed — please try again';
-      uploadError.style.display = 'block';
+      if (searchMode === 'all' && pornstarData.ok) {
+        uploadDone.style.display = 'flex';
+        showResults([], undefined, pornstarData, msg.length > 10 ? msg : 'OnlyFans creator search was unavailable.');
+      } else {
+        uploadIdle.style.display = 'flex';
+        uploadError.textContent = msg.length > 10 ? msg : 'Search failed — please try again';
+        uploadError.style.display = 'block';
+      }
       console.error('[findbyface] handleFile error:', err);
     }
   }
@@ -684,10 +766,116 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     </div>`;
   }
 
-  function showResults(results: Record<string, unknown>[], mode?: string): void {
+  function formatVideoDuration(value?: number): string {
+    if (!value || value < 0) return '';
+    const total = Math.round(value);
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const seconds = total % 60;
+    return hours > 0
+      ? `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+      : `${minutes}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  function createVideoResultCard(result: HomepageVideoResult, rank: number): HTMLElement {
+    const card = document.createElement('article');
+    card.className = 'home-video-card';
+
+    const hasSource = result.sourceUrl?.startsWith('https://');
+    const media = document.createElement(hasSource ? 'a' : 'div');
+    media.className = 'home-video-media';
+    if (media instanceof HTMLAnchorElement && hasSource) {
+      media.href = result.sourceUrl!;
+      media.target = '_blank';
+      media.rel = 'noopener noreferrer';
+    }
+    const image = document.createElement('img');
+    image.src = result.thumbnailUrl?.startsWith('http') ? result.thumbnailUrl : '/favicon.png';
+    image.alt = '';
+    image.loading = rank > 4 ? 'lazy' : 'eager';
+    image.referrerPolicy = 'origin';
+    media.appendChild(image);
+    const rankBadge = document.createElement('span');
+    rankBadge.className = 'home-video-rank';
+    rankBadge.textContent = `#${rank}`;
+    media.appendChild(rankBadge);
+    const duration = formatVideoDuration(result.durationSeconds);
+    if (duration) {
+      const durationBadge = document.createElement('span');
+      durationBadge.className = 'home-video-duration';
+      durationBadge.textContent = duration;
+      media.appendChild(durationBadge);
+    }
+    card.appendChild(media);
+
+    const body = document.createElement('div');
+    body.className = 'home-video-body';
+    const title = document.createElement('h3');
+    title.textContent = result.title || 'Indexed video match';
+    body.appendChild(title);
+    const metrics = document.createElement('p');
+    const similarity = Number.isFinite(result.similarity) ? `${(result.similarity * 100).toFixed(1)}% similarity` : 'Ranked match';
+    const evidence = `${result.supportingEmbeddings || 0} supporting face${result.supportingEmbeddings === 1 ? '' : 's'}`;
+    metrics.textContent = `${similarity} · ${evidence}`;
+    body.appendChild(metrics);
+    if (hasSource) {
+      const source = document.createElement('a');
+      source.href = result.sourceUrl!;
+      source.target = '_blank';
+      source.rel = 'noopener noreferrer';
+      source.className = 'home-video-source';
+      source.textContent = 'Open source video ↗';
+      body.appendChild(source);
+    }
+    card.appendChild(body);
+    return card;
+  }
+
+  function renderPornstarResults(payload: HomepageVideoResponse): void {
+    const results = payload.results ?? [];
+    pornstarResultsGrid.replaceChildren();
+    pornstarPanelNotice.style.display = 'none';
+    pornstarResultCount.textContent = payload.ok ? `(${results.length})` : '(unavailable)';
+    if (!payload.ok) {
+      pornstarPanelNotice.textContent = payload.error || 'Pornstar video search is temporarily unavailable.';
+      pornstarPanelNotice.style.display = 'block';
+      pornstarResultsMeta.textContent = '';
+      return;
+    }
+    pornstarResultsMeta.textContent = `${results.length} video match${results.length === 1 ? '' : 'es'} · ${(payload.indexedVideos ?? 0).toLocaleString()} videos indexed · ${(payload.elapsedSeconds ?? 0).toFixed(1)}s`;
+    if (results.length === 0) {
+      pornstarPanelNotice.textContent = 'No matching video appearances were found in the current index. Try another clear frame.';
+      pornstarPanelNotice.style.display = 'block';
+      return;
+    }
+    results.forEach((result, index) => {
+      pornstarResultsGrid.appendChild(createVideoResultCard(result, index + 1));
+    });
+  }
+
+  function selectResultSource(source: 'onlyfans' | 'pornstars'): void {
+    const onlyfansActive = source === 'onlyfans';
+    onlyfansResultsPanel.hidden = !onlyfansActive;
+    pornstarResultsPanel.hidden = onlyfansActive;
+    onlyfansResultsTab.classList.toggle('active', onlyfansActive);
+    pornstarResultsTab.classList.toggle('active', !onlyfansActive);
+    onlyfansResultsTab.setAttribute('aria-selected', String(onlyfansActive));
+    pornstarResultsTab.setAttribute('aria-selected', String(!onlyfansActive));
+    copyResultsBtn.style.display = onlyfansActive ? 'inline-flex' : 'none';
+  }
+
+  onlyfansResultsTab.addEventListener('click', () => selectResultSource('onlyfans'));
+  pornstarResultsTab.addEventListener('click', () => selectResultSource('pornstars'));
+
+  function showResults(
+    results: Record<string, unknown>[],
+    mode?: string,
+    pornstarPayload?: HomepageVideoResponse,
+    onlyfansError?: string,
+  ): void {
     const heading = document.querySelector('.results-heading') as HTMLElement | null;
     if (heading) {
-      heading.textContent = 'Matching Creators';
+      heading.textContent = 'Your matches';
     }
     allFaceResults = results;
     faceShownCount = 0;
@@ -695,6 +883,17 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     if (shareCta) shareCta.style.display = 'none';
     renderNextFacePage();
     updateCopyBtn();
+    onlyfansResultCount.textContent = onlyfansError ? '(unavailable)' : `(${results.length})`;
+    onlyfansPanelNotice.style.display = onlyfansError || results.length === 0 ? 'block' : 'none';
+    onlyfansPanelNotice.textContent = onlyfansError || (results.length === 0
+      ? 'No matching OnlyFans creator profiles were found. Try a clearer, front-facing photo.'
+      : '');
+    if (searchMode === 'all') {
+      renderPornstarResults(pornstarPayload ?? { ok: false, error: 'Pornstar video results were unavailable for this search.' });
+      selectResultSource(onlyfansError && pornstarPayload?.ok ? 'pornstars' : 'onlyfans');
+    } else {
+      selectResultSource('onlyfans');
+    }
     faceResults.style.display = 'block';
     faceResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -903,6 +1102,71 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     align-items: center; gap: 20px; padding: 0 20px; width: 100%;
     scroll-margin-top: 88px;
   }
+
+  .dedicated-tool-badge {
+    align-items: center;
+    background: rgba(151, 70, 255, .1);
+    border: 1px solid rgba(176, 107, 255, .32);
+    border-radius: 999px;
+    color: #d8b9ff;
+    display: inline-flex;
+    font-size: .76rem;
+    font-weight: 800;
+    gap: .48rem;
+    letter-spacing: .08em;
+    margin: 0 auto 18px;
+    padding: .55rem .9rem;
+    text-transform: uppercase;
+  }
+
+  .dedicated-tool-badge span {
+    color: #c65cff;
+    font-size: 1rem;
+  }
+  .finder-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: min(100%, 680px);
+    gap: 10px;
+    padding: 7px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: rgba(18,18,26,0.82);
+    box-shadow: 0 14px 36px rgba(0,0,0,0.22);
+    backdrop-filter: blur(12px);
+  }
+  .finder-tab {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    align-items: center;
+    column-gap: 9px;
+    padding: 11px 14px;
+    border: 1px solid transparent;
+    border-radius: 13px;
+    color: var(--text);
+    transition: transform 0.2s, border-color 0.2s, background 0.2s;
+  }
+  .finder-tab.included {
+    border-color: rgba(168,85,247,0.52);
+    background: linear-gradient(135deg, rgba(124,58,237,0.24), rgba(236,72,153,0.18));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  .finder-tab.disabled { color: var(--text-muted); opacity: 0.7; cursor: not-allowed; }
+  .finder-tab-icon {
+    grid-row: 1 / span 2;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: rgba(124,58,237,0.15);
+    color: var(--accent-light);
+    font-size: 15px;
+  }
+  .finder-tab > span:not(.finder-tab-icon) { font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 0.92rem; line-height: 1.2; }
+  .finder-tab small { color: var(--text-muted); font-size: 0.68rem; line-height: 1.2; }
   .upload-box {
     width: 100%; max-width: 600px;
     border: 2px dashed var(--border); border-radius: var(--radius-lg);
@@ -1159,6 +1423,11 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   @media (max-width: 480px) {
     .scanning-img-box, .face-roulette { width: 122px; height: 162px; }
     .scan-connector { width: 28px; }
+    .finder-tabs { width: 100%; max-width: 100%; gap: 5px; padding: 5px; overflow: hidden; }
+    .finder-tab { display: flex; min-width: 0; overflow: hidden; flex-direction: column; gap: 4px; padding: 9px 3px; text-align: center; }
+    .finder-tab-icon { width: 28px; height: 28px; }
+    .finder-tab > span:not(.finder-tab-icon) { font-size: 0.78rem; }
+    .finder-tab small { max-width: 100%; font-size: 0.58rem; overflow-wrap: anywhere; }
   }
 
   .done-state {
@@ -1236,6 +1505,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
 
   .face-results { width: 100%; max-width: 1200px; padding: 0 20px; margin: 0 auto; }
   .results-heading { font-size: 1.5rem; margin-bottom: 24px; text-align: center; }
+  .results-header .results-heading { margin: 0; text-align: left; }
   .cross-finder-cta {
     display: grid;
     grid-template-columns: 36px minmax(0, 1fr) auto;
@@ -1270,9 +1540,13 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     gap: 20px;
     align-items: start;
   }
-  @media (max-width: 1024px) { .face-results-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 1024px) {
+    .face-results-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .video-results-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
   @media (max-width: 680px)  {
     .face-results-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .video-results-grid { grid-template-columns: 1fr; gap: 14px; }
     .cross-finder-cta { grid-template-columns: 32px minmax(0, 1fr); gap: 10px; padding: 11px; }
     .cross-finder-icon { width: 32px; height: 32px; }
     .cross-finder-action { grid-column: 2; }
@@ -1298,7 +1572,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   .match-badge strong { font-size: 12px; font-weight: 900; line-height: 1; }
   .match-badge span { color: rgba(255,255,255,0.82); font-size: 9px; font-weight: 700; line-height: 1; letter-spacing: 0.06em; text-transform: uppercase; }
   .card-body { padding: 12px 14px; }
-  .creator-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .creator-name { font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .username { color: var(--text-muted); font-size: 12px; margin-bottom: 6px; }
   .price { font-weight: 700; font-size: 15px; margin-bottom: 10px; color: var(--text-muted); }
   .price-free { color: var(--success); }
@@ -1375,6 +1649,81 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     margin-bottom: 18px;
     flex-wrap: wrap;
   }
+  .results-source-label {
+    display: block;
+    color: var(--accent-light);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+  .result-source-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: -4px 0 20px;
+  }
+  .result-source-tab {
+    appearance: none;
+    padding: 8px 13px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+  }
+  button.result-source-tab:hover { color: var(--text); border-color: var(--accent); background: rgba(124,58,237,0.09); }
+  .result-source-tab.active { color: #fff; border-color: var(--accent); background: rgba(124,58,237,0.18); }
+  .result-source-tab.disabled { opacity: 0.55; cursor: not-allowed; }
+  .result-source-panel[hidden] { display: none; }
+  .result-panel-notice {
+    padding: 18px 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: rgba(124,58,237,0.07);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+  .video-results-meta { color: var(--text-muted); font-size: 0.82rem; margin-bottom: 16px; }
+  .video-results-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+  :global(.home-video-card) {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    transition: transform 0.22s, border-color 0.22s, box-shadow 0.22s;
+  }
+  :global(.home-video-card:hover) { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 12px 34px var(--accent-glow); }
+  :global(.home-video-media) { position: relative; display: block; aspect-ratio: 16 / 10; overflow: hidden; background: var(--surface-raised); }
+  :global(.home-video-media img) { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.35s; }
+  :global(.home-video-card:hover .home-video-media img) { transform: scale(1.035); }
+  :global(.home-video-rank), :global(.home-video-duration) {
+    position: absolute;
+    bottom: 9px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(10,10,15,0.8);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 800;
+    backdrop-filter: blur(6px);
+  }
+  :global(.home-video-rank) { left: 9px; }
+  :global(.home-video-duration) { right: 9px; }
+  :global(.home-video-body) { padding: 15px 16px 17px; }
+  :global(.home-video-body h3) { min-height: 2.8em; margin-bottom: 9px; font-size: 0.93rem; line-height: 1.4; }
+  :global(.home-video-body p) { margin-bottom: 13px; color: var(--text-muted); font-size: 0.75rem; line-height: 1.45; }
+  :global(.home-video-source) { color: var(--accent-light); font-size: 0.78rem; font-weight: 800; }
   .copy-results-btn {
     display: inline-flex;
     align-items: center;
@@ -1574,7 +1923,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   #faceResults .match-badge span { color: rgba(255,255,255,0.82); font-size: 9px; font-weight: 700; line-height: 1; letter-spacing: 0.06em; text-transform: uppercase; }
   #faceResults .card-body { padding: 14px 15px 15px; display: flex; flex-direction: column; flex: 1; }
   #faceResults .creator-name {
-    font-family: 'Syne', sans-serif; font-weight: 700;
+    font-family: 'Manrope', sans-serif; font-weight: 700;
     font-size: 14.5px; margin-bottom: 2px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     color: var(--text);

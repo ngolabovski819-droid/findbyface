@@ -1,124 +1,182 @@
 ---
 import Base from '../layouts/Base.astro';
 import UploadBox from '../components/UploadBox.astro';
-import StatsBar from '../components/StatsBar.astro';
-import CategoryChips from '../components/CategoryChips.astro';
-import CreatorCard from '../components/CreatorCard.astro';
 import { HOME_SEO } from '../config/seo-meta';
-import { resolvePlacements } from '../lib/creatorFetch';
-import { applySponsorOverrides } from '../lib/sponsorOverrides';
 
 Astro.response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
 
-const PAGE_SIZE = 20;
-const { creators: placedCreators, total } = await resolvePlacements('home', { page: 1, pageSize: PAGE_SIZE });
-const initialCreators = applySponsorOverrides(placedCreators);
-const hasMore = initialCreators.length < total;
+const faqs = [
+  {
+    name: 'Is FindByFace really free?',
+    answer: 'Yes. You can start an adult face search for free. Some tools may apply fair-use or account limits, which are shown before they affect a search.',
+  },
+  {
+    name: 'What can I search with FindByFace?',
+    answer: 'FindByFace currently searches OnlyFans creator profiles and indexed adult video appearances. Cam performer search is planned but not yet available.',
+  },
+  {
+    name: 'What photo works best?',
+    answer: 'Use a sharp, well-lit image with one unobstructed adult face. Front-facing and mild three-quarter angles usually produce the most useful rankings.',
+  },
+  {
+    name: 'Is my upload stored or shared?',
+    answer: 'The uploaded query image is processed to generate search results and is not added to the searchable face index. See the privacy policy for details about processing and service logs.',
+  },
+  {
+    name: 'Does a face match prove someone\'s identity?',
+    answer: 'No. Results are ranked visual matches, not proof of identity. Similar-looking people, image quality, pose, and index coverage can all affect the ranking.',
+  },
+  {
+    name: 'Is FindByFace a reverse image search engine?',
+    answer: 'Not exactly. Traditional reverse image search looks for copies of the same image. FindByFace compares facial features, which can surface related profiles or appearances from different images and video frames.',
+  },
+];
 
-const faqJsonLd = JSON.stringify({
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: [
-    {
+const structuredData = JSON.stringify([
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'FindByFace Adult Face Finder',
+    url: 'https://findbyface.org/',
+    description: HOME_SEO.description,
+    applicationCategory: 'SearchApplication',
+    operatingSystem: 'Any',
+    isAccessibleForFree: true,
+    audience: { '@type': 'PeopleAudience', requiredMinAge: 18 },
+    featureList: [
+      'AI face search by photo or screenshot',
+      'OnlyFans creator profile matching',
+      'Adult video appearance matching',
+      'Ranked visual similarity results',
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((item) => ({
       '@type': 'Question',
-      name: 'Is FindByFace really free?',
-      acceptedAnswer: { '@type': 'Answer', text: 'Yes. You can upload a photo and get lookalike OnlyFans matches for free — no credits or per-search fees. Signing in (also free) unlocks unlimited searches and reveals every match.' },
-    },
-    {
-      '@type': 'Question',
-      name: 'How accurate is the face matching?',
-      acceptedAnswer: { '@type': 'Answer', text: 'Our AI analyzes dozens of facial features for high-precision matching. Accuracy is best with clear, well-lit photos where the person faces the camera.' },
-    },
-    {
-      '@type': 'Question',
-      name: 'What photo works best?',
-      acceptedAnswer: { '@type': 'Answer', text: 'A sharp, front-facing photo of a single face with good lighting. Avoid sunglasses, heavy filters, group shots, and extreme angles for the strongest results.' },
-    },
-    {
-      '@type': 'Question',
-      name: 'Is my upload stored or shared?',
-      acceptedAnswer: { '@type': 'Answer', text: 'No. Your photo is processed to generate matches and is not stored or shared. The search is private.' },
-    },
-    {
-      '@type': 'Question',
-      name: "Can I find a specific person's OnlyFans?",
-      acceptedAnswer: { '@type': 'Answer', text: 'FindByFace surfaces creators who visually resemble the uploaded face. Results are based on visual similarity and are intended for discovery and entertainment, not identity confirmation.' },
-    },
-  ],
-});
+      name: item.name,
+      acceptedAnswer: { '@type': 'Answer', text: item.answer },
+    })),
+  },
+]);
 ---
 
 <Base title={HOME_SEO.title} description={HOME_SEO.description}>
   <Fragment slot="head">
-    <script type="application/ld+json" set:html={faqJsonLd} />
+    <meta name="rating" content="adult" />
+    <script type="application/ld+json" set:html={structuredData} />
   </Fragment>
   <div class="hero">
     <div class="hero-badge">
       <span class="badge-dot"></span>
-      AI-powered face matching · 100% free
+      AI-powered adult face search · free to start
     </div>
-    <h1><span class="h1-white">Find her</span> <span class="gradient-text">OnlyFans</span><br /><span class="h1-white">by photo in seconds</span></h1>
-    <p class="hero-sub">Upload any clear photo of a face and our AI instantly finds OnlyFans creators who look just like them — free, private, and unlimited.</p>
+    <h1>Find Adult Creators by Photo</h1>
+    <p class="hero-sub">Upload one clear face photo and let our AI search OnlyFans, pornstars, or cam girl creators and find the closest visual matches.</p>
     <ul class="hero-trust">
-      <li><span class="trust-ico">⚡</span> Results in under 2 seconds</li>
-      <li><span class="trust-ico">🔒</span> Your photo is never stored</li>
+      <li><span class="trust-ico">⚡</span> One photo, multiple search tools</li>
+      <li><span class="trust-ico">🔒</span> Free &amp; 100% Private</li>
       <li><span class="trust-ico">✓</span> No sign-up to start</li>
     </ul>
   </div>
 
   <UploadBox />
 
-  <StatsBar />
-
-  <section class="browse-section">
-    <div class="browse-head">
-      <span class="eyebrow">Explore</span>
-      <h2 class="section-title">Browse by Category</h2>
-      <p class="browse-sub">Jump straight to a vibe — from blonde and petite to MILF, Latina, and dozens more.</p>
+  <section class="home-section sources-section" aria-labelledby="search-sources-title">
+    <div class="section-head">
+      <span class="eyebrow">One upload searches both</span>
+      <h2 class="section-title-lg" id="search-sources-title">One face search, purpose-built indexes</h2>
+      <p class="section-lead">Every homepage upload searches creator profiles and indexed video appearances together, then lets you switch between each result set.</p>
     </div>
-    <CategoryChips />
+    <div class="source-grid">
+      <a class="source-card featured" href="/onlyfans-finder-by-face/">
+        <span class="source-status live">Live</span>
+        <span class="source-icon" aria-hidden="true">♡</span>
+        <h3>OnlyFans face finder</h3>
+        <p>Upload a face and discover visually similar creator profiles, ranked with profile details and direct source links.</p>
+        <span class="source-link">Open the individual creator tool <b>→</b></span>
+      </a>
+      <a class="source-card" href="/pornstar-finder-by-face/">
+        <span class="source-status beta">Beta</span>
+        <span class="source-icon" aria-hidden="true">▶</span>
+        <h3>Pornstar finder by face</h3>
+        <p>Search a growing adult video index to find matching appearances from a photo or video screenshot.</p>
+        <span class="source-link">Open the individual video tool <b>→</b></span>
+      </a>
+      <article class="source-card disabled" aria-disabled="true">
+        <span class="source-status soon">Coming soon</span>
+        <span class="source-icon" aria-hidden="true">◉</span>
+        <h3>Cam performer finder</h3>
+        <p>Search cam performer profiles by face when the next FindByFace index is ready.</p>
+        <span class="source-link">In development</span>
+      </article>
+    </div>
   </section>
 
-  {initialCreators.length > 0 && (
-    <section class="creators-section">
-      <h2 class="section-title">Popular Creators</h2>
-      <div class="creators-grid" id="creatorsGrid">
-        {initialCreators.map((c, i) => <CreatorCard creator={c} index={i} />)}
-      </div>
-      {hasMore && (
-        <div class="load-more-wrap">
-          <button class="load-more-btn" id="loadMoreBtn">Load More</button>
-        </div>
-      )}
-    </section>
-  )}
-
   <!-- How It Works -->
-  <section class="home-section how-section">
+  <section class="home-section how-section" id="how-it-works">
     <div class="section-head">
-      <span class="eyebrow">Simple &amp; instant</span>
-      <h2 class="section-title-lg">How FindByFace works</h2>
-      <p class="section-lead">Three steps, a few seconds, zero cost. No account required to run your first searches.</p>
+      <span class="eyebrow">Better input, better matches</span>
+      <h2 class="section-title-lg">How It Works &amp; Tips for Best Results</h2>
+      <p class="section-lead">One clear photo is all you need. Follow these three steps to get the strongest results from every live FindByFace index.</p>
     </div>
     <div class="steps-grid">
-      <div class="step-card">
-        <span class="step-num">1</span>
-        <span class="step-emoji">📤</span>
-        <h3>Upload a photo</h3>
-        <p>Drag &amp; drop, click, or paste any clear image of a face. JPG, PNG and WEBP all work. The sharper the photo and the more they face the camera, the better the match.</p>
-      </div>
-      <div class="step-card">
-        <span class="step-num">2</span>
-        <span class="step-emoji">🧠</span>
-        <h3>AI maps the face</h3>
-        <p>Our facial-recognition engine reads dozens of unique facial features and compares them against millions of indexed OnlyFans profiles in real time.</p>
-      </div>
-      <div class="step-card">
-        <span class="step-num">3</span>
-        <span class="step-emoji">💜</span>
-        <h3>Get ranked matches</h3>
-        <p>See the closest lookalike creators ranked by similarity, with prices and direct profile links. Click through and discover someone new.</p>
-      </div>
+      <article class="step-card">
+        <div class="step-visual upload-visual" aria-hidden="true">
+          <span class="visual-grid"></span>
+          <span class="photo-card photo-card-back"></span>
+          <span class="photo-card photo-card-main">
+            <span class="portrait-head"></span><span class="portrait-neck"></span><span class="portrait-body"></span>
+            <i class="crop-corner crop-tl"></i><i class="crop-corner crop-tr"></i><i class="crop-corner crop-bl"></i><i class="crop-corner crop-br"></i>
+            <b class="face-confirm"><span>✓</span> Face detected</b>
+          </span>
+          <span class="upload-flight">
+            <svg viewBox="0 0 24 24"><path d="M12 16V5m0 0L7.5 9.5M12 5l4.5 4.5M5 16.5V19h14v-2.5" /></svg>
+          </span>
+          <span class="file-ready"><i>JPG</i><span><b>face-photo.jpg</b><small>Ready to analyze</small></span><em>100%</em></span>
+        </div>
+        <span class="step-num">01</span>
+        <h3>Upload a Face Photo</h3>
+        <p>Choose, drop, or paste a clear front-facing image with one visible adult face. JPG, PNG, and WEBP files work best without heavy filters.</p>
+      </article>
+      <article class="step-card">
+        <div class="step-visual scan-visual" aria-hidden="true">
+          <span class="visual-grid"></span>
+          <span class="hud-corner hud-tl"></span><span class="hud-corner hud-tr"></span><span class="hud-corner hud-bl"></span><span class="hud-corner hud-br"></span>
+          <svg class="biometric-face" viewBox="0 0 130 150" fill="none">
+            <path class="face-outline" d="M65 13C40 13 26 31 25 58c-1 31 9 64 40 77 31-13 41-46 40-77-1-27-15-45-40-45Z" />
+            <path class="face-mesh" d="M36 56 51 49l14 8 14-8 15 7M41 77l24 13 24-13M48 112l17-7 17 7M65 57v48M51 49l-3 31 17 10 17-10-3-31" />
+            <g class="landmark-dots"><circle cx="38" cy="57" r="2"/><circle cx="51" cy="53" r="2"/><circle cx="65" cy="59" r="2"/><circle cx="79" cy="53" r="2"/><circle cx="92" cy="57" r="2"/><circle cx="48" cy="80" r="2"/><circle cx="65" cy="90" r="2"/><circle cx="82" cy="80" r="2"/><circle cx="55" cy="111" r="2"/><circle cx="65" cy="107" r="2"/><circle cx="75" cy="111" r="2"/></g>
+          </svg>
+          <span class="scan-beam"></span>
+          <span class="scan-data data-left"><i>68</i><small>landmarks</small></span>
+          <span class="scan-data data-right"><i>128D</i><small>face vector</small></span>
+          <span class="scan-status"><i></i> Comparing live indexes</span>
+        </div>
+        <span class="step-num">02</span>
+        <h3>AI Analyzes &amp; Searches</h3>
+        <p>Our face-recognition pipeline maps facial features and searches OnlyFans profiles and indexed adult video appearances at the same time.</p>
+      </article>
+      <article class="step-card">
+        <div class="step-visual results-visual" aria-hidden="true">
+          <span class="visual-grid"></span>
+          <span class="results-window">
+            <span class="results-window-head"><b>Closest matches</b><small><i></i> Ranked in 1.8s</small></span>
+            <span class="result-row result-one"><em>01</em><i class="result-avatar"></i><span><b>97% match</b><small>OnlyFans creator</small><u><i></i></u></span><strong>→</strong></span>
+            <span class="result-row result-two"><em>02</em><i class="result-avatar"></i><span><b>94% match</b><small>Video appearance</small><u><i></i></u></span><strong>→</strong></span>
+            <span class="result-row result-three"><em>03</em><i class="result-avatar"></i><span><b>91% match</b><small>OnlyFans creator</small><u><i></i></u></span><strong>→</strong></span>
+          </span>
+          <span class="result-source-pills"><b>♡ Creators</b><b>▶ Videos</b></span>
+        </div>
+        <span class="step-num">03</span>
+        <h3>Get Instant Results</h3>
+        <p>Switch between Pornstars and OnlyFans results, compare ranked visual similarity, and open the original profile or video source.</p>
+      </article>
+    </div>
+    <div class="pro-tip">
+      <span class="pro-tip-icon" aria-hidden="true">✦</span>
+      <p><strong>Pro tip:</strong> Natural, unedited photos with the face looking toward the camera deliver the strongest visual matches. Crop group photos to one face.</p>
     </div>
     <div class="section-cta">
       <button type="button" class="hero-cta" id="howCtaBtn">
@@ -132,49 +190,127 @@ const faqJsonLd = JSON.stringify({
   <section class="home-section why-section">
     <div class="section-head">
       <span class="eyebrow">Built for real searches</span>
-      <h2 class="section-title-lg">Why people use FindByFace</h2>
-      <p class="section-lead">However you found her, if you have a photo we can help you find her OnlyFans and creators who look just like her.</p>
+      <h2 class="section-title-lg">What an adult face finder can help you discover</h2>
+      <p class="section-lead">Different searches need different evidence. FindByFace keeps creator discovery and video retrieval clear and separate.</p>
     </div>
     <div class="why-grid">
       <article class="why-card">
-        <span class="why-emoji">📱</span>
-        <h3>Found her on social media</h3>
-        <p>Spotted a stunning girl on Instagram, TikTok or X? Screenshot her face and find her OnlyFans — or creators with the same look.</p>
+        <span class="why-emoji">✨</span>
+        <h3>Discover creator lookalikes</h3>
+        <p>Start with a face that matches your taste and explore OnlyFans creators with visually similar features.</p>
       </article>
       <article class="why-card">
-        <span class="why-emoji">🏡</span>
-        <h3>The girl next door</h3>
-        <p>That barista, gym regular or college crush who's out of reach? Upload a clear photo and discover lookalike creators you can actually subscribe to.</p>
+        <span class="why-emoji">🎬</span>
+        <h3>Identify an adult video source</h3>
+        <p>Use a clear performer screenshot to retrieve matching appearances from the growing indexed video library.</p>
       </article>
       <article class="why-card">
-        <span class="why-emoji">⭐</span>
-        <h3>Celebrity &amp; influencer lookalikes</h3>
-        <p>Got a celebrity crush? Upload their photo and find OnlyFans creators who could be their twin — same eyes, same smile, same vibe.</p>
+        <span class="why-emoji">🧭</span>
+        <h3>Search without a username</h3>
+        <p>When a name, handle or title is missing, a face can provide a useful visual starting point for discovery.</p>
       </article>
       <article class="why-card">
         <span class="why-emoji">🔎</span>
-        <h3>Is my partner on OnlyFans?</h3>
-        <p>Curious whether your boyfriend or girlfriend has a profile? Run a discreet face search and get your answer in seconds.</p>
+        <h3>Find the same face across frames</h3>
+        <p>Facial features can remain searchable even when a video frame has been cropped, compressed or overlaid with text.</p>
       </article>
       <article class="why-card">
         <span class="why-emoji">🛡️</span>
-        <h3>Spot deepfakes &amp; fakes</h3>
-        <p>Worried a profile is AI-generated or a catfish? Compare faces to verify whether a creator is the real person before you subscribe.</p>
+        <h3>Check your own public presence</h3>
+        <p>Creators can search their own face to review indexed appearances and use the removal process when needed.</p>
       </article>
       <article class="why-card">
         <span class="why-emoji">🎯</span>
-        <h3>Find exactly your type</h3>
-        <p>Stop endless scrolling. Upload a face that matches your taste and instantly surface creators who fit your exact preferences.</p>
+        <h3>Narrow down visual discovery</h3>
+        <p>Use ranked similarity to reduce endless browsing, then confirm every useful match at its linked source.</p>
       </article>
     </div>
+  </section>
+
+  <!-- Email signup -->
+  <section class="home-section signup-section" aria-labelledby="signup-section-title">
+    <div class="signup-card">
+      <div class="signup-glow signup-glow-one" aria-hidden="true"></div>
+      <div class="signup-glow signup-glow-two" aria-hidden="true"></div>
+      <div class="signup-copy">
+        <span class="signup-kicker"><i></i> Free FindByFace account</span>
+        <h2 id="signup-section-title">Signup with Email for Unlimited Daily Searches &amp; History Date</h2>
+        <p>Create your private account in seconds, search every live face index without the guest limit, and return to your recent matches whenever you need them.</p>
+        <ul class="signup-benefits">
+          <li><span>∞</span><div><strong>Unlimited daily searches</strong><small>Keep searching OnlyFans profiles and indexed videos.</small></div></li>
+          <li><span>↺</span><div><strong>Search history by date</strong><small>Revisit recent searches and their closest matches.</small></div></li>
+          <li><span>✉</span><div><strong>Email signup</strong><small>No social account or payment method required.</small></div></li>
+        </ul>
+        <a class="signup-email-cta" href="/signup/?next=/">
+          <span class="signup-email-icon" aria-hidden="true">✉</span>
+          Sign up free with email
+          <b aria-hidden="true">→</b>
+        </a>
+        <p class="signup-login">Already have an account? <a href="/login/?next=/">Log in</a></p>
+      </div>
+      <div class="history-preview" aria-label="Example search history">
+        <div class="history-preview-head">
+          <div><span class="history-logo">⌁</span><strong>Search history</strong></div>
+          <span class="history-saved">Saved privately</span>
+        </div>
+        <div class="history-date"><span>Today</span><i></i></div>
+        <div class="history-row featured">
+          <span class="history-thumb history-thumb-one"></span>
+          <div><strong>All-source photo search</strong><small>OnlyFans + Pornstars</small></div>
+          <time>2:14 AM</time>
+        </div>
+        <div class="history-row">
+          <span class="history-thumb history-thumb-two"></span>
+          <div><strong>Creator face search</strong><small>18 visual matches</small></div>
+          <time>1:42 AM</time>
+        </div>
+        <div class="history-date"><span>Yesterday</span><i></i></div>
+        <div class="history-row">
+          <span class="history-thumb history-thumb-three"></span>
+          <div><strong>Video appearance search</strong><small>7 indexed videos</small></div>
+          <time>11:08 PM</time>
+        </div>
+        <div class="history-preview-foot"><span>🔒</span> Only you can view your search history</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SEO: face search vs traditional reverse image search -->
+  <section class="home-section comparison-section">
+    <div class="section-head">
+      <span class="eyebrow">Search the face, not just the file</span>
+      <h2 class="section-title-lg">Adult face finder vs. reverse image search</h2>
+      <p class="section-lead">Both can begin with a photo, but they are designed to find different kinds of matches.</p>
+    </div>
+    <div class="comparison-grid">
+      <article class="comparison-card">
+        <span class="comparison-kicker">Traditional image search</span>
+        <h3>Looks for the same picture</h3>
+        <ul>
+          <li>Best for duplicate and near-duplicate images</li>
+          <li>Relies on the same frame appearing elsewhere online</li>
+          <li>Can lose the trail after crops, overlays or edits</li>
+        </ul>
+      </article>
+      <article class="comparison-card accent">
+        <span class="comparison-kicker">FindByFace AI search</span>
+        <h3>Looks for similar facial features</h3>
+        <ul>
+          <li>Compares faces across different profile photos and frames</li>
+          <li>Ranks results from purpose-built adult content indexes</li>
+          <li>Links to sources so you can review the evidence yourself</li>
+        </ul>
+      </article>
+    </div>
+    <p class="comparison-note">Similarity can produce false positives. FindByFace results should never be treated as identity confirmation.</p>
   </section>
 
   <!-- 100% Free banner -->
   <section class="home-section free-section">
     <div class="free-card">
       <span class="free-badge">100% FREE</span>
-      <h2>Free OnlyFans face search — no credits, no catch</h2>
-      <p>Unlike paid OnlyFans finders that charge per search, FindByFace lets you run face searches for free. No credit packages, no per-search fees, no subscription to view matches. Upload a photo, get instant lookalike results, and browse millions of indexed creators without paying a cent. Sign in free to unlock unlimited searches.</p>
+      <h2>Start your adult face search for free</h2>
+      <p>Try the OnlyFans creator face finder without paying per search, or open the Pornstar Finder beta to search indexed adult video appearances. Account and fair-use limits are always shown before they affect your search.</p>
       <div class="section-cta">
         <button type="button" class="hero-cta light" id="freeCtaBtn">
           <span class="cta-icon">📸</span>
@@ -184,43 +320,17 @@ const faqJsonLd = JSON.stringify({
     </div>
   </section>
 
-  <!-- Testimonials -->
+  <!-- Trust and responsible search -->
   <section class="home-section trust-section">
     <div class="section-head">
-      <span class="eyebrow">★ 4.9 / 5 from thousands of searches</span>
-      <h2 class="section-title-lg">Trust what our users say</h2>
-      <p class="section-lead">Real feedback from people who found exactly who they were looking for.</p>
+      <span class="eyebrow">Useful results need honest limits</span>
+      <h2 class="section-title-lg">Built for responsible visual search</h2>
+      <p class="section-lead">Clear processing, source-level evidence and visible uncertainty make face-search results more useful.</p>
     </div>
-    <div class="testimonials-grid">
-      <figure class="testimonial">
-        <div class="stars">★★★★★</div>
-        <blockquote>"Thought it was too good to be true. Uploaded a photo of a girl from my feed and found three creators who look just like her in seconds. Insanely accurate."</blockquote>
-        <figcaption>Brandon L. · <span>verified user</span></figcaption>
-      </figure>
-      <figure class="testimonial">
-        <div class="stars">★★★★★</div>
-        <blockquote>"I've had a crush on the same celebrity for years. Found a creator who is legitimately her twin — same eyes, same smile. Best free tool I've used."</blockquote>
-        <figcaption>Jake M. · <span>verified user</span></figcaption>
-      </figure>
-      <figure class="testimonial">
-        <div class="stars">★★★★★</div>
-        <blockquote>"Matched with someone online that seemed off. Reverse-searched her pics and confirmed it fast. Saved me a ton of time — and it cost nothing."</blockquote>
-        <figcaption>David R. · <span>verified user</span></figcaption>
-      </figure>
-    </div>
-  </section>
-
-  <!-- Reddit / community -->
-  <section class="home-section reddit-section">
-    <div class="reddit-card">
-      <span class="reddit-emoji">👽</span>
-      <div class="reddit-copy">
-        <h2>Share your OnlyFans lookalike finds</h2>
-        <p>Found an amazing match? Post it, swap search tips, and see what the community is discovering. Join the conversation and help others find their type.</p>
-      </div>
-      <a href="https://www.reddit.com/r/OnlyfansReviewsCenter/" target="_blank" rel="noopener noreferrer" class="reddit-btn">
-        Join r/OnlyfansReviewsCenter →
-      </a>
+    <div class="trust-grid">
+      <article class="trust-card"><span>01</span><h3>Query photos stay out of the index</h3><p>Your uploaded search image is processed for matching; it is not added to the searchable creator or video catalog.</p></article>
+      <article class="trust-card"><span>02</span><h3>Sources stay attached</h3><p>Useful matches lead back to creator profiles or indexed video sources so you can review context yourself.</p></article>
+      <article class="trust-card"><span>03</span><h3>Similarity is not identity</h3><p>Rankings show visual closeness, not certainty. Image quality, pose and index coverage can change the results.</p></article>
     </div>
   </section>
 
@@ -232,23 +342,27 @@ const faqJsonLd = JSON.stringify({
     <div class="faq-list">
       <details class="faq-item">
         <summary>Is FindByFace really free?</summary>
-        <p>Yes. You can upload a photo and get lookalike OnlyFans matches for free — no credits or per-search fees. Signing in (also free) unlocks unlimited searches and reveals every match.</p>
+        <p>Yes. You can start an adult face search for free. Some tools may apply fair-use or account limits, which are shown before they affect a search.</p>
       </details>
       <details class="faq-item">
-        <summary>How accurate is the face matching?</summary>
-        <p>Our AI analyzes dozens of facial features for high-precision matching. Accuracy is best with clear, well-lit photos where the person faces the camera. Blurry or angled photos return looser matches.</p>
+        <summary>What can I search with FindByFace?</summary>
+        <p>FindByFace currently searches OnlyFans creator profiles and indexed adult video appearances. Cam performer search is planned but not yet available.</p>
       </details>
       <details class="faq-item">
         <summary>What photo works best?</summary>
-        <p>A sharp, front-facing photo of a single face with good lighting. Avoid sunglasses, heavy filters, group shots, and extreme angles for the strongest results.</p>
+        <p>Use a sharp, well-lit image with one unobstructed adult face. Front-facing and mild three-quarter angles usually produce the most useful rankings.</p>
       </details>
       <details class="faq-item">
         <summary>Is my upload stored or shared?</summary>
-        <p>No. Your photo is processed to generate matches and is not stored or shared. The search is private.</p>
+        <p>The uploaded query image is processed to generate search results and is not added to the searchable face index. See the privacy policy for details about processing and service logs.</p>
       </details>
       <details class="faq-item">
-        <summary>Can I find a specific person's OnlyFans?</summary>
-        <p>FindByFace surfaces creators who visually resemble the uploaded face. Results are based on visual similarity and are intended for discovery and entertainment, not identity confirmation.</p>
+        <summary>Does a face match prove someone's identity?</summary>
+        <p>No. Results are ranked visual matches, not proof of identity. Similar-looking people, image quality, pose and index coverage can all affect the ranking.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Is FindByFace a reverse image search engine?</summary>
+        <p>Not exactly. Traditional reverse image search looks for copies of the same image. FindByFace compares facial features, which can surface related profiles or appearances from different images and video frames.</p>
       </details>
     </div>
     <div class="section-cta">
@@ -261,68 +375,6 @@ const faqJsonLd = JSON.stringify({
 </Base>
 
 <script>
-  import { initCardClickThrough } from '../lib/cardClickThrough';
-  import { creatorCardDataAttributes } from '../lib/creatorCardUi';
-
-  initCardClickThrough();
-
-  let currentPage = 2;
-  let isLoading = false;
-  let hasMoreResults = true;
-
-  const loadMoreBtn = document.getElementById('loadMoreBtn');
-  const grid = document.getElementById('creatorsGrid');
-
-  function proxyImg(url: string, w: number, h: number): string {
-    if (!url || url.startsWith('/')) return url;
-    return `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//, ''))}&w=${w}&h=${h}&fit=cover&output=webp`;
-  }
-
-  function renderCard(c: any): string {
-    const imgSrc = c.avatar?.startsWith('/') ? c.avatar : c.avatar?.startsWith('http') ? proxyImg(c.avatar, 320, 427) : '/no-image.png';
-    const price = c.subscribePrice ?? c.subscribeprice;
-    const priceLabel = (!price || isNaN(price)) ? 'FREE' : `$${parseFloat(price).toFixed(2)}`;
-    const profileUrl = c.profileUrl || `https://onlyfans.com/${encodeURIComponent(c.username)}`;
-    const isSponsored = profileUrl.startsWith('/go/');
-    const rel = isSponsored ? 'noopener nofollow sponsored' : 'noopener nofollow';
-    const cardData = creatorCardDataAttributes(c);
-    return `<div class="creator-card" data-href="${profileUrl}" ${cardData}>
-      <div class="card-img-wrap">
-        <img src="${imgSrc}" alt="${c.name || c.username}" loading="lazy" decoding="async"
-          referrerpolicy="no-referrer"
-          onerror="if(this.src!=='/no-image.png'){this.removeAttribute('srcset');this.src='/no-image.png';}">
-      </div>
-      <div class="card-body">
-        <p class="creator-name">${c.name || c.username}</p>
-        <p class="username">@${c.username}</p>
-        <p class="price ${priceLabel === 'FREE' ? 'price-free' : ''}">${priceLabel}</p>
-        <a href="${profileUrl}" class="view-btn" target="_blank" rel="${rel}">View Profile</a>
-      </div>
-    </div>`;
-  }
-
-  loadMoreBtn?.addEventListener('click', async () => {
-    if (isLoading || !hasMoreResults) return;
-    isLoading = true;
-    loadMoreBtn.textContent = 'Loading...';
-    (loadMoreBtn as HTMLButtonElement).disabled = true;
-
-    try {
-      const resp = await fetch(`/api/search?page=${currentPage}&page_size=20&scope=home`);
-      const data = await resp.json();
-      data.creators?.forEach((c: any) => grid?.insertAdjacentHTML('beforeend', renderCard(c)));
-      hasMoreResults = data.hasMore;
-      currentPage++;
-      loadMoreBtn.textContent = 'Load More';
-      (loadMoreBtn as HTMLButtonElement).disabled = false;
-      if (!hasMoreResults) (loadMoreBtn as HTMLElement).style.display = 'none';
-    } catch {
-      loadMoreBtn.textContent = 'Load More';
-      (loadMoreBtn as HTMLButtonElement).disabled = false;
-    }
-    isLoading = false;
-  });
-
   // CTA buttons scroll to the upload box and nudge the file picker open.
   function focusUpload() {
     const box = document.getElementById('uploadBox');
@@ -520,7 +572,7 @@ const faqJsonLd = JSON.stringify({
   .card-img-wrap { aspect-ratio: 3/4; overflow: hidden; background: var(--surface-raised); }
   .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .card-body { padding: 12px 14px; }
-  .creator-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .creator-name { font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .username { color: var(--text-muted); font-size: 12px; margin-bottom: 6px; }
   .price { font-weight: 700; font-size: 15px; margin-bottom: 10px; color: var(--text-muted); }
   .price-free { color: var(--success); }
@@ -536,7 +588,7 @@ const faqJsonLd = JSON.stringify({
     display: inline-flex; align-items: center; gap: 10px;
     background: linear-gradient(135deg, #7c3aed, #ec4899);
     color: #fff; border: none; cursor: pointer;
-    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-family: 'Manrope', sans-serif; font-weight: 800;
     font-size: 1.05rem; padding: 16px 34px; border-radius: 999px;
     box-shadow: 0 10px 30px rgba(124,58,237,0.4);
     transition: transform 0.15s, box-shadow 0.2s;
@@ -574,23 +626,182 @@ const faqJsonLd = JSON.stringify({
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
   }
   .step-card {
-    position: relative; background: var(--surface);
-    border: 1px solid var(--border); border-radius: var(--radius-lg);
-    padding: 32px 24px 26px; text-align: center;
+    position: relative; overflow: hidden; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 24px;
+    padding: 0 24px 28px; text-align: left;
     transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
   }
   .step-card:hover { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 12px 36px var(--accent-glow); }
   .step-num {
-    position: absolute; top: -16px; left: 50%; transform: translateX(-50%);
-    width: 34px; height: 34px; border-radius: 50%;
-    background: linear-gradient(135deg, #7c3aed, #ec4899);
-    color: #fff; font-family: 'Syne', sans-serif; font-weight: 800;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 6px 18px rgba(124,58,237,0.4);
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; margin: -19px 0 20px;
+    border: 1px solid rgba(168,85,247,0.55); border-radius: 12px;
+    background: #171323; color: var(--accent-light);
+    font-family: 'Manrope', sans-serif; font-size: 0.76rem; font-weight: 800;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.32);
   }
-  .step-emoji { font-size: 2rem; display: block; margin: 8px 0 14px; }
-  .step-card h3 { font-size: 1.15rem; margin-bottom: 10px; }
-  .step-card p { color: var(--text-muted); font-size: 0.92rem; line-height: 1.6; }
+  .step-card h3 { font-size: 1.14rem; margin-bottom: 10px; }
+  .step-card p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.68; }
+  .step-visual {
+    position: relative; isolation: isolate; height: 220px; margin: 0 -24px 0; overflow: hidden;
+    border-bottom: 1px solid var(--border);
+    background:
+      radial-gradient(circle at 50% 43%, rgba(137,61,236,0.22), transparent 42%),
+      linear-gradient(155deg, #171322 0%, #0d0d15 64%, #11101a 100%);
+  }
+  .step-visual::after {
+    content: ''; position: absolute; inset: auto 12% -42px; z-index: -1; height: 82px;
+    border-radius: 50%; background: rgba(131,55,211,0.18); filter: blur(30px);
+  }
+  .visual-grid {
+    position: absolute; inset: 0; opacity: .22; pointer-events: none;
+    background-image: linear-gradient(rgba(177,105,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(177,105,255,.07) 1px,transparent 1px);
+    background-size: 24px 24px; mask-image: linear-gradient(to bottom,transparent 3%,#000 38%,transparent 98%);
+  }
+  .upload-visual::before {
+    content: ''; position: absolute; width: 150px; height: 150px; left: calc(50% - 75px); top: 26px;
+    border: 1px solid rgba(168,85,247,.11); border-radius: 50%; box-shadow: 0 0 0 18px rgba(168,85,247,.035),0 0 0 40px rgba(168,85,247,.02);
+  }
+  .photo-card {
+    position: absolute; overflow: hidden; border-radius: 18px;
+  }
+  .photo-card-back {
+    left: calc(50% - 66px); top: 34px; width: 106px; height: 132px;
+    border: 1px solid rgba(168,85,247,.22); background: #1b1428; transform: rotate(-8deg) translateX(-14px); opacity: .72;
+  }
+  .photo-card-main {
+    left: calc(50% - 53px); top: 24px; width: 106px; height: 140px;
+    border: 1px solid rgba(204,121,255,.58); background: linear-gradient(155deg,#32204b,#20132d 58%,#32112d);
+    box-shadow: 0 18px 42px rgba(0,0,0,.48),0 0 28px rgba(134,52,220,.2); animation: upload-card-float 5s ease-in-out infinite;
+  }
+  .portrait-head {
+    position: absolute; left: 50%; top: 19px; transform: translateX(-50%);
+    width: 43px; height: 52px; border-radius: 48% 48% 44% 44%;
+    background: linear-gradient(145deg,#e0c5ff,#e6a6db); box-shadow: inset -8px -5px 12px rgba(152,85,191,.16);
+  }
+  .portrait-head::before {
+    content: ''; position: absolute; left: -3px; top: -5px; width: 47px; height: 24px; border-radius: 60% 60% 34% 24%;
+    background: linear-gradient(130deg,#43215e,#71255e); transform: rotate(-4deg);
+  }
+  .portrait-neck {
+    position: absolute; left: 50%; top: 64px; width: 19px; height: 21px; transform: translateX(-50%); background:#d7a5dc;
+  }
+  .portrait-body {
+    position: absolute; left: 50%; bottom: -24px; transform: translateX(-50%);
+    width: 106px; height: 82px; border-radius: 52% 52% 0 0;
+    background: linear-gradient(125deg,#7435ed,#dd328e 72%); box-shadow: inset 16px 10px 24px rgba(255,255,255,.08);
+  }
+  .crop-corner { position:absolute;width:13px;height:13px;border-color:#fff;border-style:solid;filter:drop-shadow(0 0 5px #b55cff) }
+  .crop-tl{left:8px;top:8px;border-width:2px 0 0 2px;border-radius:3px 0 0}.crop-tr{right:8px;top:8px;border-width:2px 2px 0 0;border-radius:0 3px 0 0}.crop-bl{left:8px;bottom:8px;border-width:0 0 2px 2px;border-radius:0 0 0 3px}.crop-br{right:8px;bottom:8px;border-width:0 2px 2px 0;border-radius:0 0 3px}
+  .face-confirm {
+    position:absolute;left:50%;bottom:7px;transform:translateX(-50%);display:flex;align-items:center;gap:4px;white-space:nowrap;
+    padding:4px 7px;border:1px solid rgba(74,222,128,.25);border-radius:999px;background:rgba(8,12,14,.82);color:#b8f5cf;font-size:.48rem;letter-spacing:.01em;
+  }
+  .face-confirm span{display:grid;place-items:center;width:11px;height:11px;border-radius:50%;background:#24b86a;color:#06130c;font-size:.42rem}
+  .upload-flight {
+    position:absolute;left:calc(50% + 43px);top:27px;display:grid;place-items:center;width:43px;height:43px;border:1px solid rgba(205,139,255,.55);border-radius:14px;
+    background:linear-gradient(145deg,#9b48f3,#7030dc);box-shadow:0 10px 28px rgba(124,58,237,.48);animation:upload-flight 3.2s ease-in-out infinite;
+  }
+  .upload-flight svg{width:22px;height:22px;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .file-ready {
+    position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;width:196px;padding:8px 10px;
+    border:1px solid rgba(255,255,255,.09);border-radius:11px;background:rgba(12,11,18,.9);box-shadow:0 12px 25px rgba(0,0,0,.35);backdrop-filter:blur(10px);
+  }
+  .file-ready>i{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:rgba(168,85,247,.17);color:#d7b4ff;font-style:normal;font-size:.48rem;font-weight:900}.file-ready>span{display:grid}.file-ready b{color:#ede9f2;font-size:.55rem}.file-ready small{color:#797486;font-size:.46rem}.file-ready em{color:#76e8a8;font-size:.5rem;font-style:normal;font-weight:800}
+  @keyframes upload-card-float{50%{transform:translateY(-3px)}}@keyframes upload-flight{50%{transform:translateY(-5px);box-shadow:0 16px 34px rgba(124,58,237,.58)}}
+  .scan-visual{background:radial-gradient(circle at 50% 48%,rgba(112,39,182,.27),transparent 39%),linear-gradient(155deg,#15111f,#0c0c13)}
+  .biometric-face {
+    position:absolute;left:50%;top:13px;width:140px;height:164px;transform:translateX(-50%);overflow:visible;
+    filter:drop-shadow(0 0 11px rgba(177,82,247,.42));
+  }
+  .face-outline{stroke:#a85af2;stroke-width:1.7;stroke-linecap:round;opacity:.85;stroke-dasharray:5 3;animation:outline-flow 8s linear infinite}.face-mesh{stroke:#8f69e8;stroke-width:.7;opacity:.35}.landmark-dots circle{fill:#fff;stroke:#c564ff;stroke-width:1;filter:drop-shadow(0 0 3px #b54aff);animation:landmark-pulse 2.2s ease-in-out infinite}.landmark-dots circle:nth-child(2n){animation-delay:.5s}.landmark-dots circle:nth-child(3n){animation-delay:1s}
+  @keyframes outline-flow{to{stroke-dashoffset:-80}}@keyframes landmark-pulse{50%{opacity:.42;r:1.45px}}
+  .hud-corner{position:absolute;width:27px;height:27px;border-color:rgba(169,89,233,.4);border-style:solid}.hud-tl{left:24px;top:20px;border-width:1px 0 0 1px}.hud-tr{right:24px;top:20px;border-width:1px 1px 0 0}.hud-bl{left:24px;bottom:20px;border-width:0 0 1px 1px}.hud-br{right:24px;bottom:20px;border-width:0 1px 1px 0}
+  .scan-beam {
+    position:absolute;z-index:3;left:11%;right:11%;top:42%;height:1px;background:linear-gradient(90deg,transparent,#974af0 20%,#fff 49%,#ef3d9c 80%,transparent);
+    box-shadow:0 0 7px #a64bf4,0 0 18px rgba(236,72,153,.45);animation:scan-sweep 3.2s ease-in-out infinite;
+  }
+  @keyframes scan-sweep{0%,100%{top:28%;opacity:.65}50%{top:68%;opacity:1}}
+  .scan-data{position:absolute;display:grid;gap:1px;padding:6px 8px;border:1px solid rgba(168,85,247,.17);border-radius:8px;background:rgba(12,10,18,.72);backdrop-filter:blur(8px)}.scan-data i{color:#dcb7ff;font-size:.58rem;font-weight:900;font-style:normal}.scan-data small{color:#716b7d;font-size:.42rem;text-transform:uppercase;letter-spacing:.06em}.data-left{left:27px;top:70px}.data-right{right:25px;top:54px}
+  .scan-status{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);display:flex;align-items:center;gap:6px;white-space:nowrap;padding:5px 9px;border-radius:999px;background:rgba(10,9,15,.82);color:#aaa4b7;font-size:.49rem}.scan-status i{width:5px;height:5px;border-radius:50%;background:#56e99b;box-shadow:0 0 8px #56e99b;animation:status-pulse 1.3s ease-in-out infinite}@keyframes status-pulse{50%{opacity:.3}}
+  .results-visual{display:grid;place-items:center;background:radial-gradient(circle at 50% 55%,rgba(189,47,178,.16),transparent 45%),linear-gradient(155deg,#15111f,#0c0c13)}
+  .results-window {
+    position:relative;z-index:1;display:grid;width:238px;margin-top:-13px;padding:9px;border:1px solid rgba(171,93,229,.28);border-radius:15px;
+    background:rgba(14,12,21,.88);box-shadow:0 18px 42px rgba(0,0,0,.44),0 0 30px rgba(124,58,237,.12);backdrop-filter:blur(12px);
+  }
+  .results-window-head{display:flex;justify-content:space-between;align-items:center;padding:2px 2px 8px}.results-window-head>b{color:#eeeaf4;font-size:.58rem}.results-window-head>small{display:flex;align-items:center;gap:4px;color:#777181;font-size:.42rem}.results-window-head>small i{width:4px;height:4px;border-radius:50%;background:#55e69a;box-shadow:0 0 6px #55e69a}
+  .result-row{display:grid;grid-template-columns:15px 31px 1fr 15px;align-items:center;gap:7px;padding:6px 5px;border-top:1px solid rgba(255,255,255,.055);border-radius:8px;transition:background .2s}.result-row.result-one{background:linear-gradient(90deg,rgba(124,58,237,.15),rgba(236,72,153,.07));border:1px solid rgba(168,85,247,.17)}.result-row>em{color:#81798e;font-size:.43rem;font-style:normal;font-weight:800}.result-avatar{position:relative;width:31px;height:31px;overflow:hidden;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:linear-gradient(145deg,#5b2d79,#bb3f8d)}.result-avatar::before{content:'';position:absolute;left:50%;top:5px;transform:translateX(-50%);width:12px;height:14px;border-radius:48%;background:#ebc7f3}.result-avatar::after{content:'';position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);width:28px;height:19px;border-radius:50% 50% 0 0;background:#8f43d9}.result-two .result-avatar{filter:hue-rotate(35deg);opacity:.91}.result-three .result-avatar{filter:hue-rotate(300deg);opacity:.82}.result-row>span{display:grid;min-width:0}.result-row>span>b{color:#ede9f2;font-size:.52rem}.result-row>span>small{color:#777181;font-size:.42rem}.result-row>span>u{position:relative;width:100%;height:2px;margin-top:4px;border-radius:2px;background:#292331;text-decoration:none;overflow:hidden}.result-row>span>u i{display:block;width:97%;height:100%;background:linear-gradient(90deg,#8b42ee,#ef479e)}.result-two>span>u i{width:94%}.result-three>span>u i{width:91%}.result-row>strong{color:#b86cff;font-size:.62rem}
+  .result-source-pills{position:absolute;z-index:2;left:50%;bottom:12px;transform:translateX(-50%);display:flex;gap:5px}.result-source-pills b{padding:4px 7px;border:1px solid rgba(168,85,247,.18);border-radius:999px;background:#151020;color:#a99eb7;font-size:.43rem;white-space:nowrap}.result-source-pills b:first-child{color:#d8b4fe;background:#221333}
+  @media (prefers-reduced-motion: reduce) {
+    .photo-card-main,.upload-flight,.face-outline,.landmark-dots circle,.scan-beam,.scan-status i{animation:none!important}
+  }
+  .pro-tip {
+    display: flex; align-items: center; gap: 14px; margin-top: 20px; padding: 18px 22px;
+    border: 1px solid rgba(168,85,247,0.3); border-radius: 16px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.13), rgba(236,72,153,0.07));
+  }
+  .pro-tip-icon { display: grid; place-items: center; flex: 0 0 38px; width: 38px; height: 38px; border-radius: 12px; background: linear-gradient(135deg, #7c3aed, #ec4899); color: #fff; }
+  .pro-tip p { color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; }
+  .pro-tip strong { color: #fff; }
+
+  /* ── Search sources ─────────────────────────────────────────────── */
+  .source-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+  .source-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 290px;
+    padding: 28px 24px 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    overflow: hidden;
+    transition: transform 0.22s, border-color 0.22s, box-shadow 0.22s;
+  }
+  a.source-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--accent);
+    box-shadow: 0 16px 42px var(--accent-glow);
+  }
+  .source-card.featured {
+    background: linear-gradient(145deg, rgba(124,58,237,0.19), rgba(236,72,153,0.09) 55%, var(--surface));
+    border-color: rgba(168,85,247,0.45);
+  }
+  .source-card.disabled { opacity: 0.72; }
+  .source-status {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .source-status.live { color: #86efac; background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.25); }
+  .source-status.beta { color: #d8b4fe; background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.25); }
+  .source-status.soon { color: var(--text-muted); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
+  .source-icon {
+    display: grid;
+    place-items: center;
+    width: 54px;
+    height: 54px;
+    margin-bottom: 24px;
+    border-radius: 16px;
+    color: #fff;
+    font-size: 1.35rem;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    box-shadow: 0 10px 26px rgba(124,58,237,0.3);
+  }
+  .source-card h3 { font-size: 1.18rem; margin-bottom: 10px; }
+  .source-card p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.65; margin-bottom: 22px; }
+  .source-link { margin-top: auto; color: var(--accent-light); font-size: 0.86rem; font-weight: 800; }
+  .source-card.disabled .source-link { color: var(--text-muted); }
 
   /* ── Why use ──────────────────────────────────────────── */
   .why-grid {
@@ -605,6 +816,123 @@ const faqJsonLd = JSON.stringify({
   .why-emoji { font-size: 1.8rem; display: block; margin-bottom: 14px; }
   .why-card h3 { font-size: 1.08rem; margin-bottom: 8px; }
   .why-card p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; }
+
+  /* ── Email signup ───────────────────────────────────────────────── */
+  .signup-card {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    grid-template-columns: minmax(0, 1.03fr) minmax(360px, 0.97fr);
+    gap: clamp(34px, 6vw, 72px);
+    align-items: center;
+    overflow: hidden;
+    padding: clamp(32px, 5vw, 60px);
+    border: 1px solid rgba(168,85,247,0.38);
+    border-radius: 28px;
+    background:
+      linear-gradient(135deg, rgba(124,58,237,0.17), rgba(236,72,153,0.07) 45%, rgba(18,18,26,0.98)),
+      var(--surface);
+    box-shadow: 0 26px 80px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .signup-glow { position: absolute; z-index: -1; width: 300px; height: 300px; border-radius: 50%; filter: blur(90px); opacity: 0.18; pointer-events: none; }
+  .signup-glow-one { left: -120px; top: -120px; background: #7c3aed; }
+  .signup-glow-two { right: -100px; bottom: -160px; background: #ec4899; }
+  .signup-kicker {
+    display: inline-flex; align-items: center; gap: 8px; margin-bottom: 17px;
+    color: #d8b4fe; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase;
+  }
+  .signup-kicker i { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 5px rgba(74,222,128,0.1); }
+  .signup-copy h2 { max-width: 630px; margin-bottom: 16px; font-size: clamp(1.65rem, 3vw, 2.45rem); line-height: 1.13; letter-spacing: -0.035em; }
+  .signup-copy > p { max-width: 610px; color: var(--text-muted); font-size: 0.96rem; line-height: 1.72; }
+  .signup-benefits { display: grid; gap: 13px; margin: 26px 0; list-style: none; }
+  .signup-benefits li { display: flex; align-items: center; gap: 13px; }
+  .signup-benefits li > span {
+    display: grid; place-items: center; flex: 0 0 38px; width: 38px; height: 38px;
+    border: 1px solid rgba(168,85,247,0.28); border-radius: 12px;
+    background: rgba(124,58,237,0.13); color: #d8b4fe; font-size: 1rem; font-weight: 800;
+  }
+  .signup-benefits li div { display: grid; gap: 1px; }
+  .signup-benefits strong { color: #fff; font-size: 0.88rem; }
+  .signup-benefits small { color: var(--text-muted); font-size: 0.76rem; line-height: 1.4; }
+  .signup-email-cta {
+    display: inline-flex; align-items: center; justify-content: center; gap: 11px;
+    min-height: 52px; padding: 0 22px; border-radius: 999px;
+    background: linear-gradient(115deg, #7c3aed, #ec4899); color: #fff;
+    font-weight: 800; box-shadow: 0 12px 32px rgba(124,58,237,0.38);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .signup-email-cta:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(236,72,153,0.35); }
+  .signup-email-cta b { font-size: 1.1rem; transition: transform 0.2s; }
+  .signup-email-cta:hover b { transform: translateX(3px); }
+  .signup-email-icon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.14); }
+  .signup-login { margin-top: 13px; color: var(--text-muted); font-size: 0.78rem !important; }
+  .signup-login a { color: #d8b4fe; font-weight: 700; }
+  .history-preview {
+    position: relative; padding: 20px; border: 1px solid rgba(255,255,255,0.1); border-radius: 22px;
+    background: rgba(10,10,15,0.76); box-shadow: 0 24px 60px rgba(0,0,0,0.38); backdrop-filter: blur(18px);
+    transform: rotate(1.2deg);
+  }
+  .history-preview::before {
+    content: ''; position: absolute; inset: -1px; z-index: -1; border-radius: inherit;
+    background: linear-gradient(145deg, rgba(168,85,247,0.55), transparent 42%, rgba(236,72,153,0.3));
+    opacity: 0.45;
+  }
+  .history-preview-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+  .history-preview-head > div { display: flex; align-items: center; gap: 9px; }
+  .history-preview-head strong { font-size: 0.92rem; }
+  .history-logo { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(135deg, #7c3aed, #ec4899); color: #fff; font-weight: 800; }
+  .history-saved { padding: 5px 8px; border-radius: 999px; background: rgba(34,197,94,0.1); color: #86efac; font-size: 0.58rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+  .history-date { display: flex; align-items: center; gap: 10px; margin: 13px 0 8px; color: var(--text-muted); font-size: 0.63rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; }
+  .history-date i { flex: 1; height: 1px; background: rgba(255,255,255,0.07); }
+  .history-row { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 10px; border-radius: 13px; }
+  .history-row.featured { border: 1px solid rgba(168,85,247,0.18); background: rgba(124,58,237,0.1); }
+  .history-row > div { display: grid; min-width: 0; }
+  .history-row strong { overflow: hidden; color: #f4f4f7; font-size: 0.76rem; white-space: nowrap; text-overflow: ellipsis; }
+  .history-row small { color: var(--text-muted); font-size: 0.65rem; }
+  .history-row time { color: var(--text-muted); font-size: 0.62rem; }
+  .history-thumb { position: relative; width: 42px; height: 42px; overflow: hidden; border-radius: 11px; background: linear-gradient(145deg, rgba(168,85,247,0.45), rgba(236,72,153,0.28)); }
+  .history-thumb::before { content: ''; position: absolute; left: 50%; top: 7px; transform: translateX(-50%); width: 16px; height: 18px; border-radius: 50%; background: #e9d5ff; }
+  .history-thumb::after { content: ''; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); width: 36px; height: 25px; border-radius: 50% 50% 0 0; background: #8b5cf6; }
+  .history-thumb-two { filter: hue-rotate(35deg); } .history-thumb-three { filter: hue-rotate(285deg); }
+  .history-preview-foot { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.07); color: var(--text-muted); font-size: 0.64rem; }
+
+  /* ── Comparison ─────────────────────────────────────────────────── */
+  .comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .comparison-card {
+    padding: 32px 30px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+  }
+  .comparison-card.accent {
+    border-color: rgba(168,85,247,0.48);
+    background: linear-gradient(145deg, rgba(124,58,237,0.2), rgba(236,72,153,0.09), var(--surface));
+  }
+  .comparison-kicker {
+    color: var(--accent-light);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .comparison-card h3 { margin: 9px 0 18px; font-size: 1.25rem; }
+  .comparison-card ul { list-style: none; display: grid; gap: 12px; }
+  .comparison-card li {
+    position: relative;
+    padding-left: 24px;
+    color: var(--text-muted);
+    font-size: 0.91rem;
+    line-height: 1.55;
+  }
+  .comparison-card li::before { content: '✓'; position: absolute; left: 0; color: var(--accent-light); font-weight: 800; }
+  .comparison-note {
+    max-width: 760px;
+    margin: 20px auto 0;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    line-height: 1.55;
+    text-align: center;
+  }
 
   /* ── Free banner ──────────────────────────────────────── */
   .free-card {
@@ -631,6 +959,26 @@ const faqJsonLd = JSON.stringify({
   .testimonial blockquote { margin: 0 0 16px; font-size: 0.96rem; line-height: 1.65; color: var(--text); }
   .testimonial figcaption { font-size: 0.85rem; font-weight: 700; }
   .testimonial figcaption span { color: var(--text-muted); font-weight: 400; }
+
+  .trust-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .trust-card {
+    position: relative;
+    padding: 28px 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+  }
+  .trust-card > span {
+    display: inline-block;
+    margin-bottom: 18px;
+    color: var(--accent-light);
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+  }
+  .trust-card h3 { font-size: 1.05rem; margin-bottom: 9px; }
+  .trust-card p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.62; }
 
   /* ── Reddit ───────────────────────────────────────────── */
   .reddit-card {
@@ -661,7 +1009,7 @@ const faqJsonLd = JSON.stringify({
     border-radius: var(--radius); padding: 4px 20px;
   }
   .faq-item summary {
-    cursor: pointer; padding: 16px 0; font-family: 'Syne', sans-serif;
+    cursor: pointer; padding: 16px 0; font-family: 'Manrope', sans-serif;
     font-weight: 700; font-size: 1rem; list-style: none;
     display: flex; justify-content: space-between; align-items: center;
   }
@@ -672,12 +1020,29 @@ const faqJsonLd = JSON.stringify({
 
   /* ── Responsive ───────────────────────────────────────── */
   @media (max-width: 880px) {
-    .steps-grid, .why-grid, .testimonials-grid { grid-template-columns: 1fr 1fr; }
+    .steps-grid, .why-grid, .testimonials-grid, .trust-grid { grid-template-columns: 1fr 1fr; }
+    .source-grid { grid-template-columns: 1fr; }
+    .source-card { min-height: 0; }
+    .signup-card { grid-template-columns: 1fr; }
+    .history-preview { width: min(100%, 560px); justify-self: center; transform: none; }
   }
   @media (max-width: 600px) {
     .home-section { margin-top: 64px; }
-    .steps-grid, .why-grid, .testimonials-grid { grid-template-columns: 1fr; }
+    .steps-grid, .why-grid, .testimonials-grid, .trust-grid, .comparison-grid { grid-template-columns: 1fr; }
+    .hero { width: 100%; padding-left: 18px; padding-right: 18px; overflow: hidden; }
+    .hero-badge { max-width: 100%; white-space: normal; text-align: center; }
+    .hero h1 { font-size: 1.78rem; }
+    .hero h1 span { overflow-wrap: anywhere; }
+    .hero-trust { width: 100%; flex-direction: column; align-items: center; }
+    .hero-trust li { max-width: 100%; text-align: left; }
     .hero-cta { width: 100%; justify-content: center; }
+    .signup-card { padding: 28px 20px; border-radius: 22px; }
+    .signup-email-cta { width: 100%; }
+    .history-preview { padding: 15px; }
+    .history-saved { display: none; }
+    .history-row { grid-template-columns: 38px minmax(0, 1fr); }
+    .history-row time { display: none; }
+    .history-thumb { width: 38px; height: 38px; }
     .reddit-card { flex-direction: column; text-align: center; }
     .reddit-btn { width: 100%; text-align: center; }
   }
