@@ -236,7 +236,10 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     </div>
     <div id="unlockBanner" class="unlock-banner" style="display:none">
       <p id="unlockBannerText">🔒 <strong>8 more matches found</strong> — sign in free to see all</p>
-      <a id="unlockBannerBtn" href="#" class="unlock-banner-btn">Sign in with Google</a>
+      <div class="unlock-banner-actions">
+        <a id="unlockBannerBtn" href="/signup/" class="unlock-banner-btn">Create free account</a>
+        <a id="unlockLoginBtn" href="/login/" class="unlock-login-btn">Log in</a>
+      </div>
     </div>
   </div>
   <div id="pornstarResultsPanel" class="result-source-panel" hidden>
@@ -277,8 +280,8 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   // Wire up auth buttons with dynamic URL
   const googleAuthBtn   = document.getElementById('googleAuthBtn') as HTMLAnchorElement | null;
   const unlockBannerBtn = document.getElementById('unlockBannerBtn') as HTMLAnchorElement | null;
+  const unlockLoginBtn  = document.getElementById('unlockLoginBtn') as HTMLAnchorElement | null;
   if (googleAuthBtn)   googleAuthBtn.href   = getGoogleAuthUrl();
-  if (unlockBannerBtn) unlockBannerBtn.href = getGoogleAuthUrl();
 
   const uploadBox       = document.getElementById('uploadBox')!;
   const fileInput       = document.getElementById('fileInput') as HTMLInputElement;
@@ -318,13 +321,72 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     ? 'onlyfans'
     : 'all';
 
-  initCardClickThrough();
-
   // Pagination state for face-search results
   let allFaceResults: Record<string, unknown>[] = [];
   let faceShownCount = 0;
+  let currentFaceSearchMode: string | undefined;
   const FACE_PAGE_SIZE = 12;
   const FREE_REGULAR_RESULT_COUNT = 15;
+  const PENDING_FACE_RESULTS_KEY = 'fbf_pending_face_results';
+  const PENDING_FACE_RESULTS_TTL = 24 * 60 * 60 * 1000;
+
+  type PendingFaceResults = {
+    version: 1;
+    savedAt: number;
+    returnPath: string;
+    results: Record<string, unknown>[];
+    shownCount: number;
+    mode?: string;
+  };
+
+  function faceResultsReturnPath(): string {
+    const url = new URL(window.location.href);
+    url.searchParams.set('resume', 'onlyfans-results');
+    url.hash = 'faceResults';
+    return `${url.pathname}${url.search}${url.hash}`;
+  }
+
+  function authHref(path: '/signup/' | '/login/'): string {
+    return `${path}?next=${encodeURIComponent(faceResultsReturnPath())}`;
+  }
+
+  function configureUnlockLinks(): void {
+    if (unlockBannerBtn) unlockBannerBtn.href = authHref('/signup/');
+    if (unlockLoginBtn) unlockLoginBtn.href = authHref('/login/');
+  }
+
+  function savePendingFaceResults(setAuthReturn = false): void {
+    if (allFaceResults.length === 0) return;
+    const returnPath = faceResultsReturnPath();
+    const payload: PendingFaceResults = {
+      version: 1,
+      savedAt: Date.now(),
+      returnPath,
+      results: allFaceResults,
+      shownCount: faceShownCount,
+      mode: currentFaceSearchMode,
+    };
+    try {
+      localStorage.setItem(PENDING_FACE_RESULTS_KEY, JSON.stringify(payload));
+      if (setAuthReturn) localStorage.setItem('fbf_auth_return', returnPath);
+    } catch { /* storage may be unavailable or full */ }
+  }
+
+  function prepareUnlockFlow(): void {
+    savePendingFaceResults(true);
+  }
+
+  configureUnlockLinks();
+  unlockBannerBtn?.addEventListener('click', prepareUnlockFlow);
+  unlockLoginBtn?.addEventListener('click', prepareUnlockFlow);
+  googleAuthBtn?.addEventListener('click', prepareUnlockFlow);
+  document.addEventListener('click', event => {
+    const target = event.target;
+    if (target instanceof Element && target.closest('.unlock-btn')) prepareUnlockFlow();
+  }, true);
+  document.addEventListener('fbf:unlock-requested', prepareUnlockFlow);
+
+  initCardClickThrough();
 
   function isSignedIn(): boolean {
     try { return !!JSON.parse(localStorage.getItem('fbf_user') || 'null'); } catch { return false; }
@@ -361,8 +423,8 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     } catch { /* ignore */ }
   }
   function showAuthModal(): void { 
+    prepareUnlockFlow();
     if (googleAuthBtn)   googleAuthBtn.href   = getGoogleAuthUrl();
-    if (unlockBannerBtn) unlockBannerBtn.href = getGoogleAuthUrl();
     authModal.style.display = 'flex'; 
   }
   function hideAuthModal(): void { authModal.style.display = 'none'; }
@@ -730,14 +792,15 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     const locked = !signedIn && !isSponsored && regularResultPosition > FREE_REGULAR_RESULT_COUNT;
 
     if (locked) {
-      return `<div class="creator-card locked" data-href="/signup">
+      const unlockHref = authHref('/signup/');
+      return `<div class="creator-card locked" data-href="${unlockHref}">
         <div class="card-img-wrap">
           <img src="${imgSrc}" alt="Locked creator" loading="lazy" decoding="async" referrerpolicy="no-referrer"
             style="filter:blur(10px);transform:scale(1.08);"
             onerror="if(this.src!=='/no-image.png'){this.src='/no-image.png';}">
           ${matchBadge}
           <div class="lock-overlay">
-            <a class="unlock-btn" href="/signup">🔓 Unlock</a>
+            <a class="unlock-btn" href="${unlockHref}">🔓 Unlock</a>
           </div>
         </div>
         <div class="card-body locked-body">
@@ -878,11 +941,14 @@ if (SUPABASE_URL && SUPABASE_KEY) {
       heading.textContent = 'Your matches';
     }
     allFaceResults = results;
+    currentFaceSearchMode = mode;
     faceShownCount = 0;
     faceResultsGrid.innerHTML = '';
     if (shareCta) shareCta.style.display = 'none';
     renderNextFacePage();
     updateCopyBtn();
+    configureUnlockLinks();
+    if (!isSignedIn()) savePendingFaceResults();
     onlyfansResultCount.textContent = onlyfansError ? '(unavailable)' : `(${results.length})`;
     onlyfansPanelNotice.style.display = onlyfansError || results.length === 0 ? 'block' : 'none';
     onlyfansPanelNotice.textContent = onlyfansError || (results.length === 0
@@ -896,6 +962,52 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     }
     faceResults.style.display = 'block';
     faceResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function restorePendingFaceResults(): void {
+    const shouldResume = new URLSearchParams(window.location.search).get('resume') === 'onlyfans-results';
+    if (!shouldResume || !isSignedIn()) return;
+
+    let pending: PendingFaceResults | null = null;
+    try {
+      pending = JSON.parse(localStorage.getItem(PENDING_FACE_RESULTS_KEY) || 'null') as PendingFaceResults | null;
+    } catch { /* invalid saved state */ }
+
+    const valid = pending?.version === 1
+      && Array.isArray(pending.results)
+      && pending.results.length > 0
+      && Date.now() - Number(pending.savedAt) <= PENDING_FACE_RESULTS_TTL;
+
+    if (!valid || !pending) {
+      try { localStorage.removeItem(PENDING_FACE_RESULTS_KEY); } catch { /* noop */ }
+      uploadError.textContent = 'Your saved search could not be restored. Please upload the photo again.';
+      uploadError.style.display = 'block';
+      return;
+    }
+
+    const targetCount = Math.min(
+      pending.results.length,
+      Math.max(FACE_PAGE_SIZE, Number(pending.shownCount) || FACE_PAGE_SIZE),
+    );
+    showResults(pending.results, pending.mode);
+    while (faceShownCount < targetCount) renderNextFacePage();
+    updateFaceResultsUI();
+
+    const heading = document.querySelector('.results-heading') as HTMLElement | null;
+    if (heading) heading.textContent = 'Your unlocked matches';
+    onlyfansPanelNotice.textContent = 'Unlocked — your original face-search results are ready to explore.';
+    onlyfansPanelNotice.style.display = 'block';
+
+    const topName = pending.results[0]
+      ? ((pending.results[0].name || pending.results[0].username) as string)
+      : undefined;
+    recordSearchHistory(pending.results, topName);
+
+    try { localStorage.removeItem(PENDING_FACE_RESULTS_KEY); } catch { /* noop */ }
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete('resume');
+    cleanUrl.hash = 'faceResults';
+    window.history.replaceState(null, '', `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
   }
 
   function renderNextFacePage(): void {
@@ -966,7 +1078,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   copyResultsBtn?.addEventListener('click', async () => {
     // Gate behind sign-in
     if (!isSignedIn()) {
-      authModal.style.display = 'flex';
+      showAuthModal();
       return;
     }
     if (allFaceResults.length === 0) return;
@@ -1014,6 +1126,8 @@ if (SUPABASE_URL && SUPABASE_KEY) {
       copyResultsBtn.title = 'Sign in free to copy your top 10 matches';
     }
   }
+
+  restorePendingFaceResults();
 </script>
 
 <style>
@@ -1606,12 +1720,19 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     justify-content: space-between; gap: 12px; flex-wrap: wrap;
   }
   .unlock-banner p { color: var(--text); font-size: 14px; margin: 0; }
+  .unlock-banner-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .unlock-banner-btn {
     background: var(--accent); color: #fff; border-radius: 999px;
     padding: 9px 20px; font-size: 13px; font-weight: 600;
     text-decoration: none; white-space: nowrap; transition: background 0.2s;
   }
   .unlock-banner-btn:hover { background: var(--accent-light); }
+  .unlock-login-btn {
+    border: 1px solid rgba(168,85,247,0.36); border-radius: 999px;
+    color: #d8b4fe; padding: 8px 16px; font-size: 13px; font-weight: 700;
+    text-decoration: none; white-space: nowrap; transition: border-color 0.2s, color 0.2s;
+  }
+  .unlock-login-btn:hover { border-color: var(--accent-light); color: #fff; }
 
   .face-load-more-wrap {
     display: flex;

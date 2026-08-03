@@ -86,7 +86,7 @@ const subtitle = isSignup
             <h2>Verify your email address</h2>
             <p>We sent a confirmation link to <strong id="confirmationEmail"></strong>.</p>
             <p>Open that email and click the verification link to activate your account. If it is not in your inbox, check your spam or junk folder.</p>
-            <a class="confirmation-login" href="/login/?status=pending&next=/dashboard/">I&rsquo;ve verified my email &mdash; log in</a>
+            <a class="confirmation-login" id="confirmationLogin" href="/login/?status=pending&next=/dashboard/">I&rsquo;ve verified my email &mdash; log in</a>
             <a class="confirmation-restart" href="/signup/" id="confirmationRestart">Use a different email address</a>
           </div>
         )}
@@ -107,7 +107,7 @@ const subtitle = isSignup
 
         <p class="auth-switch">
           {isSignup ? 'Already have an account?' : 'New to findbyface?'}
-          <a href={isSignup ? '/login/' : '/signup/'}>{isSignup ? 'Log in' : 'Create one free'}</a>
+          <a id="authSwitchLink" href={isSignup ? '/login/' : '/signup/'}>{isSignup ? 'Log in' : 'Create one free'}</a>
         </p>
       </div>
 
@@ -132,7 +132,9 @@ const subtitle = isSignup
   const subtitle = document.getElementById('authSubtitle');
   const confirmationPanel = document.getElementById('authConfirmation');
   const confirmationEmail = document.getElementById('confirmationEmail');
+  const confirmationLogin = document.getElementById('confirmationLogin');
   const confirmationRestart = document.getElementById('confirmationRestart');
+  const authSwitchLink = document.getElementById('authSwitchLink');
 
   const safePath = value => value && value.startsWith('/') && !value.startsWith('//') ? value : '/dashboard/';
   const queryReturn = new URLSearchParams(window.location.search).get('next');
@@ -145,6 +147,10 @@ const subtitle = isSignup
   const returnTo = safePath(queryReturn || storedReturn);
 
   try { localStorage.setItem('fbf_auth_return', returnTo); } catch { /* noop */ }
+  const encodedReturn = encodeURIComponent(returnTo);
+  if (authSwitchLink) authSwitchLink.href = `${mode === 'signup' ? '/login/' : '/signup/'}?next=${encodedReturn}`;
+  if (confirmationLogin) confirmationLogin.href = `/login/?status=pending&next=${encodedReturn}`;
+  if (confirmationRestart) confirmationRestart.href = `/signup/?next=${encodedReturn}`;
   if (mode === 'login' && pendingEmail) email.value = pendingEmail;
   const callbackUrl = `${window.location.origin}/auth/callback`;
   google.href = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(callbackUrl)}`;
@@ -245,7 +251,7 @@ const subtitle = isSignup
       // Do not treat a session-shaped signup response like a completed login.
       if (mode === 'signup') {
         try { localStorage.setItem('fbf_pending_email', emailValue); } catch { /* query status is the fallback */ }
-        history.replaceState(null, '', '/signup/?status=pending');
+        history.replaceState(null, '', `/signup/?status=pending&next=${encodedReturn}`);
         showPendingConfirmation(emailValue);
         return;
       }

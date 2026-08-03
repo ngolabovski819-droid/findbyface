@@ -22,7 +22,8 @@ export function initCardClickThrough(): void {
     // Unlock link handles its own native navigation; this covers clicks elsewhere.
     if (card.classList.contains('locked')) {
       e.preventDefault();
-      window.location.assign('/signup');
+      card.dispatchEvent(new CustomEvent('fbf:unlock-requested', { bubbles: true }));
+      window.location.assign(card.dataset.href || '/signup/');
       return;
     }
 
