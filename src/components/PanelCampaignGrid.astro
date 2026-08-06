@@ -1,0 +1,89 @@
+---
+// Shared by the Dashboard's multi-campaign overview (src/pages/panel/index.astro, when more
+// than one campaign is available and none has been explicitly picked yet) and the full
+// Campaigns list (src/pages/panel/campaigns.astro) — same card, same data, two different
+// contexts to reach it from. Each card links to that campaign's full detail dashboard.
+import { panelClients } from '../config/panelClients';
+import { getSponsorOverride } from '../config/sponsors';
+import { networkClickSources } from '../config/networkClickSources';
+import { getPanelStats, getGoalProgress } from '../lib/panelStats';
+import { getCampaignGoal } from '../config/campaignGoals';
+
+interface Props {
+  slugs: string[];
+  base: string;
+  emptyMessage?: string;
+}
+const { slugs, base, emptyMessage = 'No campaigns configured yet.' } = Astro.props;
+
+const rows = await Promise.all(slugs.map(async (slug) => {
+  const siteCount = (getSponsorOverride(slug)?.clickTable ? 1 : 0) + (networkClickSources[slug]?.length ?? 0);
+  const stats = await getPanelStats(slug);
+  // Only queried when a goal is actually configured for this slug — free for the common case
+  // of a campaign with no agreed trial/target.
+  const goal = getCampaignGoal(slug);
+  const goalProgress = goal ? await getGoalProgress(slug, goal) : null;
+  return {
+    slug,
+    displayName: panelClients[slug]?.displayName ?? slug,
+    siteCount,
+    allTimeTotal: stats.allTimeTotal,
+    last7: stats.last7,
+    goalPct: goalProgress ? Math.max(0, Math.min(100, goalProgress.pctOfTarget)) : null,
+  };
+}));
+---
+{rows.length ? (
+  <div class="campaign-grid">
+    {rows.map((row) => (
+      <a href={`${base}/?client=${encodeURIComponent(row.slug)}`} class="campaign-card">
+        <div class="campaign-avatar">{row.displayName.charAt(0).toUpperCase()}</div>
+        <div class="campaign-meta">
+          <strong>{row.displayName}</strong>
+          <span>{row.slug} · tracked on {row.siteCount} site{row.siteCount === 1 ? '' : 's'}</span>
+          {row.goalPct !== null && (
+            <span class="campaign-goal-track" title={`${row.goalPct}% of goal reached`}>
+              <span class="campaign-goal-fill" style={`width:${row.goalPct}%`}></span>
+            </span>
+          )}
+        </div>
+        <div class="campaign-stats">
+          <div><strong>{row.allTimeTotal.toLocaleString()}</strong><span>all-time</span></div>
+          <div><strong>{row.last7.toLocaleString()}</strong><span>last 7d</span></div>
+        </div>
+        <b class="campaign-arrow">→</b>
+      </a>
+    ))}
+  </div>
+) : (
+  <p class="empty-note">{emptyMessage}</p>
+)}
+
+<style>
+  .campaign-grid { display: grid; gap: 12px; }
+  .campaign-card {
+    display: flex; align-items: center; gap: 16px;
+    padding: 18px 20px; border: 1px solid var(--border); border-radius: var(--radius-lg);
+    background: rgba(17,16,24,0.9); transition: border-color 0.2s, transform 0.2s;
+  }
+  .campaign-card:hover { border-color: rgba(168,85,247,0.45); transform: translateY(-2px); }
+  .campaign-avatar {
+    width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg,#7c3aed,#ec4899); color: #fff; font-weight: 800; font-size: 1.05rem;
+  }
+  .campaign-meta { display: grid; min-width: 0; flex: 1; }
+  .campaign-meta strong { font-size: 0.95rem; color: #fff; overflow-wrap: anywhere; }
+  .campaign-meta span { color: var(--text-muted); font-size: 0.74rem; margin-top: 2px; overflow-wrap: anywhere; }
+  .campaign-goal-track { display: block; height: 4px; border-radius: 999px; background: #241f2e; overflow: hidden; margin-top: 8px; max-width: 220px; }
+  .campaign-goal-fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #7c3aed, #ec4899); }
+  .campaign-stats { display: flex; gap: 22px; flex-shrink: 0; }
+  .campaign-stats div { display: grid; justify-items: end; }
+  .campaign-stats strong { font: 800 1.1rem 'Manrope', sans-serif; color: #fff; }
+  .campaign-stats span { color: var(--text-muted); font-size: 0.6rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em; margin-top: 2px; }
+  .campaign-arrow { color: var(--text-muted); font-size: 1.1rem; flex-shrink: 0; }
+  @media (max-width: 640px) {
+    .campaign-card { flex-wrap: wrap; }
+    .campaign-stats { margin-left: 60px; }
+  }
+</style>

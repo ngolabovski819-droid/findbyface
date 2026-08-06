@@ -1,0 +1,615 @@
+---
+// src/middleware.ts guarantees locals.panelUser is set before this page ever renders
+// (unauthenticated requests are redirected to /panel/login there) — the `!` reflects that.
+import PanelLayout from '../../layouts/PanelLayout.astro';
+import PanelCampaignGrid from '../../components/PanelCampaignGrid.astro';
+import PanelGoalCard from '../../components/PanelGoalCard.astro';
+import { getPanelStats, getGoalProgress } from '../../lib/panelStats';
+import { resolveClientSlug } from '../../lib/panelAuth';
+import { panelBase } from '../../lib/panelHost';
+import { getPanelClient, panelClients, DEFAULT_CLIENT_SLUG } from '../../config/panelClients';
+import { getCampaignGoal } from '../../config/campaignGoals';
+
+const session = Astro.locals.panelUser!;
+const isAdmin = session.role === 'admin';
+const availableSlugs = isAdmin ? Object.keys(panelClients) : session.clientSlugs;
+const requestedClient = Astro.url.searchParams.get('client');
+
+// With more than one campaign available and none explicitly picked (via ?client= or the
+// switcher tabs), the dashboard is a sneak-peek across all of them instead of guessing which
+// one to show in full. With exactly one, that indirection is pure friction — go straight to
+// its full detail, same as this page has always behaved for a single-campaign account.
+const showOverview = availableSlugs.length > 1 && !requestedClient;
+const base = panelBase(Astro.request);
+
+let clientSlug = '';
+let client;
+let stats;
+let topPlacement = '—';
+let topPlacementPct = 0;
+let delta7: { pct: number | null; direction: 'up' | 'down' | 'flat' } = { pct: null, direction: 'flat' };
+let delta30: { pct: number | null; direction: 'up' | 'down' | 'flat' } = { pct: null, direction: 'flat' };
+let goal;
+let goalProgress = null;
+
+if (!showOverview) {
+  // A guest can only ever land on a slug from their own session.clientSlugs; admin can view
+  // any configured client via ?client=. Mirrors the same rule in src/pages/api/panel/stats.ts.
+  clientSlug = resolveClientSlug(session, requestedClient, DEFAULT_CLIENT_SLUG);
+  client = getPanelClient(clientSlug);
+  stats = await getPanelStats(clientSlug);
+  topPlacement = stats.placements[0]?.label ?? '—';
+  const windowTotal = stats.placements.reduce((sum, p) => sum + p.count, 0);
+  topPlacementPct = windowTotal > 0 ? Math.round(((stats.placements[0]?.count ?? 0) / windowTotal) * 100) : 0;
+
+  function computeDelta(current: number, previous: number) {
+    if (previous === 0) return { pct: null, direction: (current > 0 ? 'up' : 'flat') as const };
+    const pct = ((current - previous) / previous) * 100;
+    return { pct, direction: (pct > 0.5 ? 'up' : pct < -0.5 ? 'down' : 'flat') as const };
+  }
+  delta7 = computeDelta(stats.last7, stats.prev7);
+  delta30 = computeDelta(stats.last30, stats.prev30);
+
+  goal = getCampaignGoal(clientSlug);
+  goalProgress = goal ? await getGoalProgress(clientSlug, goal) : null;
+}
+---
+<PanelLayout
+  title={showOverview ? 'Overview — findbyface Panel' : `${client?.displayName ?? 'Client'} Dashboard — findbyface Panel`}
+  accountName={session.name}
+  role={session.role}
+  clientSlugs={session.clientSlugs}
+  activeModelSlug={showOverview ? undefined : clientSlug}
+  nav
+>
+  {showOverview ? (
+    <div class="dash">
+      <header class="dash-head">
+        <span class="kicker">Performance dashboard</span>
+        <h1>Overview</h1>
+        <p>Pick a campaign below to see its full dashboard.</p>
+      </header>
+      <PanelCampaignGrid slugs={availableSlugs} base={base} />
+    </div>
+  ) : (
+    <div class="dash" data-daily={JSON.stringify(stats!.daily)}>
+      <header class="dash-head">
+        <div class="dash-head-row">
+          <div>
+            <span class="kicker">Performance dashboard</span>
+            <h1>{client?.displayName ?? (clientSlug || 'Client')}<span class="role-badge">{session.role}</span></h1>
+            <p>Link click activity across the whole findbyface network{stats!.hasClickTable ? '.' : ' — tracking isn’t configured for this account yet.'}</p>
+          </div>
+          {stats!.hasClickTable && (
+            <div class="live-status" title="Numbers refresh automatically while this page is open">
+              <span class="live-dot" aria-hidden="true"></span>
+              <span>Live</span>
+              <span class="status-sep" aria-hidden="true">·</span>
+              <span id="lastUpdatedText">Updated just now</span>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {goal && goalProgress && <PanelGoalCard goal={goal} progress={goalProgress} />}
+
+      <section class="tiles">
+        <article class="tile">
+          <span>All-time clicks</span>
+          <strong id="tileAllTime">{stats!.allTimeTotal.toLocaleString()}</strong>
+          <small class="tile-subtext" id="tileSiteCount">across {stats!.bySite.length} site{stats!.bySite.length === 1 ? '' : 's'}</small>
+        </article>
+        <article class="tile">
+          <span>Last 7 days</span>
+          <strong id="tileLast7">{stats!.last7.toLocaleString()}</strong>
+          <small class={`tile-delta ${delta7.direction}`} id="tileDelta7">
+            {delta7.direction === 'up' && <svg class="delta-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>}
+            {delta7.direction === 'down' && <svg class="delta-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12l7 7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>}
+            <span>{delta7.pct !== null ? `${Math.abs(delta7.pct).toFixed(0)}%` : (delta7.direction === 'up' ? 'New' : '—')}</span>
+            <em>vs prior 7d</em>
+          </small>
+        </article>
+        <article class="tile">
+          <span>Last 30 days</span>
+          <strong id="tileLast30">{stats!.last30.toLocaleString()}</strong>
+          <small class={`tile-delta ${delta30.direction}`} id="tileDelta30">
+            {delta30.direction === 'up' && <svg class="delta-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>}
+            {delta30.direction === 'down' && <svg class="delta-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12l7 7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>}
+            <span>{delta30.pct !== null ? `${Math.abs(delta30.pct).toFixed(0)}%` : (delta30.direction === 'up' ? 'New' : '—')}</span>
+            <em>vs prior 30d</em>
+          </small>
+        </article>
+        <article class="tile">
+          <span>Top placement</span>
+          <strong class="tile-text" id="tileTopPlacement">{topPlacement}</strong>
+          <small class="tile-subtext" id="tileTopPlacementPct">{topPlacementPct}% of clicks</small>
+        </article>
+      </section>
+
+      <section class="chart-card">
+        <div class="chart-head">
+          <h2>Clicks over time</h2>
+          <div class="range-toggle" role="tablist">
+            <button type="button" data-range="7" role="tab" aria-selected="false">7d</button>
+            <button type="button" data-range="30" role="tab" aria-selected="true" class="active">30d</button>
+            <button type="button" data-range="90" role="tab" aria-selected="false">90d</button>
+          </div>
+        </div>
+        <p class="chart-caption" id="chartCaption"></p>
+        {stats!.daily.some(d => d.count > 0) ? (
+          <svg id="trendChart" viewBox="0 0 680 230" preserveAspectRatio="none" class="trend-svg"></svg>
+        ) : (
+          <p class="empty-note">No clicks recorded yet — this fills in once your link starts getting traffic.</p>
+        )}
+      </section>
+
+      <section class="lower-grid">
+        <div class="lower-col">
+          <article class="panel-card">
+            <h2>Clicks by site <small>last 90 days</small></h2>
+            {stats!.bySite.length ? (
+              <ul class="placement-list">
+                {stats!.bySite.map((s) => {
+                  const max = stats!.bySite[0]?.count || 1;
+                  const pct = Math.round((s.count / max) * 100);
+                  return (
+                    <li>
+                      <span class="placement-label">{s.site}</span>
+                      <span class="placement-bar-track"><span class="placement-bar-fill" style={`width:${pct}%`}></span></span>
+                      <span class="placement-count">{s.count.toLocaleString()}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p class="empty-note">No clicks recorded yet.</p>
+            )}
+          </article>
+
+          <article class="panel-card">
+            <h2>Traffic sources <small>last 90 days</small></h2>
+            {stats!.placements.length ? (
+              <ul class="placement-list">
+                {stats!.placements.slice(0, 8).map((p) => {
+                  const max = stats!.placements[0]?.count || 1;
+                  const pct = Math.round((p.count / max) * 100);
+                  return (
+                    <li>
+                      <span class="placement-label">{p.label}</span>
+                      <span class="placement-bar-track"><span class="placement-bar-fill" style={`width:${pct}%`}></span></span>
+                      <span class="placement-count">{p.count.toLocaleString()}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p class="empty-note">No clicks recorded yet.</p>
+            )}
+          </article>
+        </div>
+
+        <article class="panel-card">
+          <h2>Recent activity</h2>
+          {stats!.recent.length ? (
+            <table class="recent-table">
+              <thead><tr><th>When</th><th>Site</th><th>Placement</th></tr></thead>
+              <tbody>
+                {stats!.recent.slice(0, 12).map((r) => (
+                  <tr>
+                    <td>{new Date(r.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
+                    <td>{r.site}</td>
+                    <td>{r.placementLabel}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p class="empty-note">Nothing to show yet — check back after your link starts getting traffic.</p>
+          )}
+        </article>
+      </section>
+    </div>
+  )}
+</PanelLayout>
+
+<script>
+  type DailyPoint = { date: string; count: number };
+  type Coord = { x: number; y: number };
+
+  const dashEl = document.querySelector('.dash') as HTMLElement;
+  const daily: DailyPoint[] = JSON.parse(dashEl?.dataset.daily || '[]');
+  const svg = document.getElementById('trendChart') as unknown as SVGSVGElement | null;
+  const caption = document.getElementById('chartCaption');
+  const buttons = document.querySelectorAll<HTMLButtonElement>('.range-toggle button');
+  let activeRange = 30;
+
+  // viewBox units — must match the <svg viewBox="0 0 680 230"> in the template.
+  const SVG_W = 680;
+  const SVG_H = 230;
+  const MARGIN = { top: 16, right: 12, bottom: 28, left: 40 };
+  const PLOT_W = SVG_W - MARGIN.left - MARGIN.right;
+  const PLOT_H = SVG_H - MARGIN.top - MARGIN.bottom;
+  const LINE_COLOR = '#a855f7';
+
+  let currentPoints: DailyPoint[] = [];
+  let currentCoords: Coord[] = [];
+
+  // Rounds a raw max up to a "clean" axis ceiling (1/2/5 x 10^n) so gridline labels read
+  // like 25/50 instead of 23/46.
+  function niceCeil(value: number): number {
+    if (value <= 0) return 1;
+    const exp = Math.floor(Math.log10(value));
+    const base = 10 ** exp;
+    const norm = value / base;
+    const niceNorm = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
+    return niceNorm * base;
+  }
+
+  // Dates are stored as plain YYYY-MM-DD; constructing with an explicit local-midnight time
+  // avoids the classic off-by-one where `new Date('2026-08-05')` (parsed as UTC midnight)
+  // renders as Aug 4 in negative-UTC-offset timezones.
+  function toLocalDate(iso: string): Date {
+    return new Date(`${iso}T00:00:00`);
+  }
+  function formatDateShort(iso: string): string {
+    return toLocalDate(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+  function isToday(iso: string): boolean {
+    const d = toLocalDate(iso);
+    const now = new Date();
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+  }
+  function formatDateFull(iso: string): string {
+    if (isToday(iso)) return 'Today';
+    return toLocalDate(iso).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+
+  function pickTickIndices(count: number, maxTicks: number): number[] {
+    if (count <= 1) return [0];
+    if (count <= maxTicks) return Array.from({ length: count }, (_, i) => i);
+    const ticks = new Set<number>();
+    for (let i = 0; i < maxTicks; i++) ticks.add(Math.round((i * (count - 1)) / (maxTicks - 1)));
+    return [...ticks].sort((a, b) => a - b);
+  }
+
+  function drawChart(range: number): void {
+    const points = daily.slice(-range);
+    currentPoints = points;
+    const total = points.reduce((sum, p) => sum + p.count, 0);
+    if (caption) caption.textContent = `${total.toLocaleString()} click${total === 1 ? '' : 's'} in the last ${range} days`;
+    if (!svg) return;
+
+    const rawMax = Math.max(1, ...points.map(p => p.count));
+    const niceMax = niceCeil(rawMax);
+    const stepX = points.length > 1 ? PLOT_W / (points.length - 1) : 0;
+
+    currentCoords = points.map((p, i) => ({
+      x: MARGIN.left + i * stepX,
+      y: MARGIN.top + PLOT_H - (p.count / niceMax) * PLOT_H,
+    }));
+
+    const linePath = currentCoords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+    const areaPath = currentCoords.length
+      ? `${linePath} L${currentCoords[currentCoords.length - 1].x.toFixed(1)},${(MARGIN.top + PLOT_H).toFixed(1)} L${MARGIN.left.toFixed(1)},${(MARGIN.top + PLOT_H).toFixed(1)} Z`
+      : '';
+
+    // Gridlines + y-axis labels: 0 / half / max — recessive hairlines, never dashed.
+    const gridSteps = [0, niceMax / 2, niceMax];
+    const gridMarkup = gridSteps.map(v => {
+      const y = MARGIN.top + PLOT_H - (v / niceMax) * PLOT_H;
+      return `<line x1="${MARGIN.left}" y1="${y.toFixed(1)}" x2="${SVG_W - MARGIN.right}" y2="${y.toFixed(1)}" class="grid-line" />` +
+        `<text x="${(MARGIN.left - 8).toFixed(1)}" y="${(y + 3).toFixed(1)}" class="axis-label" text-anchor="end">${Math.round(v).toLocaleString()}</text>`;
+    }).join('');
+
+    // X-axis date ticks — thin out to a readable count regardless of range (7/30/90 days).
+    const tickIndices = pickTickIndices(points.length, 6);
+    const xAxisMarkup = tickIndices.map(i => {
+      const c = currentCoords[i];
+      return `<text x="${c.x.toFixed(1)}" y="${SVG_H - 8}" class="axis-label" text-anchor="middle">${formatDateShort(points[i].date)}</text>`;
+    }).join('');
+
+    svg.innerHTML = `
+      <defs>
+        <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${LINE_COLOR}" stop-opacity="0.22" />
+          <stop offset="100%" stop-color="${LINE_COLOR}" stop-opacity="0" />
+        </linearGradient>
+      </defs>
+      <g class="grid-layer">${gridMarkup}</g>
+      ${areaPath ? `<path d="${areaPath}" fill="url(#areaFill)" stroke="none"></path>` : ''}
+      ${linePath ? `<path d="${linePath}" fill="none" stroke="${LINE_COLOR}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>` : ''}
+      <g class="x-axis">${xAxisMarkup}</g>
+      <g id="hoverLayer" class="hover-layer" style="display:none">
+        <line id="hoverCrosshair" y1="${MARGIN.top}" y2="${(MARGIN.top + PLOT_H).toFixed(1)}" class="crosshair" />
+        <circle id="hoverDot" r="5" class="hover-dot" />
+        <g id="hoverTooltip"></g>
+      </g>
+    `;
+  }
+
+  // Handlers look up hover-layer elements fresh on every call (rather than caching them once)
+  // because drawChart() replaces svg.innerHTML on every range switch — cached references would
+  // point at detached nodes after the first redraw. The listeners themselves are attached to
+  // <svg> exactly once below, since that element persists across redraws.
+  function handlePointerMove(evt: PointerEvent): void {
+    if (!svg || currentCoords.length === 0) return;
+    const hoverLayer = document.getElementById('hoverLayer');
+    const crosshair = document.getElementById('hoverCrosshair');
+    const dot = document.getElementById('hoverDot');
+    const tooltip = document.getElementById('hoverTooltip');
+    if (!hoverLayer || !crosshair || !dot || !tooltip) return;
+
+    const rect = svg.getBoundingClientRect();
+    if (rect.width === 0) return;
+    const svgX = ((evt.clientX - rect.left) / rect.width) * SVG_W;
+
+    let nearest = 0;
+    let nearestDist = Infinity;
+    currentCoords.forEach((c, i) => {
+      const dist = Math.abs(c.x - svgX);
+      if (dist < nearestDist) { nearestDist = dist; nearest = i; }
+    });
+    const point = currentPoints[nearest];
+    const coord = currentCoords[nearest];
+
+    hoverLayer.style.display = '';
+    crosshair.setAttribute('x1', String(coord.x));
+    crosshair.setAttribute('x2', String(coord.x));
+    dot.setAttribute('cx', String(coord.x));
+    dot.setAttribute('cy', String(coord.y));
+
+    const tipW = 128;
+    const tipH = 52;
+    const tipX = Math.max(MARGIN.left, Math.min(SVG_W - MARGIN.right - tipW, coord.x - tipW / 2));
+    const tipY = coord.y - tipH - 14 < 2 ? coord.y + 14 : coord.y - tipH - 14;
+
+    tooltip.innerHTML = `
+      <rect x="${tipX.toFixed(1)}" y="${tipY.toFixed(1)}" width="${tipW}" height="${tipH}" rx="8" class="tooltip-box" />
+      <text x="${(tipX + 12).toFixed(1)}" y="${(tipY + 19).toFixed(1)}" class="tooltip-date">${formatDateFull(point.date)}</text>
+      <line x1="${(tipX + 12).toFixed(1)}" y1="${(tipY + 35).toFixed(1)}" x2="${(tipX + 25).toFixed(1)}" y2="${(tipY + 35).toFixed(1)}" class="tooltip-key" />
+      <text x="${(tipX + 33).toFixed(1)}" y="${(tipY + 39).toFixed(1)}" class="tooltip-value">${point.count.toLocaleString()} click${point.count === 1 ? '' : 's'}</text>
+    `;
+  }
+
+  function handlePointerLeave(): void {
+    const hoverLayer = document.getElementById('hoverLayer');
+    if (hoverLayer) hoverLayer.style.display = 'none';
+  }
+
+  svg?.addEventListener('pointermove', handlePointerMove);
+  svg?.addEventListener('pointerleave', handlePointerLeave);
+
+  buttons.forEach(btn => btn.addEventListener('click', () => {
+    buttons.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+    btn.classList.add('active');
+    btn.setAttribute('aria-selected', 'true');
+    activeRange = Number(btn.dataset.range);
+    drawChart(activeRange);
+  }));
+
+  drawChart(30);
+
+  // --- Live status: ticking "updated Xs ago" + actual periodic refetch of the headline
+  // numbers. Only wired up when the live-status badge rendered (hasClickTable was true server
+  // side — nothing to poll for a client with no tracking configured yet, and nothing rendered
+  // at all in overview mode).
+  const lastUpdatedEl = document.getElementById('lastUpdatedText');
+  if (lastUpdatedEl) {
+    let lastUpdated = Date.now();
+
+    function formatAgo(ms: number): string {
+      const seconds = Math.floor(ms / 1000);
+      if (seconds < 10) return 'Updated just now';
+      if (seconds < 60) return `Updated ${seconds}s ago`;
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return `Updated ${minutes}m ago`;
+      const hours = Math.floor(minutes / 60);
+      return `Updated ${hours}h ago`;
+    }
+
+    function tickAgo(): void {
+      lastUpdatedEl!.textContent = formatAgo(Date.now() - lastUpdated);
+    }
+    setInterval(tickAgo, 1000);
+
+    function flash(el: Element | null): void {
+      if (!el) return;
+      el.classList.remove('flash-update');
+      void (el as HTMLElement).offsetWidth; // restart the animation on repeated updates
+      el.classList.add('flash-update');
+    }
+
+    function setText(id: string, value: string): void {
+      const el = document.getElementById(id);
+      if (el && el.textContent !== value) {
+        el.textContent = value;
+        flash(el);
+      }
+    }
+
+    interface Delta { pct: number | null; direction: 'up' | 'down' | 'flat' }
+    function computeDelta(current: number, previous: number): Delta {
+      if (previous === 0) return { pct: null, direction: current > 0 ? 'up' : 'flat' };
+      const pct = ((current - previous) / previous) * 100;
+      return { pct, direction: pct > 0.5 ? 'up' : pct < -0.5 ? 'down' : 'flat' };
+    }
+
+    const ARROW_UP = '<svg class="delta-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const ARROW_DOWN = '<svg class="delta-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12l7 7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    function setDelta(id: string, delta: Delta, periodLabel: string): void {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.className = `tile-delta ${delta.direction}`;
+      const arrow = delta.direction === 'up' ? ARROW_UP : delta.direction === 'down' ? ARROW_DOWN : '';
+      const label = delta.pct !== null ? `${Math.abs(delta.pct).toFixed(0)}%` : (delta.direction === 'up' ? 'New' : '—');
+      const nextHtml = `${arrow}<span>${label}</span><em>vs prior ${periodLabel}</em>`;
+      if (el.innerHTML !== nextHtml) {
+        el.innerHTML = nextHtml;
+        flash(el);
+      }
+    }
+
+    interface PanelStatsPayload {
+      allTimeTotal: number;
+      last7: number;
+      prev7: number;
+      last30: number;
+      prev30: number;
+      placements: { label: string; count: number }[];
+      bySite: { site: string; count: number }[];
+      daily: DailyPoint[];
+    }
+
+    async function refreshStats(): Promise<void> {
+      try {
+        const response = await fetch(`/api/panel/stats${window.location.search}`);
+        if (!response.ok) return;
+        const data: PanelStatsPayload = await response.json();
+
+        setText('tileAllTime', data.allTimeTotal.toLocaleString());
+        setText('tileLast7', data.last7.toLocaleString());
+        setText('tileLast30', data.last30.toLocaleString());
+
+        const siteCountEl = document.getElementById('tileSiteCount');
+        if (siteCountEl) siteCountEl.textContent = `across ${data.bySite.length} site${data.bySite.length === 1 ? '' : 's'}`;
+
+        const windowTotal = data.placements.reduce((sum, p) => sum + p.count, 0);
+        const topPlacement = data.placements[0]?.label ?? '—';
+        const topPct = windowTotal > 0 ? Math.round(((data.placements[0]?.count ?? 0) / windowTotal) * 100) : 0;
+        setText('tileTopPlacement', topPlacement);
+        const topPctEl = document.getElementById('tileTopPlacementPct');
+        if (topPctEl) topPctEl.textContent = `${topPct}% of clicks`;
+
+        setDelta('tileDelta7', computeDelta(data.last7, data.prev7), '7d');
+        setDelta('tileDelta30', computeDelta(data.last30, data.prev30), '30d');
+
+        // The chart is otherwise a one-time SSR snapshot — without this, today's column would
+        // keep reading 0 (or any other stale count) for as long as the tab stays open, even
+        // though the "Live · Updated Xs ago" badge right above it implies everything here is
+        // current. Redraws at whichever range the visitor currently has selected, not always 30d.
+        if (Array.isArray(data.daily)) {
+          daily.splice(0, daily.length, ...data.daily);
+          drawChart(activeRange);
+        }
+
+        lastUpdated = Date.now();
+        tickAgo();
+      } catch {
+        // Transient network hiccup — keep showing the last good numbers and try again next
+        // interval rather than surfacing an error for something this low-stakes.
+      }
+    }
+
+    setInterval(refreshStats, 45_000);
+  }
+</script>
+
+<style>
+  .dash { width: min(1100px, calc(100% - 40px)); margin: 0 auto; padding: 40px 0 80px; }
+  .dash-head { margin-bottom: 28px; }
+  .dash-head-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+  .kicker { color: #b767ed; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.11em; text-transform: uppercase; }
+  .dash-head h1 { display: flex; align-items: center; gap: 12px; font-size: clamp(1.7rem, 4vw, 2.4rem); margin: 8px 0 8px; }
+  .role-badge { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); background: rgba(124,58,237,0.12); color: var(--text-muted); font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
+  .dash-head p { color: var(--text-muted); font-size: 0.88rem; }
+
+  .live-status {
+    display: flex; align-items: center; gap: 7px; flex-shrink: 0; margin-top: 6px;
+    padding: 7px 13px; border: 1px solid rgba(34,197,94,0.25); border-radius: 999px;
+    background: rgba(34,197,94,0.06); color: var(--text-muted); font-size: 0.72rem; font-weight: 700;
+  }
+  .live-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--success);
+    box-shadow: 0 0 8px var(--success); animation: livePulse 2s ease-in-out infinite;
+  }
+  .live-status > span:nth-child(2) { color: var(--success); }
+  .status-sep { color: rgba(255,255,255,0.15); }
+  @keyframes livePulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.75); } }
+
+  .flash-update { animation: flashUpdate 1s ease; }
+  @keyframes flashUpdate { 0% { color: #d8b4fe; } 100% { color: inherit; } }
+
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .tile { padding: 18px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: rgba(18,18,26,0.88); transition: border-color 0.2s, transform 0.2s; }
+  .tile:hover { border-color: rgba(168,85,247,0.4); transform: translateY(-2px); }
+  .tile span { color: var(--text-muted); font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
+  .tile strong { display: block; margin-top: 8px; font: 800 1.7rem 'Manrope', sans-serif; color: #fff; }
+  .tile strong.tile-text {
+    font-size: 1.05rem; text-transform: capitalize; overflow-wrap: anywhere;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .tile-subtext { display: block; margin-top: 6px; color: var(--text-muted); font-size: 0.66rem; font-weight: 600; }
+  .tile-delta { display: flex; align-items: center; gap: 4px; margin-top: 6px; font-size: 0.66rem; font-weight: 700; color: var(--text-muted); }
+  .tile-delta.up { color: var(--success); }
+  .tile-delta.down { color: #f87171; }
+
+  .chart-card, .panel-card { border: 1px solid var(--border); border-radius: var(--radius-lg); background: rgba(17,16,24,0.9); padding: 22px; }
+  .chart-card { margin-bottom: 20px; }
+  .chart-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 4px; }
+  .chart-head h2, .panel-card h2 { font-size: 1.05rem; }
+  .panel-card h2 small { color: var(--text-muted); font-weight: 500; font-size: 0.7rem; margin-left: 6px; text-transform: none; }
+  .range-toggle { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 10px; background: #0d0c13; }
+  .range-toggle button { padding: 6px 12px; border: 0; border-radius: 7px; background: transparent; color: var(--text-muted); font-size: 0.72rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .range-toggle button.active { background: rgba(124,58,237,0.2); color: #e5d6ef; }
+  .chart-caption { color: var(--text-muted); font-size: 0.75rem; margin-bottom: 10px; }
+  .trend-svg { width: 100%; height: 230px; display: block; cursor: crosshair; }
+
+  .lower-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .lower-col { display: grid; gap: 16px; min-width: 0; }
+  .placement-list { display: grid; gap: 10px; margin-top: 14px; list-style: none; }
+  .placement-list li { display: grid; grid-template-columns: minmax(0, 140px) minmax(0, 1fr) auto; align-items: center; gap: 10px; border-radius: 8px; transition: background-color 0.15s; }
+  .placement-list li:hover { background-color: rgba(255,255,255,0.035); }
+  .placement-label { color: var(--text); font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .placement-bar-track { height: 7px; border-radius: 999px; background: #241f2e; overflow: hidden; }
+  .placement-bar-fill { display: block; height: 100%; background: linear-gradient(90deg, #7c3aed, #a855f7); border-radius: 999px; transition: filter 0.15s; }
+  .placement-list li:hover .placement-bar-fill { filter: brightness(1.15); }
+  .placement-count { color: var(--text-muted); font-size: 0.72rem; font-weight: 700; text-align: right; }
+
+  .recent-table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 0.78rem; }
+  .recent-table th { text-align: left; color: var(--text-muted); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .recent-table td { padding: 8px 10px 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--text); white-space: nowrap; transition: color 0.15s; }
+  .recent-table td:nth-child(2), .recent-table td:nth-child(3) { color: var(--text-muted); }
+  .recent-table tbody tr { transition: background-color 0.15s; }
+  .recent-table tbody tr:hover { background-color: rgba(255,255,255,0.035); }
+  .recent-table tbody tr:hover td { color: var(--text); }
+
+  .empty-note { color: var(--text-muted); font-size: 0.78rem; margin-top: 14px; }
+
+  @media (max-width: 900px) {
+    .tiles { grid-template-columns: repeat(2, 1fr); }
+    .lower-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 520px) {
+    .tiles { grid-template-columns: 1fr; }
+    .chart-head { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .placement-list li { grid-template-columns: minmax(0, 84px) minmax(0, 1fr) auto; gap: 8px; }
+  }
+</style>
+
+<!--
+  The chart's <g>/<path>/<text> internals are built by svg.innerHTML in the script above, at
+  runtime, on every range switch — Astro's scoped CSS only rewrites selectors for elements
+  present in this file's own template markup at compile time, so a normal <style> block here
+  would silently fail to match anything injected via innerHTML (same footgun as the recent
+  history dropdowns elsewhere in this codebase). Scoping this by #trendChart instead of going
+  fully unscoped keeps it from leaking to any other SVG on the page.
+-->
+<style is:global>
+  #trendChart .grid-line { stroke: rgba(255,255,255,0.07); stroke-width: 1; }
+  #trendChart .axis-label { fill: var(--text-muted); font-size: 9.5px; font-family: 'Inter', sans-serif; }
+  #trendChart .hover-layer { pointer-events: none; }
+  #trendChart .crosshair { stroke: rgba(168,85,247,0.4); stroke-width: 1; }
+  #trendChart .hover-dot { fill: #a855f7; stroke: #15131f; stroke-width: 2; }
+  #trendChart .tooltip-box { fill: #1c1830; stroke: rgba(168,85,247,0.45); stroke-width: 1; filter: drop-shadow(0 6px 16px rgba(0,0,0,0.45)); }
+  #trendChart .tooltip-date { fill: var(--text-muted); font-size: 9.5px; font-family: 'Inter', sans-serif; font-weight: 600; }
+  #trendChart .tooltip-key { stroke: #a855f7; stroke-width: 3; stroke-linecap: round; }
+  #trendChart .tooltip-value { fill: #ffffff; font-size: 12px; font-weight: 700; font-family: 'Inter', sans-serif; }
+
+  /* Same reason: setDelta() in the script above replaces #tileDelta7/#tileDelta30's innerHTML
+     on every live refresh, so the arrow SVG and <em> period label it injects need their styles
+     here too — a scoped rule would only apply to the version Astro rendered at page load and
+     silently stop matching the moment the first 45s refresh replaces it. */
+  .tile-delta .delta-arrow { width: 11px; height: 11px; flex-shrink: 0; }
+  .tile-delta em { color: var(--text-muted); font-style: normal; font-weight: 600; margin-left: 1px; }
+</style>

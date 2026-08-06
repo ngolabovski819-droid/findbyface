@@ -1,0 +1,91 @@
+---
+import PanelLayout from '../../layouts/PanelLayout.astro';
+---
+<PanelLayout title="Client Panel Login — findbyface">
+  <main class="panel-login-page">
+    <div class="login-glow" aria-hidden="true"></div>
+    <section class="login-card">
+      <header>
+        <h1>Client Panel</h1>
+        <p>Sign in to view your performance dashboard.</p>
+      </header>
+      <form id="panelLoginForm" novalidate>
+        <label>
+          <span>Email address</span>
+          <input id="panelEmail" name="email" type="email" autocomplete="email" required />
+        </label>
+        <label>
+          <span>Password</span>
+          <input id="panelPassword" name="password" type="password" autocomplete="current-password" required />
+        </label>
+        <div class="login-message" id="loginMessage" role="alert" hidden></div>
+        <button type="submit" id="loginSubmit">Log in</button>
+      </form>
+    </section>
+  </main>
+</PanelLayout>
+
+<script>
+  const form = document.getElementById('panelLoginForm') as HTMLFormElement;
+  const message = document.getElementById('loginMessage')!;
+  const submitBtn = document.getElementById('loginSubmit') as HTMLButtonElement;
+
+  function showError(text: string): void {
+    message.textContent = text;
+    message.hidden = false;
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    message.hidden = true;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Signing in…';
+    try {
+      const email = (document.getElementById('panelEmail') as HTMLInputElement).value.trim();
+      const password = (document.getElementById('panelPassword') as HTMLInputElement).value;
+      const response = await fetch('/api/panel/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        showError(payload.error || 'Could not sign in.');
+        return;
+      }
+      const host = window.location.hostname;
+      const onPanelHost = host === 'panel.findbyface.org' || host === 'panel.localhost';
+      window.location.href = onPanelHost ? '/' : '/panel/';
+    } catch {
+      showError('Something went wrong. Try again.');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Log in';
+    }
+  });
+</script>
+
+<style>
+  .panel-login-page { position: relative; min-height: calc(100vh - 60px); display: grid; place-items: center; padding: 40px 20px; overflow: hidden; }
+  .login-glow { position: absolute; width: 420px; height: 420px; border-radius: 50%; background: radial-gradient(circle, rgba(139,64,225,.22), transparent 68%); filter: blur(16px); }
+  .login-card { position: relative; width: min(400px, 100%); padding: 36px 32px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: linear-gradient(150deg, rgba(31,20,47,.96), rgba(15,14,22,.96)); box-shadow: 0 35px 100px rgba(0,0,0,.42); }
+  .login-card h1 { font-size: 1.6rem; margin-bottom: 6px; }
+  .login-card > header p { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 26px; }
+  #panelLoginForm { display: grid; gap: 16px; }
+  label { display: grid; gap: 6px; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+  input {
+    height: 44px; padding: 0 14px; border-radius: 10px;
+    border: 1px solid var(--border); background: rgba(255,255,255,0.03);
+    color: var(--text); font-size: 0.9rem; font-family: inherit;
+  }
+  input:focus { outline: none; border-color: var(--accent-light); }
+  .login-message { padding: 10px 12px; border-radius: 8px; background: rgba(244,63,94,0.12); border: 1px solid rgba(244,63,94,0.3); color: #fca5a5; font-size: 0.8rem; }
+  button[type="submit"] {
+    height: 46px; border-radius: 999px; border: none; margin-top: 4px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-pink));
+    color: #fff; font-weight: 800; font-size: 0.9rem; cursor: pointer; font-family: inherit;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  button[type="submit"]:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(124,58,237,.35); }
+  button[type="submit"]:disabled { opacity: 0.7; cursor: default; }
+</style>

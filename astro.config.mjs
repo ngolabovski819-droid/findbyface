@@ -10,7 +10,7 @@ export default defineConfig({
   site: 'https://findbyface.org',
   integrations: [
     sitemap({
-      filter: (page) => !page.includes('/api/'),
+      filter: (page) => !page.includes('/api/') && !page.includes('/panel'),
     }),
   ],
 });

@@ -1,0 +1,180 @@
+---
+// The commercial deal agreed for a campaign (src/config/campaignGoals.ts), rendered against
+// real progress (src/lib/panelStats.ts's getGoalProgress — clicks landed since the trial
+// started, tracked with no cutoff, not frozen at day 14). Static/server-rendered only — no
+// client JS, so none of the scoped-CSS-vs-innerHTML footguns elsewhere in this codebase apply
+// here; the bar fill-in and sparkline hover states are pure CSS.
+import type { CampaignGoal } from '../config/campaignGoals';
+import type { GoalProgress } from '../lib/panelStats';
+
+interface Props {
+  goal: CampaignGoal;
+  progress: GoalProgress;
+}
+const { goal, progress } = Astro.props;
+
+// A circular ring (single AND double-lap versions) was tried and rejected three times — a
+// thick glowing gauge reads like a fitness-app/game-HUD widget, not a client-facing business
+// report. This is the pattern real usage dashboards actually use for "actual vs. target,
+// possibly over 100%" (Stripe billing, Linear cycles, Vercel usage bars): a big plain number
+// as the hero, a horizontal bar underneath it that simply caps at a full track once the target
+// is hit, and the exact percentage as a small badge next to the number — no shape that has to
+// "reconcile" with a number past 100%, because the bar doesn't try to draw the overflow at all.
+const barPct = Math.max(0, Math.min(100, progress.pctOfTarget));
+
+// Status carries the badge copy AND the accent color — one source of truth so they can never
+// disagree (a gold bar next to a "behind pace" badge would undercut the whole point).
+const STATUS_META: Record<GoalProgress['status'], { label: string; from: string; to: string; icon: string; glow: string }> = {
+  achieved: { label: 'Goal exceeded', from: '#f59e0b', to: '#fb923c', icon: 'M8 21h8M12 17v4M6 3h12l-1.5 7a4.5 4.5 0 0 1-9 0L6 3ZM4 6h2M18 6h2', glow: 'rgba(245,158,11,0.16)' },
+  ahead: { label: 'Ahead of pace', from: '#7c3aed', to: '#ec4899', icon: 'm5 15 7-7 7 7', glow: 'rgba(124,58,237,0.14)' },
+  'on-track': { label: 'On track', from: '#7c3aed', to: '#ec4899', icon: 'M5 12h14', glow: 'rgba(124,58,237,0.14)' },
+  behind: { label: 'Behind pace', from: '#f59e0b', to: '#ef4444', icon: 'M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z', glow: 'rgba(239,68,68,0.12)' },
+  missed: { label: 'Trial ended — under target', from: '#ef4444', to: '#b91c1c', icon: 'M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z', glow: 'rgba(239,68,68,0.12)' },
+};
+const meta = STATUS_META[progress.status];
+
+const currency = (value: number) => `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+// Cap the visible bars so the mini chart stays legible long after the trial ends and
+// daysElapsed keeps climbing — the headline numbers still reflect the full history regardless.
+const sparklineDays = progress.daily.slice(-21);
+const maxDaily = Math.max(1, ...sparklineDays.map(d => d.count));
+const trialDayLabel = Math.min(progress.daysElapsed, progress.trialDays);
+
+function formatDay(iso: string): string {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+---
+<article class="goal-card" style={`--goal-glow:${meta.glow}`}>
+  <div class="goal-head">
+    <div>
+      <span class="goal-kicker">Client Agreement</span>
+      <h2>{goal.label}</h2>
+      <p class="goal-since">Counting clicks from <strong>{formatDay(goal.startDate)}</strong> — the deal's start date</p>
+    </div>
+    <span class={`goal-pace-badge ${progress.status}`}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d={meta.icon}></path></svg>
+      {meta.label}
+    </span>
+  </div>
+
+  <div class="goal-hero">
+    <div class="goal-hero-value">
+      <strong>{progress.clicksSoFar.toLocaleString()}</strong>
+      <span>of {progress.clickTarget.toLocaleString()} clicks</span>
+    </div>
+    <span class="goal-hero-pct" style={`color:${meta.to}; border-color:${meta.to}66; background:${meta.to}1f`}>{progress.pctOfTarget}%</span>
+  </div>
+
+  <div class="goal-progress-track" role="img" aria-label={`${progress.clicksSoFar} of ${progress.clickTarget} click goal — ${progress.pctOfTarget}%`}>
+    <div class="goal-progress-fill" style={`width:${barPct}%; background:linear-gradient(90deg, ${meta.from}, ${meta.to})`}></div>
+  </div>
+
+  {progress.surplus !== 0 && (
+    <p class={`goal-surplus ${progress.surplus > 0 ? 'over' : 'under'}`}>
+      {progress.surplus > 0
+        ? `+${progress.surplus.toLocaleString()} clicks over target`
+        : `${Math.abs(progress.surplus).toLocaleString()} clicks short of target`}
+    </p>
+  )}
+
+  <div class="goal-stat-row">
+    <div class="goal-stat">
+      <span>Value delivered</span>
+      <strong>{currency(progress.valueDelivered)}<em> / {currency(progress.valueTarget)}</em></strong>
+    </div>
+    <div class="goal-stat">
+      <span>Trial day</span>
+      <strong>{trialDayLabel}<em> / {progress.trialDays}</em></strong>
+      {progress.bonusDays > 0 && <small class="goal-bonus-tag">+{progress.bonusDays} bonus day{progress.bonusDays === 1 ? '' : 's'}</small>}
+    </div>
+  </div>
+
+  {sparklineDays.length > 1 && (
+    <div class="goal-sparkline" role="img" aria-label="Daily clicks since the trial started">
+      {sparklineDays.map((d) => (
+        <span
+          class="goal-bar"
+          style={`height:${Math.max(6, Math.round((d.count / maxDaily) * 100))}%`}
+          title={`${formatDay(d.date)}: ${d.count.toLocaleString()} click${d.count === 1 ? '' : 's'}`}
+        ></span>
+      ))}
+    </div>
+  )}
+
+  <div class="goal-time">
+    <div class="goal-time-track"><div class="goal-time-fill" style={`width:${Math.min(100, progress.pctOfTime)}%`}></div></div>
+    <p>
+      {progress.bonusDays > 0
+        ? `Trial window closed ${progress.bonusDays} day${progress.bonusDays === 1 ? '' : 's'} ago — still tracking results`
+        : progress.isComplete
+          ? 'Trial window has ended.'
+          : `${progress.daysRemaining} day${progress.daysRemaining === 1 ? '' : 's'} remaining in the trial`}
+    </p>
+  </div>
+</article>
+
+<style>
+  .goal-card {
+    border: 1px solid rgba(168,85,247,0.24); border-radius: var(--radius-lg);
+    background: linear-gradient(155deg, rgba(124,58,237,0.1), rgba(236,72,153,0.03), rgba(17,16,24,0.95));
+    padding: 24px 26px; margin-bottom: 20px;
+    box-shadow: 0 8px 24px -10px var(--goal-glow, rgba(124,58,237,0.05));
+  }
+  .goal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+  .goal-kicker { color: #b767ed; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+  .goal-head h2 { font-size: 1.15rem; margin-top: 6px; }
+  .goal-since { color: var(--text-muted); font-size: 0.74rem; margin-top: 5px; }
+  .goal-since strong { color: #d8b4fe; font-weight: 700; }
+
+  .goal-pace-badge {
+    display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+    padding: 6px 13px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;
+    border: 1px solid; text-transform: uppercase; letter-spacing: 0.02em;
+  }
+  .goal-pace-badge svg { width: 13px; height: 13px; }
+  .goal-pace-badge.achieved { color: #fde047; border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.14); }
+  .goal-pace-badge.ahead { color: #4ade80; border-color: rgba(34,197,94,0.35); background: rgba(34,197,94,0.1); }
+  .goal-pace-badge.on-track { color: #a78bfa; border-color: rgba(168,85,247,0.35); background: rgba(124,58,237,0.12); }
+  .goal-pace-badge.behind { color: #fbbf24; border-color: rgba(251,191,36,0.35); background: rgba(251,191,36,0.1); }
+  .goal-pace-badge.missed { color: #fca5a5; border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.12); }
+
+  .goal-hero { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .goal-hero-value { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .goal-hero-value strong { font: 800 2.6rem 'Manrope', sans-serif; color: #fff; line-height: 1; letter-spacing: -0.01em; }
+  .goal-hero-value span { color: var(--text-muted); font-size: 0.88rem; font-weight: 600; }
+  .goal-hero-pct { font: 800 0.95rem 'Manrope', sans-serif; padding: 5px 12px; border-radius: 8px; border: 1px solid; flex-shrink: 0; }
+
+  .goal-progress-track { height: 10px; border-radius: 999px; background: #241f2e; overflow: hidden; margin-bottom: 10px; }
+  .goal-progress-fill { display: block; height: 100%; border-radius: 999px; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+
+  .goal-surplus { font-size: 0.76rem; font-weight: 700; margin-bottom: 18px; }
+  .goal-surplus.over { color: #fde047; }
+  .goal-surplus.under { color: #fca5a5; }
+
+  .goal-stat-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .goal-stat { position: relative; }
+  .goal-stat span { display: block; color: var(--text-muted); font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+  .goal-stat strong { font: 800 1.15rem 'Manrope', sans-serif; color: #fff; }
+  .goal-stat strong em { font-style: normal; font-weight: 600; font-size: 0.78rem; color: var(--text-muted); }
+  .goal-bonus-tag { display: block; margin-top: 3px; color: #fde047; font-size: 0.62rem; font-weight: 700; }
+
+  .goal-sparkline {
+    display: flex; align-items: flex-end; gap: 3px; height: 40px;
+    margin-bottom: 14px; padding: 4px 2px 0;
+  }
+  .goal-bar {
+    flex: 1; min-width: 4px; border-radius: 3px 3px 1px 1px;
+    background: linear-gradient(180deg, #a855f7, #6d28d9);
+    opacity: 0.65; transition: opacity 0.15s, transform 0.15s; cursor: default;
+  }
+  .goal-bar:hover { opacity: 1; transform: scaleY(1.06); }
+
+  .goal-time-track { height: 6px; border-radius: 999px; background: #241f2e; overflow: hidden; margin-bottom: 8px; }
+  .goal-time-fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #6d28d9, #a78bfa); }
+  .goal-time p { color: var(--text-muted); font-size: 0.72rem; }
+
+  @media (max-width: 640px) {
+    .goal-hero-value strong { font-size: 2.1rem; }
+    .goal-stat-row { grid-template-columns: 1fr 1fr; }
+  }
+</style>

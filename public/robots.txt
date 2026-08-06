@@ -3,5 +3,6 @@ Allow: /
 
 Disallow: /api/
 Disallow: /go/
+Disallow: /panel
 
 Sitemap: https://findbyface.org/sitemap.xml

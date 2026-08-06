@@ -1,0 +1,67 @@
+---
+import PanelLayout from '../../layouts/PanelLayout.astro';
+import { resolveClientSlug } from '../../lib/panelAuth';
+import { modelOptionsFor, DEFAULT_CLIENT_SLUG } from '../../config/panelClients';
+
+const session = Astro.locals.panelUser!;
+// This page shows the ACCOUNT's own properties, not one model's data — so unlike the
+// dashboard/activity pages, "which model" only matters here for the sidebar switcher's
+// highlight state, not for what's rendered below.
+const activeSlug = resolveClientSlug(session, Astro.url.searchParams.get('client'), DEFAULT_CLIENT_SLUG);
+const myModels = modelOptionsFor(session.clientSlugs);
+---
+<PanelLayout title="Account — findbyface Panel" accountName={session.name} role={session.role} clientSlugs={session.clientSlugs} activeModelSlug={activeSlug} nav>
+  <div class="account-page">
+    <header class="page-head">
+      <span class="kicker">Account</span>
+      <h1>Your account</h1>
+      <p>Details for the login you're currently signed in with.</p>
+    </header>
+
+    <article class="panel-card">
+      <dl class="account-list">
+        <div class="account-row">
+          <dt>Name</dt>
+          <dd>{session.name}</dd>
+        </div>
+        <div class="account-row">
+          <dt>Email</dt>
+          <dd>{session.email}</dd>
+        </div>
+        <div class="account-row">
+          <dt>Role</dt>
+          <dd><span class="role-badge">{session.role}</span></dd>
+        </div>
+        <div class="account-row">
+          <dt>{myModels.length === 1 ? 'Model' : 'Models'}</dt>
+          <dd>{session.role === 'admin' ? 'All clients' : (myModels.length ? myModels.map(m => m.displayName).join(', ') : '—')}</dd>
+        </div>
+      </dl>
+    </article>
+
+    <article class="panel-card note-card">
+      <h2>Need a password change?</h2>
+      <p>
+        Panel logins use a fixed email address rather than a real inbox, so there's no
+        self-service "forgot password" link. Ask the findbyface admin to reset it for you.
+      </p>
+    </article>
+  </div>
+</PanelLayout>
+
+<style>
+  .account-page { width: min(680px, calc(100% - 40px)); margin: 0 auto; padding: 40px 0 80px; }
+  .account-list { display: grid; gap: 4px; }
+  .account-row { display: grid; grid-template-columns: 120px minmax(0, 1fr); align-items: center; padding: 13px 4px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .account-row:last-child { border-bottom: none; }
+  .account-row dt { color: var(--text-muted); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .account-row dd { color: var(--text); font-size: 0.9rem; font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+
+  @media (max-width: 480px) {
+    .account-row { grid-template-columns: 1fr; gap: 4px; }
+    .account-row dt { font-size: 0.66rem; }
+  }
+  .note-card { margin-top: 16px; }
+  .note-card h2 { font-size: 0.92rem; margin-bottom: 8px; }
+  .note-card p { color: var(--text-muted); font-size: 0.8rem; line-height: 1.65; }
+</style>

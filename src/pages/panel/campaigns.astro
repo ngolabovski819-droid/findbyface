@@ -1,0 +1,35 @@
+---
+// An admin sees every configured client here; a guest sees just their own campaign(s) — same
+// card grid either way, via PanelCampaignGrid, always reachable regardless of count (the nav
+// link is permanent, not conditional, so this can't be a dead link). Security-wise this was
+// always fine even for a single-campaign guest: `slugs` below is derived only from their own
+// verified session.clientSlugs, never from anything the request could influence, so there was
+// never a path to seeing another client's campaign here.
+import PanelLayout from '../../layouts/PanelLayout.astro';
+import PanelCampaignGrid from '../../components/PanelCampaignGrid.astro';
+import { panelBase } from '../../lib/panelHost';
+import { panelClients, modelOptionsFor } from '../../config/panelClients';
+
+const session = Astro.locals.panelUser!;
+const isAdmin = session.role === 'admin';
+const base = panelBase(Astro.request);
+const slugs = isAdmin ? Object.keys(panelClients) : modelOptionsFor(session.clientSlugs).map(m => m.slug);
+---
+<PanelLayout title="Campaigns — findbyface Panel" accountName={session.name} role={session.role} clientSlugs={session.clientSlugs} nav>
+  <div class="campaigns-page">
+    <header class="page-head">
+      <span class="kicker">{isAdmin ? 'Admin' : 'Your campaigns'}</span>
+      <h1>Campaigns</h1>
+      <p>{isAdmin ? 'Every client currently configured for the panel.' : 'Every campaign on your account.'} Open one to view its full dashboard.</p>
+    </header>
+    <PanelCampaignGrid
+      slugs={slugs}
+      base={base}
+      emptyMessage={isAdmin ? 'No clients configured yet — add one to src/config/panelClients.ts.' : 'No campaigns on this account yet.'}
+    />
+  </div>
+</PanelLayout>
+
+<style>
+  .campaigns-page { width: min(1100px, calc(100% - 40px)); margin: 0 auto; padding: 40px 0 80px; }
+</style>

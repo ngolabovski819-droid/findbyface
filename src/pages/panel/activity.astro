@@ -1,0 +1,86 @@
+---
+import PanelLayout from '../../layouts/PanelLayout.astro';
+import { getActivityLog } from '../../lib/panelStats';
+import { resolveClientSlug } from '../../lib/panelAuth';
+import { getPanelClient, DEFAULT_CLIENT_SLUG } from '../../config/panelClients';
+
+const session = Astro.locals.panelUser!;
+const clientSlug = resolveClientSlug(session, Astro.url.searchParams.get('client'), DEFAULT_CLIENT_SLUG);
+const client = getPanelClient(clientSlug);
+const log = await getActivityLog(clientSlug);
+---
+<PanelLayout title={`Activity log — ${client?.displayName ?? 'Client'} — findbyface Panel`} accountName={session.name} role={session.role} clientSlugs={session.clientSlugs} activeModelSlug={clientSlug} nav>
+  <div class="activity-page">
+    <header class="page-head">
+      <span class="kicker">Since day one</span>
+      <h1>Activity log</h1>
+      <p>
+        {log.entries.length
+          ? `Every recorded click across the network, most recent first — ${log.entries.length.toLocaleString()} total.`
+          : "Nothing recorded yet — this fills in once your link starts getting traffic."}
+        {log.truncated && ' Showing the most recent history; a very high-volume source may have older rows beyond this.'}
+      </p>
+    </header>
+
+    {log.entries.length > 0 && (
+      <label class="log-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m15.5 15.5 5 5"></path></svg>
+        <input type="search" id="logFilter" placeholder="Filter by site or placement" autocomplete="off" />
+        <span id="logFilterCount"></span>
+      </label>
+    )}
+
+    <article class="panel-card">
+      {log.entries.length ? (
+        <table class="recent-table" id="logTable">
+          <thead><tr><th>When</th><th>Site</th><th>Placement</th><th>Referrer</th></tr></thead>
+          <tbody>
+            {log.entries.map((entry) => (
+              <tr data-filter-text={`${entry.site} ${entry.placementLabel}`.toLowerCase()}>
+                <td>{new Date(entry.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
+                <td>{entry.site}</td>
+                <td>{entry.placementLabel}</td>
+                <td class="referrer-cell">{entry.referrer || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p class="empty-note">Clicks will show up here once your link starts getting traffic.</p>
+      )}
+    </article>
+  </div>
+</PanelLayout>
+
+<script>
+  const input = document.getElementById('logFilter') as HTMLInputElement | null;
+  const countEl = document.getElementById('logFilterCount');
+  const rows = Array.from(document.querySelectorAll<HTMLTableRowElement>('#logTable tbody tr'));
+
+  function applyFilter(): void {
+    const query = (input?.value ?? '').trim().toLowerCase();
+    let visible = 0;
+    for (const row of rows) {
+      const match = !query || (row.dataset.filterText ?? '').includes(query);
+      row.hidden = !match;
+      if (match) visible++;
+    }
+    if (countEl) countEl.textContent = query ? `${visible.toLocaleString()} of ${rows.length.toLocaleString()}` : '';
+  }
+
+  input?.addEventListener('input', applyFilter);
+</script>
+
+<style>
+  .activity-page { width: min(1100px, calc(100% - 40px)); margin: 0 auto; padding: 40px 0 80px; }
+  .referrer-cell { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .log-search {
+    display: flex; align-items: center; gap: 9px; width: min(320px, 100%);
+    margin-bottom: 14px; padding: 0 12px; height: 40px;
+    border: 1px solid var(--border); border-radius: 10px; background: #0d0c13;
+  }
+  .log-search svg { width: 16px; height: 16px; stroke: var(--text-muted); flex-shrink: 0; }
+  .log-search input { flex: 1; height: 100%; border: 0; outline: 0; background: transparent; color: var(--text); font: 500 0.82rem 'Inter', sans-serif; }
+  .log-search input::placeholder { color: var(--text-muted); }
+  .log-search #logFilterCount { color: var(--text-muted); font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
+</style>
