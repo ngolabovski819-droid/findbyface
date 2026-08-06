@@ -18,9 +18,7 @@
 // identical for both.
 import type { APIRoute } from 'astro';
 import { getSponsorOverride } from '../../config/sponsors';
-
-const BOT_UA_PATTERN =
-  /bot|crawl|spider|slurp|curl|wget|python-requests|python-urllib|go-http-client|headless|phantomjs|facebookexternalhit|whatsapp|telegrambot|discordbot|slackbot|embedly|pinterest|semrushbot|ahrefsbot|mj12bot|petalbot|bytespider|yandexbot|baiduspider|duckduckbot|applebot|bingpreview|okhttp/i;
+import { isBotUserAgent } from '../../lib/botDetection';
 
 function derivePlacement(referer: string | null, ownHost: string): string | null {
   if (!referer) return null; // legitimate — pasted links, in-app browsers strip referrers
@@ -50,7 +48,7 @@ export const GET: APIRoute = async ({ params, request }) => {
   const destination = override?.linkOverride || `https://onlyfans.com/${encodeURIComponent(username)}`;
 
   const userAgent = request.headers.get('user-agent') ?? '';
-  const isBot = BOT_UA_PATTERN.test(userAgent);
+  const isBot = isBotUserAgent(userAgent);
 
   if (override?.clickTable && !isBot) {
     const referer = request.headers.get('referer');
