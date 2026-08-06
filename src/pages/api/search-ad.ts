@@ -25,8 +25,10 @@ export const GET: APIRoute = async () => {
   const ads = pins.flatMap(pin => {
     const creator = byUsername.get(pin.username.toLowerCase());
     if (!creator) return [];
+    // profileUrl may already carry a `?t=<click token>` (src/lib/clickToken.ts) — append with
+    // `&` when there's an existing query string, never a second `?`.
     const profileUrl = creator.profileUrl.startsWith('/go/')
-      ? `${creator.profileUrl}?slot=search-dropdown`
+      ? `${creator.profileUrl}${creator.profileUrl.includes('?') ? '&' : '?'}slot=search-dropdown`
       : creator.profileUrl;
     return [{
       username: creator.username,
