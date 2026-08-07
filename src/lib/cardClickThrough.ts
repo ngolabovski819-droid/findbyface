@@ -1,7 +1,7 @@
-// Makes a whole `.creator-card[data-href]` clickable to the same destination as its
-// "View Profile" link, without swallowing clicks on nested interactive elements (the
-// view-btn itself, and any future wishlist/favorite icon buttons) — those are left to
-// handle themselves natively via event delegation's closest('a, button') bail-out.
+// Makes a whole `.creator-card[data-href]` or `.home-video-card[data-href]` clickable to the
+// same destination as its own inner link, without swallowing clicks on nested interactive
+// elements (the view-btn itself, and any future wishlist/favorite icon buttons) — those are
+// left to handle themselves natively via event delegation's closest('a, button') bail-out.
 // Safe to call from multiple components on the same page (e.g. a page's own script and
 // a component it renders, like UploadBox.astro on index.astro) — guarded so the listener
 // is only ever registered once per page. Delegates from `document` so it also covers cards
@@ -15,7 +15,7 @@ export function initCardClickThrough(): void {
     if (!(target instanceof Element)) return;
     if (target.closest('a, button')) return; // let real interactive elements behave natively
 
-    const card = target.closest<HTMLElement>('.creator-card[data-href]');
+    const card = target.closest<HTMLElement>('.creator-card[data-href], .home-video-card[data-href]');
     if (!card) return;
 
     // Locked face-search cards send visitors to the full signup page. The visible

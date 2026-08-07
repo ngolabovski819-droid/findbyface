@@ -1,5 +1,5 @@
 ---
-import { proxyImg } from '../utils/image';
+import { getRouletteAvatars } from '../lib/rouletteAvatars';
 
 interface Props {
   searchMode?: 'all' | 'onlyfans';
@@ -7,35 +7,10 @@ interface Props {
 
 const { searchMode = 'all' } = Astro.props;
 
-const SUPABASE_URL = import.meta.env.SUPABASE_URL?.replace(/\/+$/, '');
-const SUPABASE_KEY = import.meta.env.SUPABASE_KEY;
-
-// Avatars that power the "searching through faces" roulette animation.
-let rouletteSrcs: string[] = [];
-if (SUPABASE_URL && SUPABASE_KEY) {
-  try {
-    const params = new URLSearchParams({
-      select: 'avatar',
-      avatar: 'not.is.null',
-      order: 'favoritedcount.desc',
-      limit: '24',
-    });
-    const resp = await fetch(`${SUPABASE_URL}/rest/v1/onlyfans_profiles?${params}`, {
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        'Accept-Profile': 'public',
-      },
-    });
-    if (resp.ok) {
-      const raw = await resp.json();
-      rouletteSrcs = raw
-        .map((r: Record<string, unknown>) => r.avatar as string)
-        .filter((a: string) => a?.startsWith('http'))
-        .map((a: string) => proxyImg(a, 160, 213));
-    }
-  } catch { /* roulette is decorative — fail silently */ }
-}
+const rouletteSrcs = await getRouletteAvatars(
+  import.meta.env.SUPABASE_URL?.replace(/\/+$/, ''),
+  import.meta.env.SUPABASE_KEY,
+);
 ---
 
 <!-- Terms of Use Modal -->
@@ -97,23 +72,25 @@ if (SUPABASE_URL && SUPABASE_KEY) {
 </div>
 
 <div class:list={["upload-section", { "onlyfans-mode": searchMode === 'onlyfans' }]} id="onlyfans-finder" data-search-mode={searchMode}>
-  {searchMode === 'all' ? <nav class="finder-tabs" aria-label="Sources included in every homepage face search">
-    <span class="finder-tab included">
+  {searchMode === 'all' ? <div class="finder-tabs" role="group" aria-label="Choose which sources to search">
+    <button type="button" class="finder-tab" id="sourceTabAll">
+      <span class="finder-tab-icon" aria-hidden="true">✦</span>
+      <span>All</span>
+    </button>
+    <button type="button" class="finder-tab" id="sourceTabPornstars" aria-pressed="true">
       <span class="finder-tab-icon" aria-hidden="true">▶</span>
       <span>Pornstars</span>
-      <small>Included · video search</small>
-    </span>
-    <span class="finder-tab included">
+    </button>
+    <button type="button" class="finder-tab" id="sourceTabOnlyfans" aria-pressed="true">
       <span class="finder-tab-icon" aria-hidden="true">♡</span>
       <span>OnlyFans</span>
-      <small>Included · creator search</small>
-    </span>
-    <span class="finder-tab disabled" aria-disabled="true">
+    </button>
+    <button type="button" class="finder-tab disabled" id="sourceTabCam" disabled aria-disabled="true">
       <span class="finder-tab-icon" aria-hidden="true">◉</span>
       <span>Cam</span>
       <small>Coming soon</small>
-    </span>
-  </nav> : <div class="dedicated-tool-badge"><span aria-hidden="true">♡</span> OnlyFans creator face search</div>}
+    </button>
+  </div> : <div class="dedicated-tool-badge"><span aria-hidden="true">♡</span> OnlyFans creator face search</div>}
   <div class="upload-box" id="uploadBox">
 
     <!-- State 1: Idle -->
@@ -226,12 +203,8 @@ if (SUPABASE_URL && SUPABASE_KEY) {
       <span class="copy-label">Copy top 10</span>
     </button>
   </div>
-  <nav class="result-source-tabs" aria-label="Explore results from another source" hidden={searchMode === 'onlyfans'}>
-    <button class="result-source-tab active" id="onlyfansResultsTab" type="button" aria-selected="true">♡ OnlyFans <span id="onlyfansResultCount"></span></button>
-    <button class="result-source-tab" id="pornstarResultsTab" type="button" aria-selected="false">▶ Pornstars <span id="pornstarResultCount"></span></button>
-    <span class="result-source-tab disabled" aria-disabled="true">◉ Cam · coming soon</span>
-  </nav>
   <div id="onlyfansResultsPanel" class="result-source-panel">
+    <h3 class="result-panel-heading">♡ OnlyFans <span id="onlyfansResultCount"></span></h3>
     <div id="onlyfansPanelNotice" class="result-panel-notice" style="display:none"></div>
     <div id="shareCta" class="share-cta" style="display:none">
       <span class="share-cta-step">1</span>
@@ -255,6 +228,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     </div>
   </div>
   <div id="pornstarResultsPanel" class="result-source-panel" hidden>
+    <h3 class="result-panel-heading">▶ Pornstars <span id="pornstarResultCount"></span></h3>
     <div id="pornstarPanelNotice" class="result-panel-notice" style="display:none"></div>
     <div id="pornstarResultsMeta" class="video-results-meta"></div>
     <div id="pornstarResultsGrid" class="video-results-grid"></div>
@@ -319,8 +293,9 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   const faceResultsCount = document.getElementById('faceResultsCount')!;
   const copyResultsBtn   = document.getElementById('copyResultsBtn') as HTMLButtonElement;
   const shareCta         = document.getElementById('shareCta')!;
-  const onlyfansResultsTab = document.getElementById('onlyfansResultsTab') as HTMLButtonElement;
-  const pornstarResultsTab = document.getElementById('pornstarResultsTab') as HTMLButtonElement;
+  const sourceTabAll        = document.getElementById('sourceTabAll') as HTMLButtonElement | null;
+  const sourceTabPornstars  = document.getElementById('sourceTabPornstars') as HTMLButtonElement | null;
+  const sourceTabOnlyfans   = document.getElementById('sourceTabOnlyfans') as HTMLButtonElement | null;
   const onlyfansResultsPanel = document.getElementById('onlyfansResultsPanel')!;
   const pornstarResultsPanel = document.getElementById('pornstarResultsPanel')!;
   const onlyfansResultCount = document.getElementById('onlyfansResultCount')!;
@@ -332,6 +307,39 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   const searchMode = document.getElementById('onlyfans-finder')?.dataset.searchMode === 'onlyfans'
     ? 'onlyfans'
     : 'all';
+
+  // Which indexes a homepage ('all' mode) search actually hits — user-controlled via
+  // sourceTabAll/Pornstars/Onlyfans. Defaults to both, matching the previous fixed behavior.
+  // Irrelevant on the dedicated OnlyFans page (searchMode === 'onlyfans'), which only ever
+  // searches its own index and has no tab UI at all.
+  const selectedSources = new Set<'pornstars' | 'onlyfans'>(['pornstars', 'onlyfans']);
+
+  function updateSourceTabsUI(): void {
+    if (!sourceTabAll || !sourceTabPornstars || !sourceTabOnlyfans) return;
+    const allSelected = selectedSources.has('pornstars') && selectedSources.has('onlyfans');
+    sourceTabAll.setAttribute('aria-pressed', String(allSelected));
+    sourceTabPornstars.setAttribute('aria-pressed', String(selectedSources.has('pornstars')));
+    sourceTabOnlyfans.setAttribute('aria-pressed', String(selectedSources.has('onlyfans')));
+  }
+
+  function toggleSource(source: 'pornstars' | 'onlyfans'): void {
+    if (selectedSources.has(source)) {
+      // Never allow deselecting down to zero sources — a search always needs somewhere to go.
+      if (selectedSources.size > 1) selectedSources.delete(source);
+    } else {
+      selectedSources.add(source);
+    }
+    updateSourceTabsUI();
+  }
+
+  sourceTabAll?.addEventListener('click', () => {
+    selectedSources.add('pornstars');
+    selectedSources.add('onlyfans');
+    updateSourceTabsUI();
+  });
+  sourceTabPornstars?.addEventListener('click', () => toggleSource('pornstars'));
+  sourceTabOnlyfans?.addEventListener('click', () => toggleSource('onlyfans'));
+  updateSourceTabsUI();
 
   // Only the 'all' mode (homepage) calls /api/video-face-search — see searchPornstarIndex().
   // 'onlyfans' mode (the dedicated OnlyFans finder page) never hits that endpoint, so it
@@ -710,9 +718,12 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     uploadScanning.style.display = 'flex';
     startScanFX();
 
-    // The homepage searches both live indexes. Dedicated tool pages only call
-    // their own index so the result set stays specific to the page's promise.
-    const pornstarSearch: Promise<HomepageVideoResponse> = searchMode === 'all'
+    // Which indexes this particular search actually hits — user-controlled via the finder
+    // tabs on the homepage; always both on the dedicated OnlyFans-only page.
+    const wantsPornstars = searchMode === 'all' && selectedSources.has('pornstars');
+    const wantsOnlyfans = searchMode === 'onlyfans' || selectedSources.has('onlyfans');
+
+    const pornstarSearch: Promise<HomepageVideoResponse> = wantsPornstars
       ? searchPornstarIndex(file)
       : Promise.resolve({ ok: false, code: 'not_requested' });
 
@@ -720,51 +731,56 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
     try {
-      // Phase 1: load models
-      setProgressLabel('Loading face detection models (first load may take ~15s)...');
-      let faceapi: any;
-      try {
-        faceapi = await loadFaceApi();
-        await ensureModels(faceapi);
-      } catch (e: any) {
-        throw new Error(`Model load failed: ${e?.message ?? e}`);
-      }
+      let data: any = { results: [], mode: undefined };
 
-      // Phase 2: detect face
-      setProgressLabel('Detecting face in your photo...');
-      const img = new Image();
-      img.src = dataUrl;
-      await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error('Image failed to decode')); });
-
-      let descriptor: Float32Array | null;
-      try {
-        descriptor = await withTimeout(detectDescriptor(faceapi, img), 30000, 'face detection');
-      } catch (e: any) {
-        throw new Error(`Face detection failed: ${e?.message ?? e}`);
-      }
-
-      if (!descriptor) {
-        throw new Error('The OnlyFans matcher could not detect a face in this image.');
-      }
-
-      // Phase 3: search API
-      setProgressLabel(searchMode === 'onlyfans'
-        ? 'Searching OnlyFans creator profiles...'
-        : 'Searching creator profiles and indexed videos...');
-      let data: any;
-      try {
-        const resp = await fetch('/api/face-search', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ descriptor: Array.from(descriptor) }),
-        });
-        if (!resp.ok) {
-          const errText = await resp.text().catch(() => `HTTP ${resp.status}`);
-          throw new Error(`API ${resp.status}: ${errText.slice(0, 120)}`);
+      if (wantsOnlyfans) {
+        // Phase 1: load models
+        setProgressLabel('Loading face detection models (first load may take ~15s)...');
+        let faceapi: any;
+        try {
+          faceapi = await loadFaceApi();
+          await ensureModels(faceapi);
+        } catch (e: any) {
+          throw new Error(`Model load failed: ${e?.message ?? e}`);
         }
-        data = await resp.json();
-      } catch (e: any) {
-        throw new Error(`Search API failed: ${e?.message ?? e}`);
+
+        // Phase 2: detect face
+        setProgressLabel('Detecting face in your photo...');
+        const img = new Image();
+        img.src = dataUrl;
+        await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error('Image failed to decode')); });
+
+        let descriptor: Float32Array | null;
+        try {
+          descriptor = await withTimeout(detectDescriptor(faceapi, img), 30000, 'face detection');
+        } catch (e: any) {
+          throw new Error(`Face detection failed: ${e?.message ?? e}`);
+        }
+
+        if (!descriptor) {
+          throw new Error('The OnlyFans matcher could not detect a face in this image.');
+        }
+
+        // Phase 3: search API
+        setProgressLabel(wantsPornstars
+          ? 'Searching creator profiles and indexed videos...'
+          : 'Searching OnlyFans creator profiles...');
+        try {
+          const resp = await fetch('/api/face-search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ descriptor: Array.from(descriptor) }),
+          });
+          if (!resp.ok) {
+            const errText = await resp.text().catch(() => `HTTP ${resp.status}`);
+            throw new Error(`API ${resp.status}: ${errText.slice(0, 120)}`);
+          }
+          data = await resp.json();
+        } catch (e: any) {
+          throw new Error(`Search API failed: ${e?.message ?? e}`);
+        }
+      } else {
+        setProgressLabel('Searching indexed videos...');
       }
 
       const pornstarData = await pornstarSearch;
@@ -779,7 +795,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
       const results = data.results ?? [];
       const topName = results[0] ? ((results[0].name || results[0].username) as string) : undefined;
       recordSearchHistory(results, topName);
-      showResults(results, data.mode, pornstarData);
+      showResults(results, data.mode, pornstarData, undefined, wantsOnlyfans, wantsPornstars);
     } catch (err: any) {
       const pornstarData = await pornstarSearch;
       stopScanFX();
@@ -788,9 +804,9 @@ if (SUPABASE_URL && SUPABASE_KEY) {
         ? 'Analyzing your image across the OnlyFans creator index.'
         : 'Analyzing your image across creator profiles and indexed adult videos.');
       const msg = err?.message ?? String(err);
-      if (searchMode === 'all' && pornstarData.ok) {
+      if (wantsPornstars && pornstarData.ok) {
         uploadDone.style.display = 'flex';
-        showResults([], undefined, pornstarData, msg.length > 10 ? msg : 'OnlyFans creator search was unavailable.');
+        showResults([], undefined, pornstarData, msg.length > 10 ? msg : 'OnlyFans creator search was unavailable.', wantsOnlyfans, wantsPornstars);
       } else {
         uploadIdle.style.display = 'flex';
         uploadError.textContent = msg.length > 10 ? msg : 'Search failed — please try again';
@@ -880,6 +896,9 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     card.className = 'home-video-card';
 
     const hasSource = result.sourceUrl?.startsWith('https://');
+    // Whole-card click-through (src/lib/cardClickThrough.ts), matching .creator-card — clicks
+    // anywhere on the card navigate, not just the thumbnail/"Open source video" link.
+    if (hasSource) card.dataset.href = result.sourceUrl!;
     const media = document.createElement(hasSource ? 'a' : 'div');
     media.className = 'home-video-media';
     if (media instanceof HTMLAnchorElement && hasSource) {
@@ -951,25 +970,16 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     });
   }
 
-  function selectResultSource(source: 'onlyfans' | 'pornstars'): void {
-    const onlyfansActive = source === 'onlyfans';
-    onlyfansResultsPanel.hidden = !onlyfansActive;
-    pornstarResultsPanel.hidden = onlyfansActive;
-    onlyfansResultsTab.classList.toggle('active', onlyfansActive);
-    pornstarResultsTab.classList.toggle('active', !onlyfansActive);
-    onlyfansResultsTab.setAttribute('aria-selected', String(onlyfansActive));
-    pornstarResultsTab.setAttribute('aria-selected', String(!onlyfansActive));
-    copyResultsBtn.style.display = onlyfansActive ? 'inline-flex' : 'none';
-  }
-
-  onlyfansResultsTab.addEventListener('click', () => selectResultSource('onlyfans'));
-  pornstarResultsTab.addEventListener('click', () => selectResultSource('pornstars'));
-
+  // Both result panels are shown stacked (whichever sources were actually searched), rather
+  // than tab-switched — the finder tabs above the upload box already decide sources up front,
+  // so a second post-search switcher would just be a redundant control for the same choice.
   function showResults(
     results: Record<string, unknown>[],
     mode?: string,
     pornstarPayload?: HomepageVideoResponse,
     onlyfansError?: string,
+    wantsOnlyfans: boolean = true,
+    wantsPornstars: boolean = searchMode === 'all',
   ): void {
     const heading = document.querySelector('.results-heading') as HTMLElement | null;
     if (heading) {
@@ -989,11 +999,14 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     onlyfansPanelNotice.textContent = onlyfansError || (results.length === 0
       ? 'No matching OnlyFans creator profiles were found. Try a clearer, front-facing photo.'
       : '');
-    if (searchMode === 'all') {
+    onlyfansResultsPanel.hidden = !wantsOnlyfans;
+    copyResultsBtn.style.display = wantsOnlyfans ? 'inline-flex' : 'none';
+
+    if (searchMode === 'all' && wantsPornstars) {
       renderPornstarResults(pornstarPayload ?? { ok: false, error: 'Pornstar video results were unavailable for this search.' });
-      selectResultSource(onlyfansError && pornstarPayload?.ok ? 'pornstars' : 'onlyfans');
+      pornstarResultsPanel.hidden = false;
     } else {
-      selectResultSource('onlyfans');
+      pornstarResultsPanel.hidden = true;
     }
     faceResults.style.display = 'block';
     faceResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1273,11 +1286,12 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     font-size: 1rem;
   }
   .finder-tabs {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     width: min(100%, 680px);
     gap: 10px;
-    padding: 7px;
+    padding: 8px;
     border: 1px solid var(--border);
     border-radius: 18px;
     background: rgba(18,18,26,0.82);
@@ -1285,36 +1299,41 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     backdrop-filter: blur(12px);
   }
   .finder-tab {
+    flex: 1 1 auto;
     min-width: 0;
-    display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-rows: auto auto;
+    display: inline-flex;
     align-items: center;
-    column-gap: 9px;
-    padding: 11px 14px;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 18px;
     border: 1px solid transparent;
     border-radius: 13px;
-    color: var(--text);
-    transition: transform 0.2s, border-color 0.2s, background 0.2s;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s, background 0.2s, color 0.2s;
   }
-  .finder-tab.included {
+  .finder-tab:hover:not(:disabled) { border-color: rgba(168,85,247,0.3); color: var(--text); }
+  .finder-tab[aria-pressed="true"] {
     border-color: rgba(168,85,247,0.52);
     background: linear-gradient(135deg, rgba(124,58,237,0.24), rgba(236,72,153,0.18));
+    color: var(--text);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
   }
-  .finder-tab.disabled { color: var(--text-muted); opacity: 0.7; cursor: not-allowed; }
+  .finder-tab:disabled, .finder-tab.disabled { color: var(--text-muted); opacity: 0.6; cursor: not-allowed; }
   .finder-tab-icon {
-    grid-row: 1 / span 2;
     display: grid;
     place-items: center;
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-radius: 10px;
     background: rgba(124,58,237,0.15);
     color: var(--accent-light);
-    font-size: 15px;
+    font-size: 17px;
+    flex-shrink: 0;
   }
-  .finder-tab > span:not(.finder-tab-icon) { font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 0.92rem; line-height: 1.2; }
+  .finder-tab > span:not(.finder-tab-icon) { font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 1rem; line-height: 1.2; }
   .finder-tab small { color: var(--text-muted); font-size: 0.68rem; line-height: 1.2; }
   .upload-box {
     width: 100%; max-width: 600px;
@@ -1814,28 +1833,18 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     text-transform: uppercase;
     margin-bottom: 3px;
   }
-  .result-source-tabs {
+  .result-panel-heading {
     display: flex;
-    flex-wrap: wrap;
+    align-items: center;
     gap: 8px;
-    margin: -4px 0 20px;
+    margin: 0 0 16px;
+    color: var(--text);
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 800;
   }
-  .result-source-tab {
-    appearance: none;
-    padding: 8px 13px;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 0.78rem;
-    font-weight: 700;
-    font-family: inherit;
-    cursor: pointer;
-    transition: color 0.2s, border-color 0.2s, background 0.2s;
-  }
-  button.result-source-tab:hover { color: var(--text); border-color: var(--accent); background: rgba(124,58,237,0.09); }
-  .result-source-tab.active { color: #fff; border-color: var(--accent); background: rgba(124,58,237,0.18); }
-  .result-source-tab.disabled { opacity: 0.55; cursor: not-allowed; }
+  .result-panel-heading span { color: var(--text-muted); font-weight: 600; font-size: 0.9rem; }
+  .result-source-panel { margin-bottom: 36px; }
   .result-source-panel[hidden] { display: none; }
   .result-panel-notice {
     padding: 18px 20px;
@@ -1860,6 +1869,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     transition: transform 0.22s, border-color 0.22s, box-shadow 0.22s;
   }
   :global(.home-video-card:hover) { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 12px 34px var(--accent-glow); }
+  :global(.home-video-card[data-href]) { cursor: pointer; }
   :global(.home-video-media) { position: relative; display: block; aspect-ratio: 16 / 10; overflow: hidden; background: var(--surface-raised); }
   :global(.home-video-media img) { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.35s; }
   :global(.home-video-card:hover .home-video-media img) { transform: scale(1.035); }
