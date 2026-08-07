@@ -203,7 +203,16 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   {searchMode === 'all' && <div id="uploadBoxTurnstile"></div>}
 </div>
 
-{searchMode === 'all' && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>}
+{searchMode === 'all' && <script is:inline>
+  // See src/pages/contact.astro for why this ready-queue exists instead of an immediate call
+  // or a DOMContentLoaded listener — Cloudflare's async script isn't guaranteed to be loaded
+  // by either point, so onload=onTurnstileLoad (Cloudflare's own ready-signal) is what's used.
+  window.__turnstileReady = window.__turnstileReady || [];
+  window.onTurnstileLoad = window.onTurnstileLoad || function () {
+    window.__turnstileReady.splice(0).forEach(function (fn) { fn(); });
+  };
+</script>}
+{searchMode === 'all' && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstileLoad" async defer></script>}
 
 <!-- Results -->
 <div id="faceResults" class="face-results" style="display:none">
@@ -335,8 +344,12 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     if (!turnstile || !TURNSTILE_SITE_KEY || turnstileWidgetId) return;
     turnstileWidgetId = turnstile.render('#uploadBoxTurnstile', { sitekey: TURNSTILE_SITE_KEY });
   }
-  renderTurnstile();
-  document.addEventListener('DOMContentLoaded', renderTurnstile);
+  // The ready-queue script only exists at all when searchMode === 'all' (see the markup above)
+  // — renderTurnstile() itself also no-ops for 'onlyfans' mode, so this stays consistent.
+  if (searchMode === 'all') {
+    if ((window as typeof window & { turnstile?: any }).turnstile) renderTurnstile();
+    else (window as any).__turnstileReady.push(renderTurnstile);
+  }
 
   // Pagination state for face-search results
   let allFaceResults: Record<string, unknown>[] = [];

@@ -250,7 +250,16 @@
   </div>
 </div>
 
-<script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+<script is:inline>
+  // See src/pages/contact.astro for why this ready-queue exists instead of an immediate call
+  // or a DOMContentLoaded listener — Cloudflare's async script isn't guaranteed to be loaded
+  // by either point, so onload=onTurnstileLoad (Cloudflare's own ready-signal) is what's used.
+  window.__turnstileReady = window.__turnstileReady || [];
+  window.onTurnstileLoad = window.onTurnstileLoad || function () {
+    window.__turnstileReady.splice(0).forEach(function (fn) { fn(); });
+  };
+</script>
+<script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstileLoad" async defer></script>
 <script>
   type VideoResult = {
     videoId: number;
@@ -289,8 +298,8 @@
     if (!turnstile || !TURNSTILE_SITE_KEY || turnstileWidgetId) return;
     turnstileWidgetId = turnstile.render('#searchTurnstile', { sitekey: TURNSTILE_SITE_KEY });
   }
-  renderTurnstile();
-  document.addEventListener('DOMContentLoaded', renderTurnstile);
+  if ((window as typeof window & { turnstile?: any }).turnstile) renderTurnstile();
+  else (window as any).__turnstileReady.push(renderTurnstile);
 
   const form = document.querySelector<HTMLFormElement>('#videoSearchForm')!;
   const input = document.querySelector<HTMLInputElement>('#faceImage')!;

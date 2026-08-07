@@ -64,7 +64,19 @@ import Base from '../layouts/Base.astro';
   </article>
 </Base>
 
-<script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+<script is:inline>
+  // Cloudflare's script is async — it can finish loading before OR after this page's own
+  // scripts run, so neither an immediate call nor a DOMContentLoaded listener reliably catches
+  // it (DOMContentLoaded often fires before an async external script even finishes
+  // downloading). `onload=onTurnstileLoad` below is Cloudflare's own ready-signal: it's only
+  // called once `window.turnstile` genuinely exists, so anything queued here is guaranteed to
+  // run exactly once, whichever order things actually load in.
+  window.__turnstileReady = window.__turnstileReady || [];
+  window.onTurnstileLoad = window.onTurnstileLoad || function () {
+    window.__turnstileReady.splice(0).forEach(function (fn) { fn(); });
+  };
+</script>
+<script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstileLoad" async defer></script>
 <script>
   const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
 
@@ -78,8 +90,8 @@ import Base from '../layouts/Base.astro';
     if (!turnstile || !TURNSTILE_SITE_KEY || turnstileWidgetId) return;
     turnstileWidgetId = turnstile.render('#cTurnstile', { sitekey: TURNSTILE_SITE_KEY });
   }
-  renderTurnstile();
-  document.addEventListener('DOMContentLoaded', renderTurnstile);
+  if ((window as typeof window & { turnstile?: any }).turnstile) renderTurnstile();
+  else (window as any).__turnstileReady.push(renderTurnstile);
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
