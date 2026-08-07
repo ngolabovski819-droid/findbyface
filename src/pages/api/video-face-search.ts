@@ -5,6 +5,7 @@ import { existsSync } from 'node:fs';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { extname, join } from 'node:path';
+import { verifyTurnstileToken } from '../../lib/turnstile';
 
 export const prerender = false;
 
@@ -265,6 +266,20 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     form = await request.formData();
   } catch {
     return json({ ok: false, code: 'invalid_form', error: 'Could not read the uploaded image.' }, 400);
+  }
+
+  const TURNSTILE_SECRET_KEY = import.meta.env.TURNSTILE_SECRET_KEY;
+  if (TURNSTILE_SECRET_KEY) {
+    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
+    const turnstileToken = form.get('turnstileToken');
+    const humanVerified = await verifyTurnstileToken(
+      typeof turnstileToken === 'string' ? turnstileToken : null,
+      TURNSTILE_SECRET_KEY,
+      clientIp,
+    );
+    if (!humanVerified) {
+      return json({ ok: false, code: 'verification_failed', error: 'Verification failed. Please try again.' }, 400);
+    }
   }
 
   const image = form.get('image');

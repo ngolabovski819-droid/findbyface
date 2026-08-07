@@ -118,6 +118,8 @@
 
       <p class="form-error" id="formError" role="alert" hidden></p>
 
+      <div id="searchTurnstile"></div>
+
       <button class="search-button" id="searchButton" type="submit" disabled>
         <span class="button-idle">
           Search indexed videos
@@ -248,6 +250,7 @@
   </div>
 </div>
 
+<script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 <script>
   type VideoResult = {
     videoId: number;
@@ -278,6 +281,16 @@
     refresh_token?: string;
     expires_at?: number;
   };
+
+  const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
+  let turnstileWidgetId: string | undefined;
+  function renderTurnstile(): void {
+    const turnstile = (window as typeof window & { turnstile?: any }).turnstile;
+    if (!turnstile || !TURNSTILE_SITE_KEY || turnstileWidgetId) return;
+    turnstileWidgetId = turnstile.render('#searchTurnstile', { sitekey: TURNSTILE_SITE_KEY });
+  }
+  renderTurnstile();
+  document.addEventListener('DOMContentLoaded', renderTurnstile);
 
   const form = document.querySelector<HTMLFormElement>('#videoSearchForm')!;
   const input = document.querySelector<HTMLInputElement>('#faceImage')!;
@@ -723,6 +736,10 @@
     try {
       const body = new FormData();
       body.append('image', selectedFile);
+      const turnstileToken = turnstileWidgetId
+        ? (window as typeof window & { turnstile?: any }).turnstile?.getResponse(turnstileWidgetId)
+        : undefined;
+      if (turnstileToken) body.append('turnstileToken', turnstileToken);
       const headers: HeadersInit = {};
       if (user?.access_token) headers.Authorization = `Bearer ${user.access_token}`;
       const response = await fetch('/api/video-face-search', {
@@ -762,6 +779,7 @@
       window.clearInterval(labelTimer);
       window.clearTimeout(timeout);
       setSearching(false);
+      if (turnstileWidgetId) (window as typeof window & { turnstile?: any }).turnstile?.reset(turnstileWidgetId);
     }
   });
 

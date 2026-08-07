@@ -19,6 +19,7 @@
     "@tensorflow/tfjs-backend-wasm": "^4.22.0",
     "@vladmandic/face-api": "^1.7.15",
     "astro": "^6.1.5",
+    "botid": "^1.5.11",
     "jimp": "^1.6.1"
   }
 }

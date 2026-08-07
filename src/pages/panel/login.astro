@@ -19,16 +19,29 @@ import PanelLayout from '../../layouts/PanelLayout.astro';
           <input id="panelPassword" name="password" type="password" autocomplete="current-password" required />
         </label>
         <div class="login-message" id="loginMessage" role="alert" hidden></div>
+        <div id="loginTurnstile"></div>
         <button type="submit" id="loginSubmit">Log in</button>
       </form>
     </section>
   </main>
 </PanelLayout>
 
+<script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 <script>
+  const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
+
   const form = document.getElementById('panelLoginForm') as HTMLFormElement;
   const message = document.getElementById('loginMessage')!;
   const submitBtn = document.getElementById('loginSubmit') as HTMLButtonElement;
+
+  let turnstileWidgetId: string | undefined;
+  function renderTurnstile(): void {
+    const turnstile = (window as typeof window & { turnstile?: any }).turnstile;
+    if (!turnstile || !TURNSTILE_SITE_KEY || turnstileWidgetId) return;
+    turnstileWidgetId = turnstile.render('#loginTurnstile', { sitekey: TURNSTILE_SITE_KEY });
+  }
+  renderTurnstile();
+  document.addEventListener('DOMContentLoaded', renderTurnstile);
 
   function showError(text: string): void {
     message.textContent = text;
@@ -43,14 +56,18 @@ import PanelLayout from '../../layouts/PanelLayout.astro';
     try {
       const email = (document.getElementById('panelEmail') as HTMLInputElement).value.trim();
       const password = (document.getElementById('panelPassword') as HTMLInputElement).value;
+      const turnstileToken = turnstileWidgetId
+        ? (window as typeof window & { turnstile?: any }).turnstile?.getResponse(turnstileWidgetId)
+        : undefined;
       const response = await fetch('/api/panel/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, turnstileToken }),
       });
       const payload = await response.json();
       if (!response.ok) {
         showError(payload.error || 'Could not sign in.');
+        if (turnstileWidgetId) (window as typeof window & { turnstile?: any }).turnstile?.reset(turnstileWidgetId);
         return;
       }
       const host = window.location.hostname;

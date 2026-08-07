@@ -43,6 +43,13 @@ const canonicalUrl = canonical ?? new URL(Astro.url.pathname, 'https://findbyfac
     gtag('js', new Date());
     gtag('config', 'G-G3L4HTH15M');
   </script>
+  <script>
+    // Classifies the /api/click-token fetch (src/components/CreatorCardEnhancements.astro)
+    // as real-browser vs. scripted traffic — see src/pages/api/click-token.ts for how the
+    // verdict is used. Mounted here so it runs on every real page load.
+    import { initBotId } from 'botid/client/core';
+    initBotId({ protect: [{ path: '/api/click-token', method: 'GET' }] });
+  </script>
   <title>{title}</title>
   <meta name="description" content={description} />
   <link rel="canonical" href={canonicalUrl} />

@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { verifyTurnstileToken } from '../../lib/turnstile';
 
 interface ContactPayload {
   name?: unknown;
@@ -6,6 +7,7 @@ interface ContactPayload {
   subject?: unknown;
   message?: unknown;
   company?: unknown; // honeypot — must stay empty
+  turnstileToken?: unknown;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -26,6 +28,16 @@ export const POST: APIRoute = async ({ request }) => {
   // Honeypot: bots fill hidden fields. Pretend success, do nothing.
   if (clean(body.company, 100) !== '') {
     return json({ ok: true });
+  }
+
+  const TURNSTILE_SECRET_KEY = import.meta.env.TURNSTILE_SECRET_KEY;
+  if (TURNSTILE_SECRET_KEY) {
+    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
+    const turnstileToken = typeof body.turnstileToken === 'string' ? body.turnstileToken : null;
+    const humanVerified = await verifyTurnstileToken(turnstileToken, TURNSTILE_SECRET_KEY, clientIp);
+    if (!humanVerified) {
+      return json({ error: 'Verification failed. Please try again.' }, 400);
+    }
   }
 
   const name = clean(body.name, 120);

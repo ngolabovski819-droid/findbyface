@@ -19,6 +19,7 @@
 // modest, hurdle against the passive/naive scripts actually observed here, not a wall against
 // someone who deliberately reverse-engineers and replicates this exact call.
 import type { APIRoute } from 'astro';
+import { checkBotId } from 'botid/server';
 import { getSponsorOverride } from '../../config/sponsors';
 import { isBotUserAgent } from '../../lib/botDetection';
 import { mintClickToken } from '../../lib/clickToken';
@@ -39,7 +40,13 @@ export const GET: APIRoute = async ({ url, request }) => {
 
   const tokens: Record<string, string> = {};
 
-  if (!isBotUserAgent(userAgent) && CLICK_TOKEN_SECRET) {
+  // BotID classifies this exact fetch (initBotId in src/layouts/Base.astro protects this
+  // path) — a stronger signal than the UA regex below, since it catches scripts that spoof a
+  // real browser UA. Additive, not a replacement: Basic-tier BotID can false-positive on
+  // things like corporate proxies/VPNs, so either check withholding a token is enough.
+  const botIdVerification = await checkBotId();
+
+  if (!isBotUserAgent(userAgent) && !botIdVerification.isBot && CLICK_TOKEN_SECRET) {
     for (const username of usernames) {
       const override = getSponsorOverride(username);
       if (override?.clickTable || override?.linkOverride) {

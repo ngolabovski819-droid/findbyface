@@ -55,6 +55,8 @@ import Base from '../layouts/Base.astro';
           <input type="text" id="cCompany" name="company" tabindex="-1" autocomplete="off" />
         </div>
 
+        <div id="cTurnstile"></div>
+
         <button type="submit" class="submit-btn" id="submitBtn">Send message</button>
         <p class="form-status" id="formStatus" role="status" aria-live="polite"></p>
       </form>
@@ -62,10 +64,22 @@ import Base from '../layouts/Base.astro';
   </article>
 </Base>
 
+<script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 <script>
+  const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
+
   const form = document.getElementById('contactForm') as HTMLFormElement;
   const btn = document.getElementById('submitBtn') as HTMLButtonElement;
   const status = document.getElementById('formStatus') as HTMLParagraphElement;
+
+  let turnstileWidgetId: string | undefined;
+  function renderTurnstile(): void {
+    const turnstile = (window as typeof window & { turnstile?: any }).turnstile;
+    if (!turnstile || !TURNSTILE_SITE_KEY || turnstileWidgetId) return;
+    turnstileWidgetId = turnstile.render('#cTurnstile', { sitekey: TURNSTILE_SITE_KEY });
+  }
+  renderTurnstile();
+  document.addEventListener('DOMContentLoaded', renderTurnstile);
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -78,6 +92,9 @@ import Base from '../layouts/Base.astro';
       subject: (document.getElementById('cSubject') as HTMLInputElement).value,
       message: (document.getElementById('cMessage') as HTMLTextAreaElement).value,
       company: (document.getElementById('cCompany') as HTMLInputElement).value,
+      turnstileToken: turnstileWidgetId
+        ? (window as typeof window & { turnstile?: any }).turnstile?.getResponse(turnstileWidgetId)
+        : undefined,
     };
 
     if (!data.name.trim() || !data.email.trim() || data.message.trim().length < 10) {
@@ -105,6 +122,7 @@ import Base from '../layouts/Base.astro';
         status.textContent = out.error || 'Something went wrong. Please try again later.';
         status.classList.add('error');
       }
+      if (turnstileWidgetId) (window as typeof window & { turnstile?: any }).turnstile?.reset(turnstileWidgetId);
     } catch {
       status.textContent = 'Network error. Please check your connection and try again.';
       status.classList.add('error');

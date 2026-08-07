@@ -6,6 +6,7 @@
 // here just by knowing this URL exists.
 import type { APIRoute } from 'astro';
 import { setPanelCookies, toPanelSession } from '../../../lib/panelAuth';
+import { verifyTurnstileToken } from '../../../lib/turnstile';
 
 export const prerender = false;
 
@@ -27,14 +28,23 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   let email = '';
   let password = '';
+  let turnstileToken: string | undefined;
   try {
-    const body = await request.json() as { email?: string; password?: string };
+    const body = await request.json() as { email?: string; password?: string; turnstileToken?: string };
     email = body.email?.trim().toLowerCase() ?? '';
     password = body.password ?? '';
+    turnstileToken = body.turnstileToken;
   } catch {
     return json({ error: 'Invalid request.' }, 400);
   }
   if (!email || !password) return json({ error: 'Enter your email and password.' }, 400);
+
+  const TURNSTILE_SECRET_KEY = import.meta.env.TURNSTILE_SECRET_KEY;
+  if (TURNSTILE_SECRET_KEY) {
+    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
+    const humanVerified = await verifyTurnstileToken(turnstileToken, TURNSTILE_SECRET_KEY, clientIp);
+    if (!humanVerified) return json({ error: 'Verification failed. Please try again.' }, 400);
+  }
 
   const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
     method: 'POST',
