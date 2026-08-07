@@ -109,7 +109,7 @@ function parseUserAgent(ua: string | null): string {
           <thead>
             <tr>
               <th>When</th>{isAllModels && <th>Model</th>}<th>Site</th><th>Placement</th>{isAdmin && <th>Location</th>}<th>Referrer</th><th>User agent</th>
-              {isAdmin && <><th>Datacenter</th><th>Link verified</th><th>IP</th></>}
+              {isAdmin && <><th>Datacenter</th><th>Link verified</th><th>BotID</th><th>IP</th></>}
             </tr>
           </thead>
           <tbody>
@@ -130,6 +130,7 @@ function parseUserAgent(ua: string | null): string {
                       {entry.linkVerified === false && <span class="flag-warn">Unverified</span>}
                       {entry.linkVerified === null && '—'}
                     </td>
+                    <td>{entry.botIdFlagged ? <span class="flag-warn">Bot flagged</span> : '—'}</td>
                     <td class="ip-cell">{entry.ipAddress || '—'}</td>
                   </>
                 )}

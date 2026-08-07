@@ -19,10 +19,21 @@ function sign(payload: string, secret: string): string {
   return crypto.createHmac('sha256', secret).update(payload).digest('base64url');
 }
 
+export interface ClickTokenVerification {
+  valid: boolean;
+  /** The BotID verdict captured at mint time (src/pages/api/click-token.ts), embedded in the
+   * token payload so it survives to the click itself — see src/pages/go/[username].ts, which
+   * stores it as its own botid_flagged column, separate from `valid`/link_verified. null
+   * whenever the token is missing/invalid/expired: there's nothing trustworthy to decode. */
+  botIdFlagged: boolean | null;
+}
+
+const INVALID: ClickTokenVerification = { valid: false, botIdFlagged: null };
+
 // One token per (username, page render) — embed as `?t=<token>` on that creator's /go/ link.
-export function mintClickToken(username: string, secret: string): string {
+export function mintClickToken(username: string, secret: string, botIdFlagged: boolean): string {
   const expiresAt = Math.floor(Date.now() / 1000) + TOKEN_TTL_SECONDS;
-  const payload = `${username.toLowerCase()}:${expiresAt}`;
+  const payload = `${username.toLowerCase()}:${expiresAt}:${botIdFlagged ? '1' : '0'}`;
   const payloadB64 = Buffer.from(payload, 'utf8').toString('base64url');
   return `${payloadB64}.${sign(payloadB64, secret)}`;
 }
@@ -30,22 +41,23 @@ export function mintClickToken(username: string, secret: string): string {
 // Not constant-time — fine here, since this isn't an auth token guarding access to anything.
 // The worst case of a timing side-channel is someone learns a bit faster whether a click
 // "counts", not any actual account/data access.
-export function verifyClickToken(token: string | null | undefined, username: string, secret: string): boolean {
-  if (!token) return false;
+export function verifyClickToken(token: string | null | undefined, username: string, secret: string): ClickTokenVerification {
+  if (!token) return INVALID;
   const parts = token.split('.');
-  if (parts.length !== 2) return false;
+  if (parts.length !== 2) return INVALID;
   const [payloadB64, signature] = parts;
-  if (sign(payloadB64, secret) !== signature) return false;
+  if (sign(payloadB64, secret) !== signature) return INVALID;
 
   let payload: string;
   try {
     payload = Buffer.from(payloadB64, 'base64url').toString('utf8');
   } catch {
-    return false;
+    return INVALID;
   }
-  const [tokenUsername, expiresAtStr] = payload.split(':');
+  const [tokenUsername, expiresAtStr, botIdFlagStr] = payload.split(':');
   const expiresAt = Number(expiresAtStr);
-  if (!tokenUsername || !Number.isFinite(expiresAt)) return false;
-  if (tokenUsername !== username.toLowerCase()) return false;
-  return Math.floor(Date.now() / 1000) < expiresAt;
+  if (!tokenUsername || !Number.isFinite(expiresAt)) return INVALID;
+  if (tokenUsername !== username.toLowerCase()) return INVALID;
+  if (Math.floor(Date.now() / 1000) >= expiresAt) return INVALID;
+  return { valid: true, botIdFlagged: botIdFlagStr === '1' };
 }

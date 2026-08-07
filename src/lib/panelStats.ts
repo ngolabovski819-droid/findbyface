@@ -226,6 +226,11 @@ export interface ActivityEntry {
    * logged before these columns existed (a genuinely missing value, not a false negative). */
   isDatacenterIp: boolean | null;
   linkVerified: boolean | null;
+  /** Vercel BotID's verdict at click-token mint time (src/pages/api/click-token.ts), carried
+   * through the token itself — see src/lib/clickToken.ts. true = BotID classified that browser
+   * session as automated. null covers both "no click table has this column yet" and "no valid
+   * token was present on the click at all," same as linkVerified/isDatacenterIp above. */
+  botIdFlagged: boolean | null;
 }
 
 export interface ActivityLog {
@@ -244,7 +249,7 @@ const ACTIVITY_LOG_CAP = 2000;
 
 async function fetchAllRows(supabaseUrl: string, supabaseKey: string, source: NetworkClickSource, cap: number) {
   const params = new URLSearchParams({
-    select: `${source.timestampColumn},placement,referrer,user_agent,country,city,ip_address,is_datacenter_ip,link_verified`,
+    select: `${source.timestampColumn},placement,referrer,user_agent,country,city,ip_address,is_datacenter_ip,link_verified,botid_flagged`,
     order: `${source.timestampColumn}.desc`,
     limit: String(cap),
   });
@@ -262,6 +267,7 @@ async function fetchAllRows(supabaseUrl: string, supabaseKey: string, source: Ne
       ipAddress: (row.ip_address as string | null | undefined) ?? null,
       isDatacenterIp: (row.is_datacenter_ip as boolean | null | undefined) ?? null,
       linkVerified: (row.link_verified as boolean | null | undefined) ?? null,
+      botIdFlagged: (row.botid_flagged as boolean | null | undefined) ?? null,
     }));
     return { rows, hitCap: rows.length >= cap };
   } catch {
@@ -319,6 +325,7 @@ export async function getActivityLog(
         ipAddress: options.includeIp ? row.ipAddress : null,
         isDatacenterIp: options.includeSignals ? row.isDatacenterIp : null,
         linkVerified: options.includeSignals ? row.linkVerified : null,
+        botIdFlagged: options.includeSignals ? row.botIdFlagged : null,
       });
     }
   });

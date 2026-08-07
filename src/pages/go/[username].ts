@@ -73,11 +73,16 @@ export const GET: APIRoute = async ({ params, request }) => {
 
     // Proof this click's link came from a page rendered just now (src/lib/clickToken.ts,
     // minted in src/lib/sponsorOverrides.ts) — not a hard gate, see that file for why. Purely
-    // a reporting signal on the row for now.
+    // a reporting signal on the row for now. botIdFlagged rides along inside the same token
+    // (captured at mint time in src/pages/api/click-token.ts) and is stored as its own column
+    // — independent of linkVerified, since a click can be provably-real-render AND
+    // BotID-flagged at the same time, or neither, or either alone.
     const CLICK_TOKEN_SECRET = import.meta.env.CLICK_TOKEN_SECRET;
-    const linkVerified = CLICK_TOKEN_SECRET
+    const tokenVerification = CLICK_TOKEN_SECRET
       ? verifyClickToken(requestUrl.searchParams.get('t'), username, CLICK_TOKEN_SECRET)
-      : false;
+      : { valid: false, botIdFlagged: null };
+    const linkVerified = tokenVerification.valid;
+    const botIdFlagged = tokenVerification.botIdFlagged;
 
     const SUPABASE_URL = import.meta.env.SUPABASE_URL?.replace(/\/+$/, '');
     const SUPABASE_KEY = import.meta.env.SUPABASE_KEY;
@@ -112,6 +117,7 @@ export const GET: APIRoute = async ({ params, request }) => {
               ip_hash: ipHash,
               is_datacenter_ip: isDatacenter,
               link_verified: linkVerified,
+              botid_flagged: botIdFlagged,
               ip_address: clientIp,
               country: geo.country,
               city: geo.city,

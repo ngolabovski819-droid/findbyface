@@ -42,15 +42,17 @@ export const GET: APIRoute = async ({ url, request }) => {
 
   // BotID classifies this exact fetch (initBotId in src/layouts/Base.astro protects this
   // path) — a stronger signal than the UA regex below, since it catches scripts that spoof a
-  // real browser UA. Additive, not a replacement: Basic-tier BotID can false-positive on
-  // things like corporate proxies/VPNs, so either check withholding a token is enough.
+  // real browser UA. Doesn't withhold the token itself (Basic-tier BotID can false-positive on
+  // things like corporate proxies/VPNs — a real click still deserves to work) — instead the
+  // verdict rides along inside the token (src/lib/clickToken.ts) so it shows up as its own
+  // signal on the click row (botid_flagged) rather than silently suppressing minting.
   const botIdVerification = await checkBotId();
 
-  if (!isBotUserAgent(userAgent) && !botIdVerification.isBot && CLICK_TOKEN_SECRET) {
+  if (!isBotUserAgent(userAgent) && CLICK_TOKEN_SECRET) {
     for (const username of usernames) {
       const override = getSponsorOverride(username);
       if (override?.clickTable || override?.linkOverride) {
-        tokens[username.toLowerCase()] = mintClickToken(username, CLICK_TOKEN_SECRET);
+        tokens[username.toLowerCase()] = mintClickToken(username, CLICK_TOKEN_SECRET, botIdVerification.isBot);
       }
     }
   }
