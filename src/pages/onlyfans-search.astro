@@ -57,8 +57,13 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
     </div>
 
     <div class="search-layout">
-      <aside class="filters">
-        <h3 class="filters-title">Filters</h3>
+      <button class="filters-backdrop" id="filtersBackdrop" type="button" aria-label="Close filters" tabindex="-1"></button>
+
+      <aside class="filters" id="filtersPanel">
+        <div class="filters-title-row">
+          <h3 class="filters-title">Filters</h3>
+          <button class="filters-close-btn" id="filtersCloseBtn" type="button" aria-label="Close filters">×</button>
+        </div>
 
         <div class="filter-group">
           <label class="filter-label toggle-label">
@@ -103,7 +108,13 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
       </aside>
 
       <div class="results-area">
-        <p class="results-meta" id="resultsCount">Loading...</p>
+        <div class="results-top-bar">
+          <p class="results-meta" id="resultsCount">Loading...</p>
+          <button class="filters-toggle-btn" id="filtersToggleBtn" type="button" aria-expanded="false" aria-controls="filtersPanel">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="1.6" fill="currentColor" stroke="none"/><circle cx="16" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="10" cy="18" r="1.6" fill="currentColor" stroke="none"/></svg>
+            Filters
+          </button>
+        </div>
         <div class="results-grid" id="resultsGrid"></div>
         <div class="load-more-wrap" id="loadMoreWrap" style="display:none">
           <button class="load-more-btn" id="loadMoreBtn">Load More</button>
@@ -179,6 +190,28 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
   const loadMoreBtn    = document.getElementById('loadMoreBtn') as HTMLButtonElement;
   const applyBtn       = document.getElementById('applyBtn')!;
 
+  // ── Mobile filters drawer — desktop keeps the sticky sidebar untouched; these buttons
+  // only render (via CSS) under the 1000px breakpoint. ────────────────────────────────
+  const filtersPanel      = document.getElementById('filtersPanel')!;
+  const filtersBackdrop   = document.getElementById('filtersBackdrop')!;
+  const filtersToggleBtn  = document.getElementById('filtersToggleBtn') as HTMLButtonElement;
+  const filtersCloseBtn   = document.getElementById('filtersCloseBtn') as HTMLButtonElement;
+
+  function openFilters(): void {
+    filtersPanel.classList.add('filters-open');
+    filtersBackdrop.classList.add('filters-open');
+    filtersToggleBtn.setAttribute('aria-expanded', 'true');
+  }
+  function closeFilters(): void {
+    filtersPanel.classList.remove('filters-open');
+    filtersBackdrop.classList.remove('filters-open');
+    filtersToggleBtn.setAttribute('aria-expanded', 'false');
+  }
+  filtersToggleBtn.addEventListener('click', openFilters);
+  filtersCloseBtn.addEventListener('click', closeFilters);
+  filtersBackdrop.addEventListener('click', closeFilters);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeFilters(); });
+
   document.querySelectorAll('#priceOptions .pill').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('#priceOptions .pill').forEach(b => b.classList.remove('active'));
@@ -224,7 +257,8 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
     activeFilters.verified = verifiedToggle.checked ? 'true' : '';
     activeFilters.bundles  = bundlesToggle.checked ? 'true' : '';
     if (q) pushHistory(q);
-    closeDropdown();
+    dropdown.style.display = 'none';
+    closeFilters();
     fetchCreators(false);
   });
 
@@ -271,6 +305,7 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
     loadMoreBtn.disabled = true;
 
     const params = new URLSearchParams();
+    params.set('scope', 'onlyfans-search'); // pins the 3 sponsored creators — see src/config/placements.ts
     if (activeFilters.q)        params.set('q',        activeFilters.q);
     if (activeFilters.verified) params.set('verified',  activeFilters.verified);
     if (activeFilters.price)    params.set('price',     activeFilters.price);
@@ -491,7 +526,69 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
     top: 80px;
   }
 
-  .filters-title { font-size: 1rem; margin-bottom: 24px; }
+  .filters-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .filters-title { font-size: 1rem; margin-bottom: 0; }
+
+  .filters-close-btn, .filters-toggle-btn { display: none; }
+
+  .filters-close-btn {
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .filters-close-btn:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+
+  .filters-toggle-btn {
+    align-items: center;
+    gap: 7px;
+    padding: 9px 16px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .filters-toggle-btn:hover { border-color: var(--accent); }
+
+  .filters-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 499;
+    border: 0;
+    background: rgba(3, 3, 8, 0.7);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .filters-backdrop.filters-open { opacity: 1; pointer-events: auto; }
+
+  .results-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
   .filter-group { margin-bottom: 22px; }
 
   .filter-label {
@@ -549,7 +646,8 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
   }
   .apply-btn:hover { background: var(--accent-light); }
 
-  .results-meta { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
+  .results-top-bar { margin-bottom: 20px; }
+  .results-meta { color: var(--text-muted); font-size: 14px; }
 
   .results-grid {
     display: grid;
@@ -572,7 +670,29 @@ const sort     = Astro.url.searchParams.get('sort') ?? '';
 
   @media (max-width: 1000px) {
     .search-layout { grid-template-columns: 1fr; }
-    .filters { position: static; }
+
+    /* Off-canvas by default — .filters-open (toggled by filtersToggleBtn) slides it in.
+       Desktop never touches these rules, so the sticky-sidebar layout above is untouched. */
+    .filters {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 500;
+      width: min(320px, 86vw);
+      height: 100vh;
+      border-radius: 0;
+      overflow-y: auto;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      box-shadow: 24px 0 60px rgba(0,0,0,0.5);
+    }
+    .filters.filters-open { transform: translateX(0); }
+
+    .filters-close-btn { display: flex; }
+    .filters-toggle-btn { display: inline-flex; }
+    .filters-backdrop { display: block; }
+
     .results-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
   @media (max-width: 640px) {

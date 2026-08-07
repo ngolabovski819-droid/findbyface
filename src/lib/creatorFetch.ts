@@ -63,6 +63,11 @@ interface FetchOrganicParams {
   limit: number;
   offset: number;
   timeoutMs?: number;
+  /** Mirrors the plain-search filters in src/pages/api/search.ts — only 'onlyfans-search'
+   * scope actually sets these today; 'home'/'category:<slug>' never pass them. */
+  verified?: boolean;
+  bundles?: boolean;
+  price?: string;
 }
 
 interface FetchOrganicResult {
@@ -76,7 +81,7 @@ export async function fetchOrganicCreators(params: FetchOrganicParams): Promise<
   const { SUPABASE_URL, SUPABASE_KEY } = supabaseCreds();
   if (!SUPABASE_URL || !SUPABASE_KEY) return { rows: [], total: 0, failed: true };
 
-  const { termsOr, excludeUsernames, order, limit, offset, timeoutMs = 8000 } = params;
+  const { termsOr, excludeUsernames, order, limit, offset, timeoutMs = 8000, verified, bundles, price } = params;
   if (limit <= 0) return { rows: [], total: 0, failed: false };
 
   const qp = new URLSearchParams();
@@ -96,6 +101,11 @@ export async function fetchOrganicCreators(params: FetchOrganicParams): Promise<
   if (excludeUsernames && excludeUsernames.length) {
     qp.set('username', `not.in.(${excludeUsernames.join(',')})`);
   }
+  if (verified) qp.set('isverified', 'eq.true');
+  if (bundles) qp.set('bundle1_price', 'not.is.null');
+  if (price === '0') qp.set('subscribeprice', 'eq.0');
+  else if (price === '5') qp.set('subscribeprice', 'lte.5');
+  else if (price === '10') qp.set('subscribeprice', 'lte.10');
 
   const ctrl = new AbortController();
   const tId = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -172,6 +182,9 @@ export interface ResolvePlacementsParams {
   pageSize: number;
   termsOr?: string[];
   order?: string;
+  verified?: boolean;
+  bundles?: boolean;
+  price?: string;
 }
 
 export interface ResolvePlacementsResult {
@@ -184,7 +197,7 @@ export async function resolvePlacements(
   scope: string,
   params: ResolvePlacementsParams,
 ): Promise<ResolvePlacementsResult> {
-  const { page, pageSize, termsOr, order } = params;
+  const { page, pageSize, termsOr, order, verified, bundles, price } = params;
   const { pinned, excluded } = getPlacement(scope);
 
   const excludeUsernames = Array.from(new Set([...excluded, ...pinned.map(p => p.username)]));
@@ -199,11 +212,11 @@ export async function resolvePlacements(
   const organicOffset = windowStart - 1 - pinsBeforeWindow;
   const organicLimit = pageSize - pinsInWindow.length;
 
-  let organic = await fetchOrganicCreators({ termsOr, excludeUsernames, order, limit: organicLimit, offset: organicOffset });
+  let organic = await fetchOrganicCreators({ termsOr, excludeUsernames, order, limit: organicLimit, offset: organicOffset, verified, bundles, price });
 
   let usedFallback = false;
   if (termsOr && termsOr.length && organic.rows.length === 0) {
-    organic = await fetchOrganicCreators({ excludeUsernames, order, limit: organicLimit, offset: organicOffset });
+    organic = await fetchOrganicCreators({ excludeUsernames, order, limit: organicLimit, offset: organicOffset, verified, bundles, price });
     usedFallback = true;
   }
 

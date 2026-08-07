@@ -41,16 +41,24 @@ export const GET: APIRoute = async ({ url }) => {
     ? 'first_seen_at.desc.nullslast,favoritedcount.desc'
     : 'favoritedcount.desc,subscribeprice.asc';
 
-  // Pinning only ever activates for the fixed 'home' / 'category:<slug>' scopes that
-  // index.astro and categories/[slug].astro explicitly opt into — a bare free-text
-  // search (no scope param) always falls through to the plain query below untouched.
-  if (scope === 'home' || scope.startsWith('category:')) {
+  // Pinning only ever activates for the fixed 'home' / 'category:<slug>' / 'onlyfans-search'
+  // scopes that index.astro, categories/[slug].astro, and onlyfans-search.astro explicitly
+  // opt into — a bare free-text search (no scope param) always falls through to the plain
+  // query below untouched.
+  if (scope === 'home' || scope.startsWith('category:') || scope === 'onlyfans-search') {
     let termsOr: string[] | undefined;
     if (scope.startsWith('category:')) {
       const category = slugToCategory(scope.slice('category:'.length));
       if (category) termsOr = category.terms;
+    } else if (scope === 'onlyfans-search' && q) {
+      termsOr = q.split(/[|,]/).map(s => s.trim()).filter(Boolean);
     }
-    const { creators: placedCreators, total } = await resolvePlacements(scope, { page, pageSize, order, termsOr });
+    const { creators: placedCreators, total } = await resolvePlacements(scope, {
+      page, pageSize, order, termsOr,
+      verified: verified === 'true',
+      bundles: bundles === 'true',
+      price,
+    });
     const creators = applySponsorOverrides(placedCreators);
     const hasMore = (page - 1) * pageSize + creators.length < total;
     const data = { creators, total, hasMore };

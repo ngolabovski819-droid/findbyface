@@ -45,6 +45,17 @@ export const placements: Record<string, Placement> = {
     ],
     excluded: [],
   },
+  // The main results grid on /onlyfans-search.astro (src/pages/api/search.ts, scope=
+  // 'onlyfans-search') — distinct from 'search-dropdown' above, which only covers that
+  // page's recent-searches dropdown, not its actual result cards.
+  'onlyfans-search': {
+    pinned: [
+      { username: 'emilylopz', position: 1 },
+      { username: 'rocketreynaxo', position: 2 },
+      { username: 'hannazuki', position: 3 },
+    ],
+    excluded: [],
+  },
 };
 
 export function getPlacement(scope: string): Placement {
