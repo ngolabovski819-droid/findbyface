@@ -5,9 +5,64 @@ import { resolveClientSlug } from '../../lib/panelAuth';
 import { getPanelClient, DEFAULT_CLIENT_SLUG } from '../../config/panelClients';
 
 const session = Astro.locals.panelUser!;
+const isAdmin = session.role === 'admin';
 const clientSlug = resolveClientSlug(session, Astro.url.searchParams.get('client'), DEFAULT_CLIENT_SLUG);
 const client = getPanelClient(clientSlug);
-const log = await getActivityLog(clientSlug);
+const log = await getActivityLog(clientSlug, { includeIp: isAdmin, includeLocation: isAdmin });
+
+function formatLocation(city: string | null, country: string | null): string {
+  if (city && country) return `${city}, ${country}`;
+  return city || country || '—';
+}
+
+// A raw UA string is 100-150+ characters — never going to fit a table cell. Parses out just
+// "Browser X on OS Y" for the visible cell; the full raw string stays available via the title
+// attribute (native hover tooltip) for when the exact detail matters — e.g. spotting a
+// specific outdated-OS pattern repeating suspiciously across many rows, the way the
+// iPhone-OS-13_2_3 bot cluster got caught. Best-effort, not exhaustive — falls back to
+// "Browser" / "OS" rather than guessing wrong on an unrecognized string.
+function parseUserAgent(ua: string | null): string {
+  if (!ua) return '—';
+
+  let os = 'OS';
+  const ios = ua.match(/(?:iPhone|iPad|iPod).*?OS (\d+[_.]\d+)/);
+  const android = ua.match(/Android (\d+(?:\.\d+)?)/);
+  const mac = ua.match(/Mac OS X (\d+[_.]\d+)/);
+  if (ios) os = `iOS ${ios[1].replace('_', '.')}`;
+  else if (android) os = `Android ${android[1]}`;
+  else if (/Windows NT 10\.0/.test(ua)) os = 'Windows 10/11';
+  else if (/Windows NT/.test(ua)) os = 'Windows';
+  else if (mac) os = `macOS ${mac[1].replace('_', '.')}`;
+  else if (/Linux/.test(ua)) os = 'Linux';
+
+  let browser = 'Browser';
+  const crIos = ua.match(/CriOS\/(\d+)/);
+  const fxIos = ua.match(/FxiOS\/(\d+)/);
+  const edgIos = ua.match(/EdgiOS\/(\d+)/);
+  const gsa = ua.match(/GSA\/([\d.]+)/);
+  const edg = ua.match(/Edg\/(\d+)/);
+  const opr = ua.match(/OPR\/(\d+)/);
+  const samsung = ua.match(/SamsungBrowser\/(\d+)/);
+  const oem = ua.match(/(HeyTapBrowser|MiuiBrowser|YaBrowser)\/(\d+)/);
+  const firefox = ua.match(/Firefox\/(\d+)/);
+  const chrome = ua.match(/Chrome\/(\d+)/);
+  const safari = ua.match(/Version\/(\d+).*Safari/);
+
+  if (crIos) browser = `Chrome ${crIos[1]}`;
+  else if (fxIos) browser = `Firefox ${fxIos[1]}`;
+  else if (edgIos) browser = `Edge ${edgIos[1]}`;
+  else if (gsa) browser = `Google App ${gsa[1]}`;
+  else if (edg) browser = `Edge ${edg[1]}`;
+  else if (opr) browser = `Opera ${opr[1]}`;
+  else if (samsung) browser = `Samsung Internet ${samsung[1]}`;
+  else if (oem) browser = `${oem[1]} ${oem[2]}`;
+  else if (firefox) browser = `Firefox ${firefox[1]}`;
+  else if (safari && !chrome) browser = `Safari ${safari[1]}`;
+  else if (chrome) browser = `Chrome ${chrome[1]}`;
+  else if (/Safari/.test(ua)) browser = 'Safari';
+
+  return `${browser} on ${os}`;
+}
 ---
 <PanelLayout title={`Activity log — ${client?.displayName ?? 'Client'} — findbyface Panel`} accountName={session.name} role={session.role} clientSlugs={session.clientSlugs} activeModelSlug={clientSlug} nav>
   <div class="activity-page">
@@ -25,7 +80,7 @@ const log = await getActivityLog(clientSlug);
     {log.entries.length > 0 && (
       <label class="log-search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m15.5 15.5 5 5"></path></svg>
-        <input type="search" id="logFilter" placeholder="Filter by site or placement" autocomplete="off" />
+        <input type="search" id="logFilter" placeholder={isAdmin ? "Filter by site, placement, or location" : "Filter by site or placement"} autocomplete="off" />
         <span id="logFilterCount"></span>
       </label>
     )}
@@ -33,14 +88,22 @@ const log = await getActivityLog(clientSlug);
     <article class="panel-card">
       {log.entries.length ? (
         <table class="recent-table" id="logTable">
-          <thead><tr><th>When</th><th>Site</th><th>Placement</th><th>Referrer</th></tr></thead>
+          <thead>
+            <tr>
+              <th>When</th><th>Site</th><th>Placement</th>{isAdmin && <th>Location</th>}<th>Referrer</th><th>User agent</th>
+              {isAdmin && <th>IP</th>}
+            </tr>
+          </thead>
           <tbody>
             {log.entries.map((entry) => (
-              <tr data-filter-text={`${entry.site} ${entry.placementLabel}`.toLowerCase()}>
+              <tr data-filter-text={`${entry.site} ${entry.placementLabel} ${entry.city ?? ''} ${entry.country ?? ''}`.toLowerCase()}>
                 <td>{new Date(entry.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
                 <td>{entry.site}</td>
                 <td>{entry.placementLabel}</td>
+                {isAdmin && <td>{formatLocation(entry.city, entry.country)}</td>}
                 <td class="referrer-cell">{entry.referrer || '—'}</td>
+                <td class="ua-cell" title={entry.userAgent || ''}>{parseUserAgent(entry.userAgent)}</td>
+                {isAdmin && <td class="ip-cell">{entry.ipAddress || '—'}</td>}
               </tr>
             ))}
           </tbody>
@@ -72,8 +135,14 @@ const log = await getActivityLog(clientSlug);
 </script>
 
 <style>
-  .activity-page { width: min(1100px, calc(100% - 40px)); margin: 0 auto; padding: 40px 0 80px; }
-  .referrer-cell { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .activity-page { width: min(1300px, calc(100% - 40px)); margin: 0 auto; padding: 40px 0 80px; }
+  .referrer-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ua-cell {
+    max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    color: var(--text-muted); font-size: 0.74rem; cursor: help;
+    border-bottom: 1px dotted var(--border); /* hints there's more on hover, without a full underline */
+  }
+  .ip-cell { font: 500 0.78rem 'SF Mono', 'Consolas', monospace; color: var(--text-muted); white-space: nowrap; }
   .log-search {
     display: flex; align-items: center; gap: 9px; width: min(320px, 100%);
     margin-bottom: 14px; padding: 0 12px; height: 40px;

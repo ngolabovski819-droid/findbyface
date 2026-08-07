@@ -36,7 +36,7 @@ const ROW_CAP = 5000;
 const DAY_MS = 86_400_000;
 
 function humanizePlacement(placement: string | null): string {
-  if (!placement) return 'Direct / unknown';
+  if (!placement) return 'Direct';
   if (placement === 'home') return 'Homepage';
   if (placement === 'search') return 'Search results';
   if (placement === 'dashboard') return 'Dashboard';
@@ -194,6 +194,16 @@ export interface ActivityEntry {
   site: string;
   placementLabel: string;
   referrer: string | null;
+  userAgent: string | null;
+  /** Only populated when getActivityLog() is called with includeLocation: true (admin sessions
+   * only, see src/pages/panel/activity.astro). null for every guest/client session, regardless
+   * of what's actually stored in the table. */
+  country: string | null;
+  city: string | null;
+  /** Raw client IP — only ever populated when getActivityLog() is called with includeIp:
+   * true (admin sessions only, see src/pages/panel/activity.astro). null for every guest/
+   * client session, regardless of what's actually stored in the table. */
+  ipAddress: string | null;
 }
 
 export interface ActivityLog {
@@ -212,7 +222,7 @@ const ACTIVITY_LOG_CAP = 2000;
 
 async function fetchAllRows(supabaseUrl: string, supabaseKey: string, source: NetworkClickSource, cap: number) {
   const params = new URLSearchParams({
-    select: `${source.timestampColumn},placement,referrer`,
+    select: `${source.timestampColumn},placement,referrer,user_agent,country,city,ip_address`,
     order: `${source.timestampColumn}.desc`,
     limit: String(cap),
   });
@@ -224,6 +234,10 @@ async function fetchAllRows(supabaseUrl: string, supabaseKey: string, source: Ne
       createdAt: String(row[source.timestampColumn]),
       placement: (row.placement as string | null | undefined) ?? null,
       referrer: (row.referrer as string | null | undefined) ?? null,
+      userAgent: (row.user_agent as string | null | undefined) ?? null,
+      country: (row.country as string | null | undefined) ?? null,
+      city: (row.city as string | null | undefined) ?? null,
+      ipAddress: (row.ip_address as string | null | undefined) ?? null,
     }));
     return { rows, hitCap: rows.length >= cap };
   } catch {
@@ -237,7 +251,12 @@ async function fetchAllRows(supabaseUrl: string, supabaseKey: string, source: Ne
 // is correct (fetching each source's own top-K guarantees the true global top-K is among
 // them — a row outside its own source's top-K can't be in the global top-K either, since that
 // source alone already supplies K rows newer than it).
-export async function getActivityLog(clientSlug: string, limit = ACTIVITY_LOG_CAP): Promise<ActivityLog> {
+// includeIp/includeLocation: true only for admin sessions (src/pages/panel/activity.astro) — a
+// guest/client login always gets ipAddress/country/city: null on every entry, regardless of
+// what's in the table. Fetched from the DB either way (cheap, same query) but deliberately
+// stripped right here rather than left to the page template to remember not to render it, so
+// the raw IP/location never leaves this function in a non-admin response.
+export async function getActivityLog(clientSlug: string, options: { includeIp?: boolean; includeLocation?: boolean } = {}, limit = ACTIVITY_LOG_CAP): Promise<ActivityLog> {
   const sources = resolveSources(clientSlug);
   if (!sources.length) return { entries: [], hasClickTable: false, truncated: false };
 
@@ -255,7 +274,16 @@ export async function getActivityLog(clientSlug: string, limit = ACTIVITY_LOG_CA
     if (result.hitCap) anySourceHitCap = true;
     const site = sources[i].site;
     for (const row of result.rows) {
-      all.push({ createdAt: row.createdAt, site, placementLabel: humanizePlacement(row.placement), referrer: row.referrer });
+      all.push({
+        createdAt: row.createdAt,
+        site,
+        placementLabel: humanizePlacement(row.placement),
+        referrer: row.referrer,
+        userAgent: row.userAgent,
+        country: options.includeLocation ? row.country : null,
+        city: options.includeLocation ? row.city : null,
+        ipAddress: options.includeIp ? row.ipAddress : null,
+      });
     }
   });
 

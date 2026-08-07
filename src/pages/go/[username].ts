@@ -1,10 +1,15 @@
 // Click-tracking redirect for sponsored creators. Looks up the sponsor override for
-// `username`, logs a click (timestamp/user_agent/referrer/placement/salted-IP-hash) when a
-// click table is configured, the request isn't a bot/crawler (src/lib/botDetection.ts), and
-// the same IP hasn't already hit this exact link several times in the last few seconds
-// (src/lib/clickIntegrity.ts) — then redirects to the real destination either way. Route every
-// sponsored card/CTA link through this — never link straight to the destination for a creator
-// with a linkOverride or clickTable configured.
+// `username`, logs a click (timestamp/user_agent/referrer/placement/salted-IP-hash/raw IP/
+// country/city) when a click table is configured, the request isn't a bot/crawler
+// (src/lib/botDetection.ts), and the same IP hasn't already hit this exact link several times
+// in the last few seconds (src/lib/clickIntegrity.ts) — then redirects to the real destination
+// either way. Route every sponsored card/CTA link through this — never link straight to the
+// destination for a creator with a linkOverride or clickTable configured.
+//
+// The raw ip_address column exists only for admin-panel fraud investigation ("did the same
+// visitor click this repeatedly") — src/lib/panelStats.ts gates it on session.role === 'admin'
+// and it must never be exposed to a guest/client login. country/city come free from Vercel's
+// edge geolocation headers (no third-party service) and are shown to every panel role.
 //
 // GOTCHA: never link here with rel="noreferrer" — it stops the browser from sending a
 // Referer to this route, silently zeroing placement data even for internal traffic. Use
@@ -21,7 +26,7 @@
 import type { APIRoute } from 'astro';
 import { getSponsorOverride } from '../../config/sponsors';
 import { isBotUserAgent } from '../../lib/botDetection';
-import { extractClientIp, hashIp, isDatacenterIp, isRateLimited } from '../../lib/clickIntegrity';
+import { extractClientIp, hashIp, isDatacenterIp, isRateLimited, extractGeo } from '../../lib/clickIntegrity';
 import { verifyClickToken } from '../../lib/clickToken';
 
 function derivePlacement(referer: string | null, ownHost: string): string | null {
@@ -64,6 +69,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     const CLICK_IP_SALT = import.meta.env.CLICK_IP_SALT;
     const ipHash = clientIp && CLICK_IP_SALT ? hashIp(clientIp, CLICK_IP_SALT) : null;
     const isDatacenter = isDatacenterIp(clientIp);
+    const geo = extractGeo(request.headers);
 
     // Proof this click's link came from a page rendered just now (src/lib/clickToken.ts,
     // minted in src/lib/sponsorOverrides.ts) — not a hard gate, see that file for why. Purely
@@ -106,6 +112,9 @@ export const GET: APIRoute = async ({ params, request }) => {
               ip_hash: ipHash,
               is_datacenter_ip: isDatacenter,
               link_verified: linkVerified,
+              ip_address: clientIp,
+              country: geo.country,
+              city: geo.city,
             }),
           });
         }
