@@ -200,7 +200,10 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   </div>
 
   <p class="upload-error" id="uploadError" style="display:none"></p>
+  {searchMode === 'all' && <div id="uploadBoxTurnstile"></div>}
 </div>
+
+{searchMode === 'all' && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>}
 
 <!-- Results -->
 <div id="faceResults" class="face-results" style="display:none">
@@ -320,6 +323,20 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   const searchMode = document.getElementById('onlyfans-finder')?.dataset.searchMode === 'onlyfans'
     ? 'onlyfans'
     : 'all';
+
+  // Only the 'all' mode (homepage) calls /api/video-face-search — see searchPornstarIndex().
+  // 'onlyfans' mode (the dedicated OnlyFans finder page) never hits that endpoint, so it
+  // never renders this widget or loads Cloudflare's script (see the markup above).
+  const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
+  let turnstileWidgetId: string | undefined;
+  function renderTurnstile(): void {
+    if (searchMode !== 'all') return;
+    const turnstile = (window as typeof window & { turnstile?: any }).turnstile;
+    if (!turnstile || !TURNSTILE_SITE_KEY || turnstileWidgetId) return;
+    turnstileWidgetId = turnstile.render('#uploadBoxTurnstile', { sitekey: TURNSTILE_SITE_KEY });
+  }
+  renderTurnstile();
+  document.addEventListener('DOMContentLoaded', renderTurnstile);
 
   // Pagination state for face-search results
   let allFaceResults: Record<string, unknown>[] = [];
@@ -628,6 +645,10 @@ if (SUPABASE_URL && SUPABASE_KEY) {
     try {
       const body = new FormData();
       body.append('image', file);
+      const turnstileToken = turnstileWidgetId
+        ? (window as typeof window & { turnstile?: any }).turnstile?.getResponse(turnstileWidgetId)
+        : undefined;
+      if (turnstileToken) body.append('turnstileToken', turnstileToken);
       const headers: HeadersInit = {};
       const token = storedAccessToken();
       if (token) headers.Authorization = `Bearer ${token}`;
@@ -655,6 +676,7 @@ if (SUPABASE_URL && SUPABASE_KEY) {
       };
     } finally {
       window.clearTimeout(timeout);
+      if (turnstileWidgetId) (window as typeof window & { turnstile?: any }).turnstile?.reset(turnstileWidgetId);
     }
   }
 
