@@ -1,3 +1,12 @@
+---
+import { getRouletteAvatars } from '../lib/rouletteAvatars';
+
+const rouletteSrcs = await getRouletteAvatars(
+  import.meta.env.SUPABASE_URL?.replace(/\/+$/, ''),
+  import.meta.env.SUPABASE_KEY,
+);
+---
+
 <section class="video-search" aria-labelledby="video-search-heading">
   <div class="hero-search-layout">
     <div class="hero-copy">
@@ -82,6 +91,63 @@
         </div>
       </label>
 
+      <div class="scanning-state" id="scanningState">
+        <div class="scan-stage">
+          <div class="scanning-img-box">
+            <img id="scanningImg" alt="Your photo being analyzed" />
+            <div class="scan-line"></div>
+            <span class="scan-bracket tl"></span>
+            <span class="scan-bracket tr"></span>
+            <span class="scan-bracket bl"></span>
+            <span class="scan-bracket br"></span>
+            <span class="scan-tag">Your photo</span>
+          </div>
+          <div class="scan-connector">
+            <span class="connector-core"></span>
+            <span class="connector-spark"></span>
+          </div>
+          <div class="face-roulette" id="faceRoulette" aria-hidden="true">
+            {rouletteSrcs.length > 0
+              ? (
+                  <div
+                    class="roulette-strip"
+                    style={`height:${rouletteSrcs.length * 100}%;animation:roulette-scroll ${Math.max(2, rouletteSrcs.length * 0.11).toFixed(2)}s steps(${rouletteSrcs.length}) infinite;`}
+                  >
+                    {rouletteSrcs.map((src) => (
+                      <img
+                        src={src}
+                        class="roulette-face"
+                        loading="eager"
+                        decoding="async"
+                        referrerpolicy="no-referrer"
+                        alt=""
+                      />
+                    ))}
+                  </div>
+                )
+              : <div class="roulette-placeholder"></div>}
+            <span class="roulette-ring"></span>
+            <span class="scan-tag">Matching…</span>
+          </div>
+        </div>
+
+        <p class="scanning-title">Searching indexed videos</p>
+        <p class="scanning-sub" id="scanningSub">Loading face detection model…</p>
+
+        <div class="progress-track">
+          <div class="progress-fill"></div>
+        </div>
+
+        <p class="scan-counter" id="scanCounter">Compared with <strong>0</strong> indexed faces</p>
+
+        <div class="scan-steps" id="scanSteps">
+          <span class="scan-step active" data-step="0"><i class="step-mark"></i>Detecting face</span>
+          <span class="scan-step" data-step="1"><i class="step-mark"></i>Mapping landmarks</span>
+          <span class="scan-step" data-step="2"><i class="step-mark"></i>Searching indexed frames</span>
+          <span class="scan-step" data-step="3"><i class="step-mark"></i>Ranking matches</span>
+        </div>
+      </div>
+
       <div class="photo-guidance" aria-label="Photo guidance">
         <span>
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -121,16 +187,10 @@
       <div id="searchTurnstile"></div>
 
       <button class="search-button" id="searchButton" type="submit" disabled>
-        <span class="button-idle">
-          Search indexed videos
-          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-            <path d="M4 10h12M11.5 5.5 16 10l-4.5 4.5" />
-          </svg>
-        </span>
-        <span class="button-loading" hidden>
-          <span class="spinner"></span>
-          <span id="loadingLabel">Loading face model…</span>
-        </span>
+        Search indexed videos
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M4 10h12M11.5 5.5 16 10l-4.5 4.5" />
+        </svg>
       </button>
     </form>
   </div>
@@ -310,9 +370,8 @@
   const fileName = document.querySelector<HTMLElement>('#fileName')!;
   const searchButton = document.querySelector<HTMLButtonElement>('#searchButton')!;
   const formError = document.querySelector<HTMLElement>('#formError')!;
-  const idleContent = searchButton.querySelector<HTMLElement>('.button-idle')!;
-  const loadingContent = searchButton.querySelector<HTMLElement>('.button-loading')!;
-  const loadingLabel = document.querySelector<HTMLElement>('#loadingLabel')!;
+  const scanningImg = document.querySelector<HTMLImageElement>('#scanningImg')!;
+  const scanningSub = document.querySelector<HTMLElement>('#scanningSub')!;
   const resultsSection = document.querySelector<HTMLElement>('#resultsSection')!;
   const resultsTitle = document.querySelector<HTMLElement>('#resultsTitle')!;
   const searchMeta = document.querySelector<HTMLElement>('#searchMeta')!;
@@ -703,12 +762,59 @@
 
   loadMore.addEventListener('click', renderNextResultsPage);
 
+  // ── Scanning visual FX (staged steps + live counter) — mirrors UploadBox.astro's, since
+  // the homepage's version of this search flow already had it and this page didn't.
+  let _scanFX: { stepTimer?: number; counterRAF?: number } = {};
+
+  function startScanFX(): void {
+    stopScanFX();
+
+    const steps = Array.from(document.querySelectorAll('#scanSteps .scan-step')) as HTMLElement[];
+    let si = 0;
+    steps.forEach((s, i) => {
+      s.classList.toggle('active', i === 0);
+      s.classList.remove('done');
+    });
+    _scanFX.stepTimer = window.setInterval(() => {
+      if (si < steps.length - 1) si++;
+      steps.forEach((s, i) => {
+        s.classList.toggle('active', i === si);
+        s.classList.toggle('done', i < si);
+      });
+    }, 1500);
+
+    const counterEl = document.getElementById('scanCounter')?.querySelector('strong') as HTMLElement | null;
+    if (counterEl) {
+      const target = 2_413_000 + Math.floor(Math.random() * 90000);
+      const start = performance.now();
+      const dur = 6500;
+      const tick = (now: number) => {
+        const t = Math.min((now - start) / dur, 1);
+        const eased = 1 - Math.pow(1 - t, 3);
+        counterEl.textContent = Math.floor(eased * target).toLocaleString();
+        if (t < 1) _scanFX.counterRAF = requestAnimationFrame(tick);
+      };
+      _scanFX.counterRAF = requestAnimationFrame(tick);
+    }
+  }
+
+  function stopScanFX(): void {
+    if (_scanFX.stepTimer) clearInterval(_scanFX.stepTimer);
+    if (_scanFX.counterRAF) cancelAnimationFrame(_scanFX.counterRAF);
+    _scanFX = {};
+  }
+
   function setSearching(value: boolean): void {
     searching = value;
     input.disabled = value;
     searchButton.disabled = value || !selectedFile;
-    idleContent.hidden = value;
-    loadingContent.hidden = !value;
+    form.classList.toggle('is-scanning', value);
+    if (value) {
+      scanningImg.src = imagePreview.src;
+      startScanFX();
+    } else {
+      stopScanFX();
+    }
   }
 
   form.addEventListener('submit', async (event) => {
@@ -729,15 +835,15 @@
     resultsSection.hidden = true;
 
     const labels = [
-      'Loading face model…',
+      'Loading face detection model…',
       'Creating face embedding…',
       'Searching indexed frames…',
     ];
     let labelIndex = 0;
-    loadingLabel.textContent = labels[0];
+    scanningSub.textContent = labels[0];
     const labelTimer = window.setInterval(() => {
       labelIndex = Math.min(labelIndex + 1, labels.length - 1);
-      loadingLabel.textContent = labels[labelIndex];
+      scanningSub.textContent = labels[labelIndex];
     }, 1800);
 
     const controller = new AbortController();
@@ -1265,21 +1371,14 @@
     box-shadow: none;
   }
 
-  .button-idle,
-  .button-loading {
+  .search-button {
     display: inline-flex;
-    min-width: 0;
     align-items: center;
     justify-content: center;
     gap: 10px;
   }
 
-  .button-idle[hidden],
-  .button-loading[hidden] {
-    display: none;
-  }
-
-  .button-idle svg {
+  .search-button svg {
     width: 19px;
     stroke: currentColor;
     stroke-width: 1.8;
@@ -1287,17 +1386,214 @@
     stroke-linejoin: round;
   }
 
-  .spinner {
-    width: 17px;
-    height: 17px;
-    border: 2px solid rgba(255, 255, 255, 0.35);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 0.75s linear infinite;
+  /* While a search is running, the drop-zone/guidance/button give way to the scanning
+     visual below — same idle/scanning split UploadBox.astro uses on the homepage. */
+  #videoSearchForm.is-scanning .drop-zone,
+  #videoSearchForm.is-scanning .photo-guidance,
+  #videoSearchForm.is-scanning .usage-note,
+  #videoSearchForm.is-scanning .search-access-note,
+  #videoSearchForm.is-scanning #searchTurnstile,
+  #videoSearchForm.is-scanning .search-button {
+    display: none;
   }
 
-  @keyframes spin {
-    to { transform: rotate(360deg); }
+  .scanning-state { display: none; }
+  #videoSearchForm.is-scanning .scanning-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 4px 8px;
+    gap: 14px;
+    text-align: center;
+  }
+
+  .scan-stage {
+    display: flex; align-items: center; justify-content: center;
+    gap: 14px; margin-bottom: 6px;
+  }
+
+  .scanning-img-box {
+    position: relative; width: 150px; height: 200px;
+    border-radius: 14px; overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: 0 0 0 1px rgba(124,58,237,0.15), 0 10px 30px rgba(0,0,0,0.4);
+  }
+  .scanning-img-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  .scan-line {
+    position: absolute; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, transparent, #00d4ff, #7c3aed, #00d4ff, transparent);
+    box-shadow: 0 0 12px #00d4ff, 0 0 24px rgba(0,212,255,0.4);
+    animation: video-scan-line 1.8s ease-in-out infinite; top: 0;
+  }
+  @keyframes video-scan-line {
+    0%   { top: 0%; opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+
+  .scan-bracket {
+    position: absolute; width: 22px; height: 22px; pointer-events: none;
+    border: 2px solid var(--accent-light);
+    filter: drop-shadow(0 0 4px var(--accent-glow));
+    animation: video-bracket-pulse 1.6s ease-in-out infinite;
+  }
+  .scan-bracket.tl { top: 10px; left: 10px; border-right: none; border-bottom: none; border-radius: 6px 0 0 0; }
+  .scan-bracket.tr { top: 10px; right: 10px; border-left: none; border-bottom: none; border-radius: 0 6px 0 0; }
+  .scan-bracket.bl { bottom: 10px; left: 10px; border-right: none; border-top: none; border-radius: 0 0 0 6px; }
+  .scan-bracket.br { bottom: 10px; right: 10px; border-left: none; border-top: none; border-radius: 0 0 6px 0; }
+  @keyframes video-bracket-pulse {
+    0%, 100% { opacity: 0.45; transform: scale(1); }
+    50%      { opacity: 1; transform: scale(1.06); }
+  }
+
+  .scan-tag {
+    position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+    font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+    color: #fff; background: rgba(10,10,15,0.7);
+    padding: 2px 9px; border-radius: 999px; backdrop-filter: blur(4px);
+    white-space: nowrap;
+  }
+
+  .scan-connector {
+    position: relative; width: 44px; height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-pink));
+    border-radius: 2px; opacity: 0.5;
+  }
+  .scan-connector .connector-spark {
+    position: absolute; top: 50%; left: 0; width: 8px; height: 8px;
+    margin-top: -4px; border-radius: 50%;
+    background: #fff; box-shadow: 0 0 10px 2px var(--accent-light);
+    animation: video-spark-travel 1.1s linear infinite;
+  }
+  @keyframes video-spark-travel {
+    from { left: 0; opacity: 0; }
+    15%  { opacity: 1; }
+    85%  { opacity: 1; }
+    to   { left: 100%; opacity: 0; }
+  }
+
+  .face-roulette {
+    position: relative; width: 150px; height: 200px;
+    border-radius: 14px; overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--surface-raised);
+    box-shadow: 0 0 0 1px rgba(236,72,153,0.18), 0 10px 30px rgba(0,0,0,0.4);
+  }
+  .roulette-strip {
+    position: absolute; top: 0; left: 0; width: 100%;
+    display: flex; flex-direction: column;
+    will-change: transform;
+  }
+  .roulette-face {
+    width: 100%; height: 200px; object-fit: cover; display: block; flex: 0 0 auto;
+  }
+  @keyframes roulette-scroll {
+    from { transform: translateY(0); }
+    to   { transform: translateY(-100%); }
+  }
+  .roulette-placeholder {
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--surface-raised), var(--surface));
+  }
+  .roulette-ring {
+    position: absolute; inset: 0; pointer-events: none;
+    border: 2px solid transparent;
+    border-radius: 14px;
+    box-shadow: inset 0 0 22px rgba(236,72,153,0.25);
+    animation: video-ring-flicker 0.22s steps(2) infinite;
+  }
+  @keyframes video-ring-flicker {
+    0% { box-shadow: inset 0 0 22px rgba(236,72,153,0.25); }
+    100% { box-shadow: inset 0 0 28px rgba(124,58,237,0.35); }
+  }
+
+  .scanning-title {
+    font-size: 1.15rem; font-weight: 800; letter-spacing: 0.01em;
+    background: linear-gradient(135deg, var(--accent-light), var(--accent-pink));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .scanning-title::after {
+    content: ''; display: inline-block;
+    animation: video-ellipsis 1.4s steps(4) infinite;
+    width: 1em; text-align: left;
+  }
+  @keyframes video-ellipsis {
+    0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; }
+  }
+  .scanning-sub { color: var(--text-muted); font-size: 13px; max-width: 400px; line-height: 1.5; }
+
+  .progress-track {
+    width: 100%; max-width: 340px; height: 6px;
+    background: rgba(255,255,255,0.08); border-radius: 3px;
+    overflow: hidden; position: relative;
+  }
+  .progress-fill {
+    position: absolute; left: 0;
+    height: 100%; width: 42%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-pink), var(--accent));
+    background-size: 200% 100%;
+    border-radius: 3px;
+    will-change: transform;
+    animation: video-progress-bounce 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate,
+               video-progress-shimmer 1.2s linear infinite;
+  }
+  @keyframes video-progress-bounce {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(238%); }
+  }
+  @keyframes video-progress-shimmer {
+    from { background-position: 0% 0; }
+    to   { background-position: 200% 0; }
+  }
+
+  .scan-counter {
+    font-size: 12px; color: var(--text-muted); letter-spacing: 0.02em;
+  }
+  .scan-counter strong {
+    color: var(--accent-light); font-variant-numeric: tabular-nums;
+    font-weight: 700;
+  }
+
+  .scan-steps {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 8px 14px; margin-top: 4px; max-width: 420px;
+  }
+  .scan-step {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text-muted);
+    opacity: 0.5; transition: opacity 0.3s, color 0.3s;
+  }
+  .step-mark {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid currentColor; position: relative; flex-shrink: 0;
+    transition: all 0.3s;
+  }
+  .scan-step.active { opacity: 1; color: var(--accent-light); }
+  .scan-step.active .step-mark {
+    border-color: var(--accent-light);
+    box-shadow: 0 0 0 0 var(--accent-glow);
+    animation: video-step-ping 1.2s ease-out infinite;
+  }
+  @keyframes video-step-ping {
+    0%   { box-shadow: 0 0 0 0 rgba(168,85,247,0.5); }
+    100% { box-shadow: 0 0 0 8px rgba(168,85,247,0); }
+  }
+  .scan-step.done { opacity: 1; color: var(--success); }
+  .scan-step.done .step-mark {
+    border-color: var(--success); background: var(--success);
+  }
+  .scan-step.done .step-mark::after {
+    content: ''; position: absolute;
+    left: 3px; top: 0px; width: 4px; height: 8px;
+    border: solid #0a0a0f; border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+  @media (max-width: 480px) {
+    .scanning-img-box, .face-roulette { width: 122px; height: 162px; }
+    .scan-connector { width: 28px; }
   }
 
   .validation-card {
@@ -1820,8 +2116,7 @@
       font-size: 10px;
     }
 
-    .button-idle,
-    .button-loading {
+    .search-button {
       max-width: 100%;
       gap: 7px;
       font-size: 12px;
