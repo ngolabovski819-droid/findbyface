@@ -15,10 +15,15 @@ export async function verifyTurnstileToken(
 
   try {
     const res = await fetch(SITEVERIFY_URL, { method: 'POST', body });
-    if (!res.ok) return false;
-    const data = (await res.json()) as { success?: boolean };
+    if (!res.ok) {
+      console.error('[turnstile] siteverify HTTP', res.status, await res.text().catch(() => ''));
+      return false;
+    }
+    const data = (await res.json()) as { success?: boolean; 'error-codes'?: string[]; hostname?: string };
+    if (data.success !== true) console.error('[turnstile] siteverify rejected:', JSON.stringify(data));
     return data.success === true;
-  } catch {
+  } catch (err) {
+    console.error('[turnstile] siteverify fetch threw:', err);
     return false;
   }
 }
