@@ -22,11 +22,18 @@ interface Props {
   // uses that nav link to see every configured client instead of a personal subset.
   clientSlugs?: string[];
   activeModelSlug?: string;
+  // Explicit override for the switcher tabs, used only by pages that need admin-facing
+  // switching (currently just Activity log, which also offers an "All models" tab) — when set,
+  // this replaces the guest-derived modelOptions entirely rather than being merged with them,
+  // so a page opts into exactly the tab set it supports instead of every /panel/* page having
+  // to understand slugs like 'all' that only Activity log's data layer knows how to resolve.
+  modelSwitcherOptions?: ModelOption[];
 }
-const { title, accountName, role, nav = false, clientSlugs = [], activeModelSlug } = Astro.props;
+const { title, accountName, role, nav = false, clientSlugs = [], activeModelSlug, modelSwitcherOptions } = Astro.props;
 
 const base = panelBase(Astro.request);
-const modelOptions: ModelOption[] = modelOptionsFor(clientSlugs);
+const modelOptions: ModelOption[] = modelSwitcherOptions ?? modelOptionsFor(clientSlugs);
+const showModelSwitcher = modelSwitcherOptions ? modelOptions.length > 1 : (role === 'guest' && modelOptions.length > 1);
 // Always visible, even for a single-campaign guest — the Campaigns page is a reasonable place
 // to land regardless of count, and staying visible means the link doesn't shift around in the
 // nav the moment a second campaign gets added. campaigns.astro's own route guard still governs
@@ -119,7 +126,7 @@ const publicPath = `${base}${innerPath}`;
             <span><span class="brand-find">find</span><span class="brand-byface">byface</span></span>
           </span>
         </header>
-        {role === 'guest' && modelOptions.length > 1 && (
+        {showModelSwitcher && (
           <div class="model-switcher">
             <span class="model-switcher-label">Viewing</span>
             <div class="model-tabs" role="tablist">

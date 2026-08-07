@@ -2,17 +2,35 @@
 import PanelLayout from '../../layouts/PanelLayout.astro';
 import { getActivityLog } from '../../lib/panelStats';
 import { resolveClientSlug } from '../../lib/panelAuth';
-import { getPanelClient, DEFAULT_CLIENT_SLUG } from '../../config/panelClients';
+import { getPanelClient, panelClients, DEFAULT_CLIENT_SLUG, type ModelOption } from '../../config/panelClients';
 
 const session = Astro.locals.panelUser!;
 const isAdmin = session.role === 'admin';
+// 'all' is an admin-only sentinel meaning "every configured client, combined" — resolveClientSlug
+// lets it through unvalidated for admin (it doesn't check against panelClients), and a guest can
+// never land on it since resolveClientSlug only ever returns a slug from their own clientSlugs.
 const clientSlug = resolveClientSlug(session, Astro.url.searchParams.get('client'), DEFAULT_CLIENT_SLUG);
-const client = getPanelClient(clientSlug);
-const log = await getActivityLog(clientSlug, { includeIp: isAdmin, includeLocation: isAdmin });
+const isAllModels = isAdmin && clientSlug === 'all';
+const client = isAllModels ? null : getPanelClient(clientSlug);
+
+// Admin gets an explicit switcher (every configured client + "All models") since, unlike a
+// guest, admin isn't scoped to a fixed clientSlugs list for PanelLayout to derive tabs from.
+const adminSwitcherOptions: ModelOption[] | undefined = isAdmin
+  ? [{ slug: 'all', displayName: 'All models' }, ...Object.entries(panelClients).map(([slug, c]) => ({ slug, displayName: c.displayName }))]
+  : undefined;
+
+const log = await getActivityLog(
+  isAllModels ? Object.keys(panelClients) : clientSlug,
+  { includeIp: isAdmin, includeLocation: isAdmin, includeSignals: isAdmin },
+);
 
 function formatLocation(city: string | null, country: string | null): string {
   if (city && country) return `${city}, ${country}`;
   return city || country || '—';
+}
+
+function modelDisplayName(slug: string): string {
+  return getPanelClient(slug)?.displayName ?? slug;
 }
 
 // A raw UA string is 100-150+ characters — never going to fit a table cell. Parses out just
@@ -64,14 +82,14 @@ function parseUserAgent(ua: string | null): string {
   return `${browser} on ${os}`;
 }
 ---
-<PanelLayout title={`Activity log — ${client?.displayName ?? 'Client'} — findbyface Panel`} accountName={session.name} role={session.role} clientSlugs={session.clientSlugs} activeModelSlug={clientSlug} nav>
+<PanelLayout title={`Activity log — ${isAllModels ? 'All models' : (client?.displayName ?? 'Client')} — findbyface Panel`} accountName={session.name} role={session.role} clientSlugs={session.clientSlugs} activeModelSlug={clientSlug} modelSwitcherOptions={adminSwitcherOptions} nav>
   <div class="activity-page">
     <header class="page-head">
       <span class="kicker">Since day one</span>
       <h1>Activity log</h1>
       <p>
         {log.entries.length
-          ? `Every recorded click across the network, most recent first — ${log.entries.length.toLocaleString()} total.`
+          ? `Every recorded click ${isAllModels ? 'across every model and site' : 'across the network'}, most recent first — ${log.entries.length.toLocaleString()} total.`
           : "Nothing recorded yet — this fills in once your link starts getting traffic."}
         {log.truncated && ' Showing the most recent history; a very high-volume source may have older rows beyond this.'}
       </p>
@@ -90,20 +108,31 @@ function parseUserAgent(ua: string | null): string {
         <table class="recent-table" id="logTable">
           <thead>
             <tr>
-              <th>When</th><th>Site</th><th>Placement</th>{isAdmin && <th>Location</th>}<th>Referrer</th><th>User agent</th>
-              {isAdmin && <th>IP</th>}
+              <th>When</th>{isAllModels && <th>Model</th>}<th>Site</th><th>Placement</th>{isAdmin && <th>Location</th>}<th>Referrer</th><th>User agent</th>
+              {isAdmin && <><th>Datacenter</th><th>Link verified</th><th>IP</th></>}
             </tr>
           </thead>
           <tbody>
             {log.entries.map((entry) => (
-              <tr data-filter-text={`${entry.site} ${entry.placementLabel} ${entry.city ?? ''} ${entry.country ?? ''}`.toLowerCase()}>
+              <tr data-filter-text={`${entry.site} ${modelDisplayName(entry.model)} ${entry.placementLabel} ${entry.city ?? ''} ${entry.country ?? ''}`.toLowerCase()}>
                 <td>{new Date(entry.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
+                {isAllModels && <td>{modelDisplayName(entry.model)}</td>}
                 <td>{entry.site}</td>
                 <td>{entry.placementLabel}</td>
                 {isAdmin && <td>{formatLocation(entry.city, entry.country)}</td>}
                 <td class="referrer-cell">{entry.referrer || '—'}</td>
                 <td class="ua-cell" title={entry.userAgent || ''}>{parseUserAgent(entry.userAgent)}</td>
-                {isAdmin && <td class="ip-cell">{entry.ipAddress || '—'}</td>}
+                {isAdmin && (
+                  <>
+                    <td>{entry.isDatacenterIp ? <span class="flag-warn">Datacenter</span> : '—'}</td>
+                    <td>
+                      {entry.linkVerified === true && <span class="flag-ok">Verified</span>}
+                      {entry.linkVerified === false && <span class="flag-warn">Unverified</span>}
+                      {entry.linkVerified === null && '—'}
+                    </td>
+                    <td class="ip-cell">{entry.ipAddress || '—'}</td>
+                  </>
+                )}
               </tr>
             ))}
           </tbody>
@@ -143,6 +172,12 @@ function parseUserAgent(ua: string | null): string {
     border-bottom: 1px dotted var(--border); /* hints there's more on hover, without a full underline */
   }
   .ip-cell { font: 500 0.78rem 'SF Mono', 'Consolas', monospace; color: var(--text-muted); white-space: nowrap; }
+  .flag-ok, .flag-warn {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 0.68rem; font-weight: 700; white-space: nowrap;
+  }
+  .flag-ok { background: rgba(34,197,94,0.14); color: var(--success); }
+  .flag-warn { background: rgba(248,113,113,0.14); color: #f87171; }
   .log-search {
     display: flex; align-items: center; gap: 9px; width: min(320px, 100%);
     margin-bottom: 14px; padding: 0 12px; height: 40px;

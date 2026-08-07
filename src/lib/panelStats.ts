@@ -58,6 +58,17 @@ function resolveSources(clientSlug: string): NetworkClickSource[] {
   return sources;
 }
 
+interface TaggedSource extends NetworkClickSource {
+  clientSlug: string;
+}
+
+// Same per-site source resolution as resolveSources(), just fanned out across every requested
+// slug and tagged with which one each source came from — powers getActivityLog()'s "more than
+// one model at once" mode (an admin's "all models" activity view).
+function resolveSourcesForSlugs(clientSlugs: string[]): TaggedSource[] {
+  return clientSlugs.flatMap((slug) => resolveSources(slug).map((source) => ({ ...source, clientSlug: slug })));
+}
+
 function emptyStats(clientSlug: string, hasClickTable: boolean): PanelStats {
   return { clientSlug, hasClickTable, allTimeTotal: 0, last7: 0, prev7: 0, last30: 0, prev30: 0, daily: [], placements: [], bySite: [], recent: [] };
 }
@@ -192,6 +203,12 @@ export async function getPanelStats(clientSlug: string, recentLimit = 25): Promi
 export interface ActivityEntry {
   createdAt: string;
   site: string;
+  /** The panelClients slug this row belongs to (e.g. 'rocketreynaxo') — always populated, not
+   * gated, since a caller can only ever ask for slugs it's already allowed to see (a guest's
+   * own clientSlugs, or every configured client for an admin's "all models" view). Only
+   * actually rendered as a column when more than one model was requested at once — see
+   * src/pages/panel/activity.astro. */
+  model: string;
   placementLabel: string;
   referrer: string | null;
   userAgent: string | null;
@@ -204,6 +221,11 @@ export interface ActivityEntry {
    * true (admin sessions only, see src/pages/panel/activity.astro). null for every guest/
    * client session, regardless of what's actually stored in the table. */
   ipAddress: string | null;
+  /** Bot-management signals — only populated when getActivityLog() is called with
+   * includeSignals: true (admin sessions only). null both for non-admin sessions AND for rows
+   * logged before these columns existed (a genuinely missing value, not a false negative). */
+  isDatacenterIp: boolean | null;
+  linkVerified: boolean | null;
 }
 
 export interface ActivityLog {
@@ -222,7 +244,7 @@ const ACTIVITY_LOG_CAP = 2000;
 
 async function fetchAllRows(supabaseUrl: string, supabaseKey: string, source: NetworkClickSource, cap: number) {
   const params = new URLSearchParams({
-    select: `${source.timestampColumn},placement,referrer,user_agent,country,city,ip_address`,
+    select: `${source.timestampColumn},placement,referrer,user_agent,country,city,ip_address,is_datacenter_ip,link_verified`,
     order: `${source.timestampColumn}.desc`,
     limit: String(cap),
   });
@@ -238,6 +260,8 @@ async function fetchAllRows(supabaseUrl: string, supabaseKey: string, source: Ne
       country: (row.country as string | null | undefined) ?? null,
       city: (row.city as string | null | undefined) ?? null,
       ipAddress: (row.ip_address as string | null | undefined) ?? null,
+      isDatacenterIp: (row.is_datacenter_ip as boolean | null | undefined) ?? null,
+      linkVerified: (row.link_verified as boolean | null | undefined) ?? null,
     }));
     return { rows, hitCap: rows.length >= cap };
   } catch {
@@ -251,13 +275,22 @@ async function fetchAllRows(supabaseUrl: string, supabaseKey: string, source: Ne
 // is correct (fetching each source's own top-K guarantees the true global top-K is among
 // them — a row outside its own source's top-K can't be in the global top-K either, since that
 // source alone already supplies K rows newer than it).
-// includeIp/includeLocation: true only for admin sessions (src/pages/panel/activity.astro) — a
-// guest/client login always gets ipAddress/country/city: null on every entry, regardless of
-// what's in the table. Fetched from the DB either way (cheap, same query) but deliberately
-// stripped right here rather than left to the page template to remember not to render it, so
-// the raw IP/location never leaves this function in a non-admin response.
-export async function getActivityLog(clientSlug: string, options: { includeIp?: boolean; includeLocation?: boolean } = {}, limit = ACTIVITY_LOG_CAP): Promise<ActivityLog> {
-  const sources = resolveSources(clientSlug);
+// clientSlug accepts either one slug (the normal guest/single-model case) or an array (an
+// admin's "all models" view) — sources from every requested slug are fetched in parallel and
+// merged into one globally-sorted log, each entry tagged with which model it came from.
+//
+// includeIp/includeLocation/includeSignals: true only for admin sessions
+// (src/pages/panel/activity.astro) — a guest/client login always gets ipAddress/country/city/
+// isDatacenterIp/linkVerified: null on every entry, regardless of what's in the table. Fetched
+// from the DB either way (cheap, same query) but deliberately stripped right here rather than
+// left to the page template to remember not to render it, so none of it ever leaves this
+// function in a non-admin response.
+export async function getActivityLog(
+  clientSlug: string | string[],
+  options: { includeIp?: boolean; includeLocation?: boolean; includeSignals?: boolean } = {},
+  limit = ACTIVITY_LOG_CAP,
+): Promise<ActivityLog> {
+  const sources = resolveSourcesForSlugs(Array.isArray(clientSlug) ? clientSlug : [clientSlug]);
   if (!sources.length) return { entries: [], hasClickTable: false, truncated: false };
 
   const SUPABASE_URL = import.meta.env.SUPABASE_URL?.replace(/\/+$/, '');
@@ -272,17 +305,20 @@ export async function getActivityLog(clientSlug: string, options: { includeIp?: 
   settled.forEach((result, i) => {
     if (!result) return;
     if (result.hitCap) anySourceHitCap = true;
-    const site = sources[i].site;
+    const { site, clientSlug: model } = sources[i];
     for (const row of result.rows) {
       all.push({
         createdAt: row.createdAt,
         site,
+        model,
         placementLabel: humanizePlacement(row.placement),
         referrer: row.referrer,
         userAgent: row.userAgent,
         country: options.includeLocation ? row.country : null,
         city: options.includeLocation ? row.city : null,
         ipAddress: options.includeIp ? row.ipAddress : null,
+        isDatacenterIp: options.includeSignals ? row.isDatacenterIp : null,
+        linkVerified: options.includeSignals ? row.linkVerified : null,
       });
     }
   });
