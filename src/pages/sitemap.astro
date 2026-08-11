@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import { categories } from '../config/categories';
 
 const canonical = 'https://findbyface.org/sitemap/';
 const title = 'HTML Sitemap | findbyface';
@@ -27,53 +28,9 @@ const legalLinks = [
   { href: '/dmca/', label: 'DMCA' },
 ];
 
-const categorySlugs = [
-  'top',
-  'blonde',
-  'milf',
-  'trans',
-  'feet',
-  'bbw',
-  'latina',
-  'asian',
-  'ebony',
-  'redhead',
-  'petite',
-  'free',
-  'models',
-  'white-girls',
-  'blowjob',
-  'footjob',
-  'indian',
-  'korean',
-  'japanese',
-  'greek',
-  'serbian',
-  'bondage',
-  'bbc',
-  'anal',
-  'small-tits',
-  'big-tits',
-  'mature',
-  'hentai',
-  'old-young',
-  'threesome',
-  'bukkake',
-  'celebrity',
-  'strap-on',
-  'italian',
-  'dutch',
-  'rough-sex',
-  'solo-male',
-  'pussy-licking',
-];
-
-const categoryLinks = categorySlugs.map((slug) => ({
-  href: `/categories/${slug}/`,
-  label: slug
-    .split('-')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' '),
+const categoryLinks = categories.map((c) => ({
+  href: `/categories/${c.slug}/`,
+  label: c.label,
 }));
 ---
 

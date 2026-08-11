@@ -6,12 +6,14 @@ interface Props {
   title: string;
   description?: string;
   canonical?: string;
+  robots?: string;
 }
 
 const {
   title,
   description = 'Find lookalike OnlyFans creators instantly. Upload a photo and discover matching creators in seconds.',
   canonical,
+  robots,
 } = Astro.props;
 
 const canonicalUrl = canonical ?? new URL(Astro.url.pathname, 'https://findbyface.org').href;
@@ -52,6 +54,7 @@ const canonicalUrl = canonical ?? new URL(Astro.url.pathname, 'https://findbyfac
   </script>
   <title>{title}</title>
   <meta name="description" content={description} />
+  {robots && <meta name="robots" content={robots} />}
   <link rel="canonical" href={canonicalUrl} />
 
   <!-- Open Graph -->
