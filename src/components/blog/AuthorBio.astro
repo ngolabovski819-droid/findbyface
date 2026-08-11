@@ -1,0 +1,77 @@
+---
+import AuthorAvatar from './AuthorAvatar.astro';
+
+interface Props {
+  name?: string;
+  bio?: string;
+  avatarSrc?: string;
+}
+
+const {
+  name = 'Nick',
+  bio = 'Writes about online safety, visual search, and how to use face search responsibly. Been building findbyface\'s search tools since day one.',
+  avatarSrc,
+} = Astro.props;
+---
+
+<section class="author-bio" aria-label="About the author">
+  {avatarSrc ? (
+    <img class="author-avatar" src={avatarSrc} alt={name} width="64" height="64" loading="lazy" />
+  ) : (
+    <AuthorAvatar size={64} />
+  )}
+  <div class="author-copy">
+    <p class="author-kicker">Written by</p>
+    <p class="author-name">{name}</p>
+    <p class="author-desc">{bio}</p>
+  </div>
+</section>
+
+<style>
+  .author-bio {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin: 44px 0 0;
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+  }
+
+  .author-avatar {
+    flex: 0 0 64px;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .author-kicker {
+    margin: 0 0 2px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-light);
+  }
+
+  .author-name {
+    margin: 0 0 6px;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 800;
+    font-size: 1.05rem;
+    color: var(--text);
+  }
+
+  .author-desc {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.86rem;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 480px) {
+    .author-bio { flex-direction: column; align-items: center; text-align: center; }
+  }
+</style>

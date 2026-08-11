@@ -1,0 +1,67 @@
+---
+interface Props {
+  url: string;
+  title: string;
+}
+
+const { url, title } = Astro.props;
+---
+
+<button type="button" class="share-cta" data-share-url={url} data-share-title={title}>
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.6" x2="15.4" y2="6.4"/><line x1="8.6" y1="13.4" x2="15.4" y2="17.6"/></svg>
+  <span data-share-label>Share</span>
+</button>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('.share-cta').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const url = btn.dataset.shareUrl || '';
+      const title = btn.dataset.shareTitle || '';
+      const label = btn.querySelector<HTMLElement>('[data-share-label]');
+      if (navigator.share) {
+        try {
+          await navigator.share({ url, title });
+          return;
+        } catch {
+          // User cancelled the native share sheet — nothing else to do.
+          return;
+        }
+      }
+      try {
+        await navigator.clipboard.writeText(url);
+        if (label) {
+          const original = label.textContent;
+          label.textContent = 'Link copied!';
+          setTimeout(() => { label.textContent = original; }, 1600);
+        }
+      } catch {
+        // Clipboard permission denied — nothing to fall back to silently.
+      }
+    });
+  });
+</script>
+
+<style>
+  .share-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(10, 10, 15, 0.55);
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  }
+
+  .share-cta:hover {
+    border-color: rgba(255, 255, 255, 0.45);
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    transform: translateY(-1px);
+  }
+</style>

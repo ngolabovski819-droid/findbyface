@@ -1,0 +1,143 @@
+---
+interface Reference {
+  title: string;
+  description: string;
+  url: string;
+}
+
+interface Props {
+  references?: Reference[];
+  disclaimer?: string;
+}
+
+const {
+  references = [],
+  disclaimer = 'This article is for general information and safety awareness only. It is not legal, investigative, or law-enforcement advice. Similarity results from any face-search tool are a ranking signal, not proof of identity — always verify independently before acting on them.',
+} = Astro.props;
+
+const hasReferences = references.length > 0;
+---
+
+<section class="ref-disc" aria-label="References and disclaimer">
+  <div class="ref-disc-tabs" role="tablist">
+    {hasReferences && (
+      <button type="button" class="ref-tab active" data-tab="references" role="tab" aria-selected="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        References
+      </button>
+    )}
+    <button type="button" class={`ref-tab${hasReferences ? '' : ' active'}`} data-tab="disclaimer" role="tab" aria-selected={hasReferences ? 'false' : 'true'}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Disclaimer
+    </button>
+  </div>
+
+  {hasReferences && (
+    <div class="ref-panel" data-panel="references">
+      <ol>
+        {references.map((ref) => (
+          <li>
+            <p class="ref-title">{ref.title}</p>
+            <p class="ref-desc">{ref.description}</p>
+            <a href={ref.url} target="_blank" rel="noopener noreferrer">{ref.url.replace(/^https?:\/\//, '')}</a>
+          </li>
+        ))}
+      </ol>
+    </div>
+  )}
+
+  <div class="ref-panel" data-panel="disclaimer" style={hasReferences ? 'display:none' : ''}>
+    <p>{disclaimer}</p>
+  </div>
+</section>
+
+<script>
+  document.querySelectorAll('.ref-disc').forEach((widget) => {
+    const tabs = widget.querySelectorAll<HTMLButtonElement>('.ref-tab');
+    const panels = widget.querySelectorAll<HTMLElement>('.ref-panel');
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        tabs.forEach((t) => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        const target = tab.dataset.tab;
+        panels.forEach((panel) => {
+          panel.style.display = panel.dataset.panel === target ? '' : 'none';
+        });
+      });
+    });
+  });
+</script>
+
+<style>
+  .ref-disc {
+    margin: 40px 0 0;
+    padding: 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+  }
+
+  .ref-disc-tabs {
+    display: inline-flex;
+    gap: 6px;
+    padding: 4px;
+    margin-bottom: 18px;
+    border-radius: 999px;
+    background: var(--surface-2, rgba(255, 255, 255, 0.04));
+    border: 1px solid var(--border);
+  }
+
+  .ref-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .ref-tab.active {
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    color: #fff;
+  }
+
+  .ref-panel ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 18px;
+    counter-reset: ref-counter;
+  }
+
+  .ref-panel li { counter-increment: ref-counter; padding-left: 30px; position: relative; }
+
+  .ref-panel li::before {
+    content: counter(ref-counter) '.';
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: var(--accent-light);
+    font-weight: 800;
+    font-size: 0.9rem;
+  }
+
+  .ref-title { margin: 0 0 4px; font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 0.92rem; color: var(--text); }
+  .ref-desc { margin: 0 0 6px; color: var(--text-muted); font-size: 0.85rem; line-height: 1.6; }
+  .ref-panel a { color: var(--accent-light); font-size: 0.8rem; font-style: italic; }
+
+  .ref-panel[data-panel='disclaimer'] p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.86rem;
+    line-height: 1.7;
+  }
+</style>

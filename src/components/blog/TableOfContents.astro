@@ -1,0 +1,109 @@
+---
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  headings: Heading[];
+}
+
+const { headings } = Astro.props;
+const items = headings.filter((h) => h.depth === 2 || h.depth === 3);
+---
+
+{items.length > 0 && (
+  <details class="toc">
+    <summary>
+      <span class="toc-label">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        Table of contents
+      </span>
+      <svg class="toc-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <nav aria-label="Table of contents">
+      <ol>
+        {items.map((h) => (
+          <li class={h.depth === 3 ? 'toc-sub' : ''}>
+            <a href={`#${h.slug}`}>{h.text}</a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  </details>
+)}
+
+<style>
+  .toc {
+    margin: 28px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    padding: 4px 22px;
+  }
+
+  .toc summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 0;
+    cursor: pointer;
+    list-style: none;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text);
+  }
+
+  .toc summary::-webkit-details-marker { display: none; }
+
+  .toc-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--accent-light);
+  }
+
+  .toc-chevron { color: var(--text-muted); transition: transform 0.2s; flex-shrink: 0; }
+  .toc[open] .toc-chevron { transform: rotate(180deg); }
+
+  .toc nav { padding: 2px 0 18px; }
+
+  .toc ol {
+    margin: 0;
+    padding: 0 0 0 4px;
+    list-style: none;
+    display: grid;
+    gap: 9px;
+    counter-reset: toc-counter;
+  }
+
+  .toc li {
+    counter-increment: toc-counter;
+    font-size: 0.9rem;
+  }
+
+  .toc li::before {
+    content: counter(toc-counter) '.';
+    color: var(--accent-light);
+    font-weight: 700;
+    margin-right: 8px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .toc li.toc-sub {
+    margin-left: 22px;
+    font-size: 0.85rem;
+  }
+
+  .toc li.toc-sub::before { content: '–'; }
+
+  .toc a {
+    color: var(--text-muted);
+    transition: color 0.15s;
+  }
+
+  .toc a:hover { color: var(--accent-light); }
+</style>
