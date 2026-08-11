@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { Resend } from 'resend';
 import { verifyTurnstileToken } from '../../lib/turnstile';
 
 interface ContactPayload {
@@ -88,6 +89,25 @@ export const POST: APIRoute = async ({ request }) => {
   } catch (err) {
     console.error('contact insert error', err);
     return json({ error: 'Could not send your message. Please try again later.' }, 502);
+  }
+
+  // The message is already safely stored above — email is a best-effort notification on
+  // top of that, so a failure here never fails the request or loses the submission.
+  const RESEND_API_KEY = import.meta.env.RESEND_API_KEY;
+  const CONTACT_NOTIFY_EMAIL = import.meta.env.CONTACT_NOTIFY_EMAIL;
+  if (RESEND_API_KEY && CONTACT_NOTIFY_EMAIL) {
+    try {
+      const resend = new Resend(RESEND_API_KEY);
+      await resend.emails.send({
+        from: 'findbyface Contact <onboarding@resend.dev>',
+        to: CONTACT_NOTIFY_EMAIL,
+        replyTo: email,
+        subject: `[findbyface contact] ${subject || '(no subject)'}`,
+        text: `From: ${name} <${email}>\n\n${message}`,
+      });
+    } catch (err) {
+      console.error('contact email send failed', err);
+    }
   }
 
   return json({ ok: true });
