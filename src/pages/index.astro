@@ -334,6 +334,19 @@ const structuredData = JSON.stringify([
     </div>
   </section>
 
+  <section class="home-section battle-promo-section" aria-labelledby="creator-battle-promo-title">
+    <a class="battle-promo" href="/battle/">
+      <span class="battle-promo-copy">
+        <span class="eyebrow">New ranking game</span>
+        <h2 id="creator-battle-promo-title">Creator Battle</h2>
+        <strong>Choose your favorite. Move the rankings.</strong>
+        <p>Vote in head-to-head OnlyFans creator matchups, reveal the live point swing, and play three Daily rounds or keep going in Unlimited.</p>
+        <span class="battle-promo-cta">Play Creator Battle <b>→</b></span>
+      </span>
+      <img src="/creator-battle-share-card.png" width="1200" height="630" loading="lazy" alt="Creator Battle showing two creators in a head-to-head points matchup" />
+    </a>
+  </section>
+
   <!-- FAQ for SEO -->
   <section class="home-section faq-section">
     <div class="section-head">
@@ -803,6 +816,17 @@ const structuredData = JSON.stringify([
   .source-link { margin-top: auto; color: var(--accent-light); font-size: 0.86rem; font-weight: 800; }
   .source-card.disabled .source-link { color: var(--text-muted); }
 
+  /* ── Creator Battle promo ─────────────────────────────────────── */
+  .battle-promo-section { margin-top: 30px; }
+  .battle-promo { position: relative; display: grid; min-height: 320px; padding: 34px; overflow: hidden; grid-template-columns: .82fr 1.18fr; align-items: center; gap: 34px; border: 1px solid rgba(126,151,255,.3); border-radius: 24px; background: radial-gradient(circle at 20% 20%,rgba(88,108,229,.18),transparent 42%),linear-gradient(145deg,#151724,#0d0e16); box-shadow: 0 22px 60px rgba(0,0,0,.22); transition: transform .22s,border-color .22s,box-shadow .22s; }
+  .battle-promo:hover { transform: translateY(-4px); border-color: rgba(145,166,255,.58); box-shadow: 0 28px 72px rgba(45,56,128,.26); }
+  .battle-promo-copy { position: relative; z-index: 1; display: grid; justify-items: start; }
+  .battle-promo h2 { margin: 5px 0 0; background: linear-gradient(110deg,#86a6ff,#dc81ee 62%,#ff7dad); background-clip: text; color: transparent; font-size: clamp(2rem,4vw,3rem); letter-spacing: -.06em; }
+  .battle-promo-copy > strong { color: #e9ebf5; font-size: .93rem; }
+  .battle-promo p { margin: 10px 0 20px; color: #9296aa; font-size: .78rem; line-height: 1.65; }
+  .battle-promo-cta { display: inline-flex; min-height: 39px; padding: 0 15px; align-items: center; gap: 8px; border: 1px solid rgba(126,151,255,.3); border-radius: 999px; background: rgba(82,108,207,.16); color: #c2d0ff; font-size: .7rem; font-weight: 850; }
+  .battle-promo img { position: relative; z-index: 1; display: block; width: 100%; height: auto; border: 1px solid rgba(255,255,255,.1); border-radius: 17px; box-shadow: 0 18px 45px rgba(0,0,0,.34); }
+
   /* ── Why use ──────────────────────────────────────────── */
   .why-grid {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
@@ -1023,11 +1047,14 @@ const structuredData = JSON.stringify([
     .steps-grid, .why-grid, .testimonials-grid, .trust-grid { grid-template-columns: 1fr 1fr; }
     .source-grid { grid-template-columns: 1fr; }
     .source-card { min-height: 0; }
+    .battle-promo { grid-template-columns: 1fr; }
     .signup-card { grid-template-columns: 1fr; }
     .history-preview { width: min(100%, 560px); justify-self: center; transform: none; }
   }
   @media (max-width: 600px) {
     .home-section { margin-top: 64px; }
+    .battle-promo-section { margin-top: 24px; }
+    .battle-promo { min-height: 0; padding: 25px 21px; gap: 23px; }
     .steps-grid, .why-grid, .testimonials-grid, .trust-grid, .comparison-grid { grid-template-columns: 1fr; }
     .hero { width: 100%; padding-left: 18px; padding-right: 18px; overflow: hidden; }
     .hero-badge { max-width: 100%; white-space: normal; text-align: center; }

@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { getBattleAccountProfile } from '../../../lib/accountProfile';
 
 export const prerender = false;
 
@@ -44,7 +45,7 @@ export const POST: APIRoute = async ({ request }) => {
     access_token?: string;
     refresh_token?: string;
     expires_in?: number;
-    user?: { email?: string; user_metadata?: { full_name?: string; avatar_url?: string }; identities?: unknown[] };
+    user?: { id?: string; email?: string; user_metadata?: { full_name?: string; avatar_url?: string }; identities?: unknown[] };
     error_description?: string;
     code?: string;
     error_code?: string;
@@ -64,15 +65,19 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const sessionReady = Boolean(payload.access_token);
+  const battleProfile = payload.user.id
+    ? await getBattleAccountProfile(supabaseUrl, supabaseKey, payload.user.id)
+    : null;
   return json({
     requiresConfirmation: !sessionReady,
     access_token: payload.access_token,
     refresh_token: payload.refresh_token,
     expires_in: payload.expires_in,
     user: sessionReady ? {
+      id: payload.user.id,
       email: payload.user.email,
-      name: payload.user.user_metadata?.full_name || payload.user.email,
-      avatar: payload.user.user_metadata?.avatar_url || null,
+      name: battleProfile?.displayName || payload.user.user_metadata?.full_name || payload.user.email,
+      avatar: battleProfile?.avatarUrl || null,
     } : undefined,
   }, 200, !sessionReady ? {
     'Set-Cookie': 'fbf_pending_signup=1; Path=/; Max-Age=1800; SameSite=Lax; Secure',

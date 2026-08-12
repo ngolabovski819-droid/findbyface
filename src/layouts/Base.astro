@@ -7,6 +7,10 @@ interface Props {
   description?: string;
   canonical?: string;
   robots?: string;
+  image?: string;
+  imageAlt?: string;
+  imageWidth?: number;
+  imageHeight?: number;
 }
 
 const {
@@ -14,9 +18,14 @@ const {
   description = 'Find lookalike OnlyFans creators instantly. Upload a photo and discover matching creators in seconds.',
   canonical,
   robots,
+  image,
+  imageAlt,
+  imageWidth = 1200,
+  imageHeight = 630,
 } = Astro.props;
 
 const canonicalUrl = canonical ?? new URL(Astro.url.pathname, 'https://findbyface.org').href;
+const socialImageUrl = image ? new URL(image, canonicalUrl).href : null;
 ---
 
 <!DOCTYPE html>
@@ -64,11 +73,18 @@ const canonicalUrl = canonical ?? new URL(Astro.url.pathname, 'https://findbyfac
   <meta property="og:url" content={canonicalUrl} />
   <meta property="og:title" content={title} />
   <meta property="og:description" content={description} />
+  {socialImageUrl && <meta property="og:image" content={socialImageUrl} />}
+  {socialImageUrl && <meta property="og:image:secure_url" content={socialImageUrl} />}
+  {socialImageUrl && <meta property="og:image:width" content={String(imageWidth)} />}
+  {socialImageUrl && <meta property="og:image:height" content={String(imageHeight)} />}
+  {socialImageUrl && imageAlt && <meta property="og:image:alt" content={imageAlt} />}
 
   <!-- Twitter -->
-  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:card" content={socialImageUrl ? 'summary_large_image' : 'summary'} />
   <meta name="twitter:title" content={title} />
   <meta name="twitter:description" content={description} />
+  {socialImageUrl && <meta name="twitter:image" content={socialImageUrl} />}
+  {socialImageUrl && imageAlt && <meta name="twitter:image:alt" content={imageAlt} />}
 
   <link rel="icon" type="image/png" href="/favicon.png?v=2" />
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
@@ -96,6 +112,7 @@ const canonicalUrl = canonical ?? new URL(Astro.url.pathname, 'https://findbyfac
         <a href="/onlyfans-search/">Search</a>
         <a href="/onlyfans-finder-by-face/">OnlyFans Finder</a>
         <a href="/pornstar-finder-by-face/">Pornstar Finder</a>
+        <a href="/battle/">Creator Battle</a>
         <a href="/categories/top/">Categories</a>
         <a href="/promote/">Promote Your OnlyFans</a>
         <a href="/contact/">Contact</a>

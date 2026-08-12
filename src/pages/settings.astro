@@ -22,11 +22,25 @@ import Base from '../layouts/Base.astro';
       <!-- Profile -->
       <div class="set-panel">
         <h2>Profile</h2>
-        <label class="set-field-label" for="nameInput">Name</label>
+        <div class="set-profile-preview">
+          <img id="profileAvatarPreview" src="/api/player-avatar?style=1" alt="Your player avatar" />
+          <div><strong id="profilePreviewName">Player</strong><small>Shown on Battle leaderboards</small></div>
+        </div>
+        <label class="set-field-label" for="nameInput">Battle nickname</label>
         <div class="set-inline">
-          <input type="text" id="nameInput" class="set-input" maxlength="60" autocomplete="name" />
+          <input type="text" id="nameInput" class="set-input" minlength="3" maxlength="24" autocomplete="nickname" />
           <button class="set-btn primary" id="saveNameBtn">Save changes</button>
         </div>
+        <p class="set-field-help">3–24 characters. Nicknames are unique.</p>
+        <div class="set-avatar-picker" aria-label="Choose a player avatar">
+          {[1,2,3,4,5,6,7,8].map((style) => (
+            <button type="button" data-avatar-style={style} aria-label={`Choose avatar ${style}`}>
+              <img src={`/api/player-avatar?style=${style}`} alt="" />
+              <span aria-hidden="true">✓</span>
+            </button>
+          ))}
+        </div>
+        <p class="set-profile-message" id="profileMessage" role="status" hidden></p>
       </div>
 
       <!-- Email -->
@@ -102,22 +116,79 @@ import Base from '../layouts/Base.astro';
 
     // Profile
     const nameInput = document.getElementById('nameInput') as HTMLInputElement;
+    const avatarPreview = document.getElementById('profileAvatarPreview') as HTMLImageElement;
+    const previewName = document.getElementById('profilePreviewName')!;
+    const profileMessage = document.getElementById('profileMessage')!;
+    const avatarButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-avatar-style]'));
+    let selectedAvatarStyle = 1;
     nameInput.value = user.name || '';
+    previewName.textContent = user.name || 'Player';
     document.getElementById('setEmail')!.textContent = user.email || '—';
 
-    document.getElementById('saveNameBtn')?.addEventListener('click', (e) => {
+    function selectAvatar(style: number) {
+      selectedAvatarStyle = Math.min(Math.max(Math.trunc(style), 1), 8);
+      avatarPreview.src = `/api/player-avatar?style=${selectedAvatarStyle}`;
+      avatarButtons.forEach(button => button.classList.toggle('selected', Number(button.dataset.avatarStyle) === selectedAvatarStyle));
+    }
+
+    async function profileApi(path: string, options: RequestInit = {}) {
+      const headers = new Headers(options.headers);
+      headers.set('Authorization', `Bearer ${user.access_token || ''}`);
+      if (options.body) headers.set('Content-Type', 'application/json');
+      const response = await fetch(path, { ...options, headers });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Could not update your profile');
+      return payload;
+    }
+
+    avatarButtons.forEach(button => button.addEventListener('click', () => {
+      selectAvatar(Number(button.dataset.avatarStyle));
+    }));
+    nameInput.addEventListener('input', () => {
+      previewName.textContent = nameInput.value.trim() || 'Player';
+    });
+
+    const currentStyle = Number(new URL(user.avatar || '', window.location.origin).searchParams.get('style'));
+    selectAvatar(Number.isInteger(currentStyle) && currentStyle >= 1 && currentStyle <= 8 ? currentStyle : 1);
+
+    profileApi('/api/battle-profile').then(profile => {
+      nameInput.value = profile.displayName;
+      previewName.textContent = profile.displayName;
+      selectAvatar(Number(profile.avatarStyle));
+    }).catch(error => {
+      profileMessage.textContent = error.message;
+      profileMessage.dataset.kind = 'error';
+      profileMessage.hidden = false;
+    });
+
+    document.getElementById('saveNameBtn')?.addEventListener('click', async (e) => {
       const btn = e.currentTarget as HTMLButtonElement;
-      const newName = nameInput.value.trim();
-      if (!newName) { nameInput.focus(); return; }
-      try {
-        const u = JSON.parse(localStorage.getItem('fbf_user') || '{}');
-        u.name = newName;
-        localStorage.setItem('fbf_user', JSON.stringify(u));
-      } catch { /* noop */ }
+      const newName = nameInput.value.trim().replace(/\s+/g, ' ');
+      if (newName.length < 3) { nameInput.focus(); return; }
+      profileMessage.hidden = true;
       const original = btn.textContent;
-      btn.textContent = 'Saved ✓';
+      btn.textContent = 'Saving…';
       btn.disabled = true;
-      setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1600);
+      try {
+        const profile = await profileApi('/api/battle-profile', {
+          method: 'POST',
+          body: JSON.stringify({ displayName: newName, avatarStyle: selectedAvatarStyle }),
+        });
+        const u = JSON.parse(localStorage.getItem('fbf_user') || '{}');
+        u.name = profile.displayName;
+        u.avatar = profile.avatarUrl;
+        localStorage.setItem('fbf_user', JSON.stringify(u));
+        window.dispatchEvent(new CustomEvent('fbf:profile-updated', { detail: profile }));
+        previewName.textContent = profile.displayName;
+        btn.textContent = 'Saved ✓';
+        setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1600);
+      } catch (error) {
+        profileMessage.textContent = error instanceof Error ? error.message : 'Could not save your profile';
+        profileMessage.dataset.kind = 'error';
+        profileMessage.hidden = false;
+        btn.textContent = original;
+        btn.disabled = false;
+      }
     });
 
     // Active session
@@ -178,6 +249,12 @@ import Base from '../layouts/Base.astro';
   }
   .set-panel h2 { font-size: 1rem; margin-bottom: 16px; }
 
+  .set-profile-preview { display: flex; margin-bottom: 18px; align-items: center; gap: 12px; }
+  .set-profile-preview img { width: 54px; height: 54px; border: 1px solid rgba(255,255,255,.1); border-radius: 15px; background: var(--surface-raised); }
+  .set-profile-preview div { display: grid; gap: 3px; min-width: 0; }
+  .set-profile-preview strong { overflow: hidden; color: var(--text); font-size: .92rem; text-overflow: ellipsis; white-space: nowrap; }
+  .set-profile-preview small { color: var(--text-muted); font-size: .67rem; }
+
   .set-field-label { color: var(--text-muted); font-size: 13px; margin-bottom: 4px; }
   .set-strong { font-weight: 700; font-size: 14.5px; color: var(--text); }
 
@@ -190,6 +267,18 @@ import Base from '../layouts/Base.astro';
     transition: border-color 0.2s;
   }
   .set-input:focus { outline: none; border-color: var(--accent); }
+  .set-field-help { margin-top: 6px; color: var(--text-muted); font-size: .66rem; }
+  .set-avatar-picker { display: grid; margin-top: 16px; grid-template-columns: repeat(8,1fr); gap: 8px; }
+  .set-avatar-picker button { position: relative; min-width: 0; padding: 0; border: 2px solid transparent; border-radius: 12px; outline: 0; background: transparent; cursor: pointer; transition: border-color .16s,transform .16s; }
+  .set-avatar-picker button:hover { transform: translateY(-2px); }
+  .set-avatar-picker button.selected { border-color: #8aa6ff; box-shadow: 0 0 0 3px rgba(113,143,235,.13); }
+  .set-avatar-picker img { display: block; width: 100%; border-radius: 10px; }
+  .set-avatar-picker span { position: absolute; right: -4px; bottom: -4px; display: none; width: 17px; height: 17px; place-items: center; border: 2px solid var(--surface); border-radius: 50%; background: #86a3f7; color: #0d1222; font-size: .55rem; font-weight: 900; }
+  .set-avatar-picker button.selected span { display: grid; }
+  .set-avatar-picker button:focus-visible { outline: 3px solid rgba(124,156,255,.6); outline-offset: 3px; }
+  .set-profile-message { margin-top: 11px; padding: 8px 10px; border-radius: 8px; color: #9edbbd; background: rgba(30,120,79,.11); font-size: .68rem; }
+  .set-profile-message[data-kind="error"] { color: #f2a1b0; background: rgba(136,40,58,.12); }
+  .set-profile-message[hidden] { display: none; }
 
   .set-row-flex {
     display: flex; align-items: center; justify-content: space-between;
@@ -238,5 +327,6 @@ import Base from '../layouts/Base.astro';
     .set-inline { flex-direction: column; align-items: stretch; }
     .set-inline .set-btn { width: 100%; }
     .session-current { align-self: flex-start; }
+    .set-avatar-picker { grid-template-columns: repeat(4,1fr); gap: 10px; }
   }
 </style>

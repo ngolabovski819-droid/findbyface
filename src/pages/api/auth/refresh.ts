@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { getBattleAccountProfile } from '../../../lib/accountProfile';
 
 export const prerender = false;
 
@@ -42,6 +43,7 @@ export const POST: APIRoute = async ({ request }) => {
     refresh_token?: string;
     expires_in?: number;
     user?: {
+      id?: string;
       email?: string;
       user_metadata?: { full_name?: string; avatar_url?: string };
     };
@@ -55,14 +57,18 @@ export const POST: APIRoute = async ({ request }) => {
     }, 401);
   }
 
+  if (!payload.user.id) return json({ error: 'Invalid user account.' }, 401);
+  const battleProfile = await getBattleAccountProfile(supabaseUrl, supabaseKey, payload.user.id);
+
   return json({
     access_token: payload.access_token,
     refresh_token: payload.refresh_token || refreshToken,
     expires_in: payload.expires_in,
     user: {
+      id: payload.user.id,
       email: payload.user.email,
-      name: payload.user.user_metadata?.full_name || payload.user.email,
-      avatar: payload.user.user_metadata?.avatar_url || null,
+      name: battleProfile.displayName || payload.user.user_metadata?.full_name || payload.user.email,
+      avatar: battleProfile.avatarUrl,
     },
   });
 };

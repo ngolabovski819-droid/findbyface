@@ -1,8 +1,11 @@
 // WHERE a creator appears — paid placement config.
 // Scopes: 'home', 'category:<slug>' (slugs come from src/config/categories.ts),
-// 'face-search' (the AI face-match results in UploadBox.astro / api/face-search.ts), and
+// 'face-search' (the AI face-match results in UploadBox.astro / api/face-search.ts),
 // 'search-dropdown' (the ranked sponsored rows in every recent-searches dropdown, see
-// api/search-ad.ts).
+// api/search-ad.ts), and 'battle' (api/battle-unlimited.ts) — pinned creators here get
+// boosted odds of appearing as an Unlimited-mode Battle candidate (SPONSOR_SLOT_RATE in
+// that file), never a fake/inflated answer. `position` is unused for this scope — it's a
+// flat pool, not a ranked list — pick a random pin each time a sponsored slot triggers.
 //
 // For 'home' and 'category:<slug>', pinned positions are 1-based and GLOBAL across the
 // full paginated list for that scope — e.g. position 21 is page 2, item 1 at
@@ -43,6 +46,12 @@ export const placements: Record<string, Placement> = {
       { username: 'rocketreynaxo', position: 2 },
       { username: 'hannazuki', position: 3 },
     ],
+    excluded: [],
+  },
+  // No one's bought a Battle slot yet — add { username, position } entries here (position
+  // is ignored for this scope, see note above) once a placement is sold.
+  battle: {
+    pinned: [],
     excluded: [],
   },
   // The main results grid on /onlyfans-search.astro (src/pages/api/search.ts, scope=

@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { getBattleAccountProfile } from '../../../lib/accountProfile';
 
 export const POST: APIRoute = async ({ request }) => {
   const SUPABASE_URL = import.meta.env.SUPABASE_URL?.replace(/\/+$/, '');
@@ -30,14 +31,21 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const user = await resp.json() as {
+    id?: string;
     email: string;
     user_metadata?: { full_name?: string; avatar_url?: string };
   };
 
+  if (!user.id) {
+    return new Response(JSON.stringify({ error: 'Invalid user' }), { status: 401 });
+  }
+  const battleProfile = await getBattleAccountProfile(SUPABASE_URL, SUPABASE_KEY, user.id);
+
   return new Response(JSON.stringify({
+    id: user.id,
     email: user.email,
-    name: user.user_metadata?.full_name || user.email,
-    avatar: user.user_metadata?.avatar_url || null,
+    name: battleProfile.displayName || user.user_metadata?.full_name || user.email,
+    avatar: battleProfile.avatarUrl,
   }), {
     headers: { 'Content-Type': 'application/json' },
   });

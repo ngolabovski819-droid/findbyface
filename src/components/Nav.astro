@@ -7,6 +7,7 @@ const isVideoSearch =
   pathname.startsWith('/video-search');
 const isDiscover = pathname.startsWith('/ai-discover');
 const isSearch = pathname.startsWith('/onlyfans-search');
+const isBattle = pathname.startsWith('/battle');
 ---
 
 <header class="nav">
@@ -25,6 +26,9 @@ const isSearch = pathname.startsWith('/onlyfans-search');
         <span>Pornstar Finder</span><small class="nav-new-badge">New</small>
       </a>
       <a href="/onlyfans-search/" class={isSearch ? 'active' : ''}>OnlyFans Search</a>
+      <a href="/battle/" class={`nav-feature-link ${isBattle ? 'active' : ''}`}>
+        <span>Battle</span><small class="nav-new-badge">New</small>
+      </a>
       <div class="mobile-auth-actions" id="mobileAuthActions">
         <a href="/login/" class="mobile-login">Log in</a>
         <a href="/signup/" class="mobile-signup">Sign up free</a>
@@ -100,15 +104,26 @@ const isSearch = pathname.startsWith('/onlyfans-search');
   const ddName    = document.getElementById('ddName')!;
   const signOutBtn = document.getElementById('signOutBtn')!;
 
-  function setAvatar(el: HTMLElement, user: { name?: string; email: string; avatar?: string }): void {
-    if (user.avatar) {
-      el.innerHTML = `<img src="${user.avatar}" alt="" referrerpolicy="no-referrer" />`;
-    } else {
-      el.textContent = (user.name || user.email || '?')[0].toUpperCase();
+  function defaultAvatarStyle(seed: string): number {
+    const uuidHex = seed.replace(/-/g, '');
+    if (/^[a-f\d]{32}$/i.test(uuidHex)) return Number.parseInt(uuidHex.slice(0, 2), 16) % 8 + 1;
+    let hash = 2166136261;
+    for (let index = 0; index < seed.length; index += 1) {
+      hash ^= seed.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
     }
+    return (hash >>> 0) % 8 + 1;
+  }
+
+  function setAvatar(el: HTMLElement, user: { id?: string; name?: string; email: string; avatar?: string }): void {
+    const avatar = user.avatar && /^\/api\/player-avatar\?style=[1-8]$/.test(user.avatar)
+      ? user.avatar
+      : `/api/player-avatar?style=${defaultAvatarStyle(user.id || user.email)}`;
+    el.innerHTML = `<img src="${avatar}" alt="" />`;
   }
 
   type StoredUser = {
+    id?: string;
     name?: string;
     email: string;
     avatar?: string;
@@ -167,15 +182,26 @@ const isSearch = pathname.startsWith('/onlyfans-search');
         }
         user = refreshed;
       }
-      authActions.style.display = 'none';
-      mobileAuthActions.style.display = 'none';
-      setAvatar(userAvatar, user);
-      setAvatar(ddAvatar, user);
-      userName.textContent = user.name?.split(' ')[0] || user.email.split('@')[0];
-      ddName.textContent = user.name || user.email;
-      userMenu.style.display = 'block';
+      renderStoredUser(user);
     } catch { /* not signed in */ }
   }
+
+  function renderStoredUser(user: StoredUser): void {
+    authActions.style.display = 'none';
+    mobileAuthActions.style.display = 'none';
+    setAvatar(userAvatar, user);
+    setAvatar(ddAvatar, user);
+    userName.textContent = user.name?.split(' ')[0] || user.email.split('@')[0];
+    ddName.textContent = user.name || user.email;
+    userMenu.style.display = 'block';
+  }
+
+  window.addEventListener('fbf:profile-updated', () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('fbf_user') || 'null') as StoredUser | null;
+      if (user) renderStoredUser(user);
+    } catch { /* noop */ }
+  });
 
   function closeDropdown(): void {
     userDropdown.classList.remove('open');

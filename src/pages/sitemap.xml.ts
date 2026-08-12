@@ -21,6 +21,7 @@ export const GET: APIRoute = async () => {
   const corePages: UrlEntry[] = [
     { loc: `${SITE}/`, changefreq: 'daily', priority: '1.0' },
     { loc: `${SITE}/onlyfans-search/`, changefreq: 'daily', priority: '0.9' },
+    { loc: `${SITE}/battle/`, changefreq: 'daily', priority: '0.9' },
     { loc: `${SITE}/onlyfans-finder-by-face/`, changefreq: 'daily', priority: '0.9' },
     { loc: `${SITE}/pornstar-finder-by-face/`, changefreq: 'daily', priority: '0.9' },
     { loc: `${SITE}/blog/`, changefreq: 'weekly', priority: '0.7' },
