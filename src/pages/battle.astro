@@ -527,6 +527,7 @@ const structuredData = JSON.stringify([
     if (!arena) return;
     const delta = Number(result.rating_delta || 0);
     const upset = delta > 16.05;
+    arena.classList.remove('is-submitting');
     arena.classList.add('is-resolving');
     if (upset) arena.classList.add('is-upset');
 
@@ -536,15 +537,53 @@ const structuredData = JSON.stringify([
       const rank = Number(selected ? result.selected_rank : result.other_rank);
       const rankLabel = Number.isInteger(rank) && rank > 0 ? `#${rank.toLocaleString()}` : 'Updating…';
       card.disabled = true;
+      card.classList.remove('is-pending-pick', 'is-pending-other');
       card.classList.add(selected ? 'is-selected' : 'is-other');
       const burst = card.querySelector<HTMLElement>('.points-burst')!;
       burst.innerHTML = `<strong>${selected ? '+' : '−'}${formatDelta(delta)}</strong><span>${selected && upset ? 'UPSET · POINTS' : 'POINTS'}</span>`;
       const reveal = card.querySelector<HTMLElement>('.rating-reveal')!;
+      reveal.classList.remove('is-pending');
       reveal.innerHTML = `<span class="result-label">${selected ? 'Your pick' : 'Opponent'}</span>
         <span class="result-metric rank-metric"><strong>${rankLabel}</strong><small>Live rank</small></span>
         <span class="result-metric points-metric"><span class="points-change ${selected ? 'gain' : 'loss'}"><strong>${selected ? '+' : '−'}${formatDelta(delta)}</strong><small>points</small></span></span>`;
       const callToAction = card.querySelector<HTMLElement>('.vote-cta');
       if (callToAction) callToAction.textContent = selected ? 'Picked' : 'Result';
+    });
+  }
+
+  function beginVote(container: HTMLElement, selectedId: number): void {
+    const arena = container.querySelector<HTMLElement>('.vs-arena');
+    if (!arena) return;
+    arena.classList.add('is-submitting');
+    navigator.vibrate?.(18);
+    arena.querySelectorAll<HTMLButtonElement>('.vs-card').forEach((card) => {
+      const selected = Number(card.dataset.id) === selectedId;
+      card.disabled = true;
+      card.classList.add(selected ? 'is-pending-pick' : 'is-pending-other');
+      const callToAction = card.querySelector<HTMLElement>('.vote-cta');
+      if (callToAction) callToAction.textContent = selected ? 'Picked' : 'Locked';
+      if (!selected) return;
+      const reveal = card.querySelector<HTMLElement>('.rating-reveal')!;
+      reveal.classList.add('is-pending');
+      reveal.innerHTML = `<span class="result-label">Your pick is locked</span>
+        <span class="result-resolving"><i aria-hidden="true"></i><strong>Moving the rankings…</strong></span>`;
+    });
+  }
+
+  function resetVoteState(container: HTMLElement): void {
+    const arena = container.querySelector<HTMLElement>('.vs-arena');
+    if (!arena) return;
+    arena.classList.remove('is-submitting');
+    arena.querySelectorAll<HTMLButtonElement>('.vs-card').forEach((card) => {
+      card.disabled = false;
+      card.classList.remove('is-pending-pick', 'is-pending-other');
+      const callToAction = card.querySelector<HTMLElement>('.vote-cta');
+      if (callToAction) callToAction.textContent = 'Choose';
+      const reveal = card.querySelector<HTMLElement>('.rating-reveal');
+      if (reveal) {
+        reveal.classList.remove('is-pending');
+        reveal.innerHTML = '';
+      }
     });
   }
 
@@ -612,7 +651,7 @@ const structuredData = JSON.stringify([
 
   async function handleDailyVote(round: DailyRound, selectedId: number): Promise<void> {
     const arena = document.getElementById('dailyArena')!;
-    arena.querySelectorAll<HTMLButtonElement>('.vs-card').forEach((card) => { card.disabled = true; });
+    beginVote(arena, selectedId);
     try {
       const result: VoteResult = await api('/api/battle-guess', {
         method: 'POST',
@@ -634,7 +673,8 @@ const structuredData = JSON.stringify([
       transitionToNext(arena, renderDailyPanel);
     } catch (error: any) {
       showToast(error.message || 'Something went wrong');
-      arena.querySelectorAll<HTMLButtonElement>('.vs-card').forEach((card) => { card.disabled = false; });
+      resetVoteState(arena);
+      bindVoteCards(arena, (id) => handleDailyVote(round, id));
     }
   }
 
@@ -675,7 +715,7 @@ const structuredData = JSON.stringify([
     unlimitedBusy = true;
     const pair = unlimitedPair;
     const arena = document.getElementById('unlimitedArena')!;
-    arena.querySelectorAll<HTMLButtonElement>('.vs-card').forEach((card) => { card.disabled = true; });
+    beginVote(arena, selectedId);
     try {
       const result: VoteResult = await api('/api/battle-guess', {
         method: 'POST',
@@ -707,7 +747,8 @@ const structuredData = JSON.stringify([
       });
     } catch (error: any) {
       showToast(error.message || 'Something went wrong');
-      arena.querySelectorAll<HTMLButtonElement>('.vs-card').forEach((card) => { card.disabled = false; });
+      resetVoteState(arena);
+      bindVoteCards(arena, handleUnlimitedVote);
       unlimitedBusy = false;
     }
   }
@@ -1115,12 +1156,21 @@ const structuredData = JSON.stringify([
   .vs-card.is-selected { border-color: rgba(78,226,153,.72); box-shadow: 0 20px 55px rgba(22,165,105,.18),0 0 0 3px rgba(59,221,147,.11); animation: selected-card .7s cubic-bezier(.18,.9,.25,1); }
   .vs-card.is-other { opacity: .72; border-color: rgba(239,96,124,.36); animation: other-card .55s ease; }
   .vs-card.is-other .vs-media img { filter: saturate(.7) brightness(.76); }
+  .vs-card.is-pending-pick { border-color: rgba(78,226,153,.72); box-shadow: 0 20px 55px rgba(22,165,105,.18),0 0 0 3px rgba(59,221,147,.11); animation: vote-lock .28s cubic-bezier(.18,.9,.25,1); }
+  .vs-card.is-pending-other { opacity: .68; filter: saturate(.72) brightness(.8); }
+  .vs-card.is-pending-pick .vote-cta { border-color: rgba(78,226,153,.5); background: rgba(25,174,107,.18); color: #79efb4; }
+  .vs-card.is-pending-pick .rating-reveal { opacity: 1; transform: translateY(0); transition: opacity .12s ease,transform .2s cubic-bezier(.18,.9,.25,1); }
+  .rating-reveal.is-pending { grid-template-columns: 1fr; }
+  .result-resolving { display: flex; grid-column: 1/-1; min-height: 30px; align-items: center; gap: 8px; color: #effff7; }
+  .result-resolving i { width: 14px; height: 14px; flex: 0 0 auto; border: 2px solid rgba(93,239,173,.24); border-top-color: #6ceaae; border-radius: 50%; animation: spin .6s linear infinite; }
+  .result-resolving strong { font-size: .72rem !important; letter-spacing: -.01em !important; }
   .vs-card.is-selected .points-burst, .vs-card.is-other .points-burst { animation: points-burst 1.15s .05s cubic-bezier(.18,.9,.25,1) both; }
   .vs-card.is-selected .rating-reveal, .vs-card.is-other .rating-reveal { opacity: 1; transform: translateY(0); transition: opacity .28s .12s ease,transform .36s .12s cubic-bezier(.18,.9,.25,1); }
   .vs-card.is-selected .points-change, .vs-card.is-other .points-change { animation: points-chip .52s .2s cubic-bezier(.18,.9,.25,1) both; }
   .vs-arena.is-upset .vs-card.is-selected { animation: upset-card .8s cubic-bezier(.18,.9,.25,1); box-shadow: 0 22px 65px rgba(151,79,235,.3),0 0 0 3px rgba(172,95,244,.2); }
   .vs-arena.is-upset .vs-card.is-selected .points-burst strong { color: #ddb0ff; }
   .vs-arena.is-resolving .vs-medallion { animation: medallion-pulse .55s ease; }
+  .vs-arena.is-submitting .vs-medallion { animation: medallion-wait .8s ease-in-out infinite alternate; }
 
   .arena-loading, .arena-error { display: grid; min-height: 430px; padding: 50px 30px; place-items: center; align-content: center; gap: 14px; border: 1px dashed var(--border); border-radius: 18px; background: rgba(18,18,26,.48); color: var(--text-muted); text-align: center; }
   .arena-loading span { width: 26px; height: 26px; border: 2px solid rgba(113,145,238,.2); border-top-color: #789cff; border-radius: 50%; animation: spin .75s linear infinite; }
@@ -1250,11 +1300,13 @@ const structuredData = JSON.stringify([
   .profile-save:disabled { opacity: .65; cursor: wait; }
 
   @keyframes selected-card { 0% { transform: scale(1); } 42% { transform: scale(1.025) translateY(-5px); } 100% { transform: scale(1); } }
+  @keyframes vote-lock { 0% { transform: scale(1); } 55% { transform: scale(1.018) translateY(-3px); } 100% { transform: scale(1); } }
   @keyframes other-card { 0% { transform: translateX(0); } 35% { transform: translateX(-3px); } 60% { transform: translateX(2px); } 100% { transform: translateX(0); } }
   @keyframes upset-card { 0% { transform: scale(1); } 32% { transform: scale(1.035) rotate(-.4deg); } 58% { transform: scale(1.015) rotate(.25deg); } 100% { transform: scale(1); } }
   @keyframes points-burst { 0% { opacity: 0; transform: translate(-50%,-10%) scale(.65); } 25% { opacity: 1; transform: translate(-50%,-50%) scale(1.1); } 72% { opacity: 1; transform: translate(-50%,-62%) scale(1); } 100% { opacity: 0; transform: translate(-50%,-88%) scale(.94); } }
   @keyframes points-chip { from { opacity: 0; transform: translateY(7px) scale(.82); } 65% { opacity: 1; transform: translateY(-1px) scale(1.05); } to { opacity: 1; transform: none; } }
   @keyframes medallion-pulse { 45% { transform: translate(-50%,-50%) scale(1.13); filter: brightness(1.25); } }
+  @keyframes medallion-wait { to { transform: translate(-50%,-50%) scale(1.07); filter: brightness(1.18); } }
   @keyframes toast-in { from { opacity: 0; transform: translate(-50%,8px); } }
   @keyframes spin { to { transform: rotate(360deg); } }
 

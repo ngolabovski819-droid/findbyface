@@ -2,7 +2,7 @@
 // atomically records the battle, calculates K=32 Elo movement, updates both creators, and
 // updates the authenticated player's battle record and Daily streak.
 import type { APIRoute } from 'astro';
-import { getBattleAccountProfile } from '../../lib/accountProfile';
+import { defaultPlayerAvatarUrl, isPlayerAvatarUrl } from '../../lib/accountProfile';
 import { verifySupabaseUser, extractBearerToken } from '../../lib/verifyUser';
 import { isBotUserAgent } from '../../lib/botDetection';
 import { logBattleError, logBattleEvent } from '../../lib/battleTelemetry';
@@ -160,7 +160,11 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   try {
-    const playerProfile = await getBattleAccountProfile(SUPABASE_URL, SUPABASE_KEY, user.id);
+    // Profile edits are mirrored to Supabase Auth. New accounts receive the same
+    // deterministic built-in avatar here without an extra database request per vote.
+    const playerAvatar = isPlayerAvatarUrl(user.avatarUrl)
+      ? user.avatarUrl
+      : defaultPlayerAvatarUrl(user.id);
     const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_guess`, {
       method: 'POST',
       headers: SUPABASE_HEADERS(SUPABASE_KEY),
@@ -172,7 +176,7 @@ export const POST: APIRoute = async ({ request }) => {
         p_right_id: rightId,
         p_guessed_id: selectedId,
         p_sponsored_slot: Boolean(body.sponsoredSlot),
-        p_avatar_url: playerProfile.avatarUrl,
+        p_avatar_url: playerAvatar,
       }),
     });
 

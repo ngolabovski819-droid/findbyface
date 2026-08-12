@@ -9,12 +9,45 @@ export interface VerifiedUser {
   avatarUrl: string | null;
 }
 
+interface CachedVerification {
+  user: VerifiedUser;
+  expiresAt: number;
+}
+
+// A player commonly casts several votes within a minute. Re-validating the same Supabase
+// token over the network for every round adds visible latency without improving security in
+// that tiny window. Serverless instances reuse this bounded cache when warm; cold instances
+// simply fall back to the authoritative Auth request below.
+const verificationCache = new Map<string, CachedVerification>();
+const VERIFICATION_CACHE_MS = 45_000;
+const VERIFICATION_CACHE_MAX = 500;
+
+function cachedUser(accessToken: string): VerifiedUser | null {
+  const cached = verificationCache.get(accessToken);
+  if (!cached) return null;
+  if (cached.expiresAt <= Date.now()) {
+    verificationCache.delete(accessToken);
+    return null;
+  }
+  return cached.user;
+}
+
+function cacheUser(accessToken: string, user: VerifiedUser): void {
+  if (verificationCache.size >= VERIFICATION_CACHE_MAX) {
+    const oldestKey = verificationCache.keys().next().value;
+    if (oldestKey) verificationCache.delete(oldestKey);
+  }
+  verificationCache.set(accessToken, { user, expiresAt: Date.now() + VERIFICATION_CACHE_MS });
+}
+
 export async function verifySupabaseUser(
   accessToken: string | null | undefined,
   supabaseUrl: string,
   supabaseKey: string,
 ): Promise<VerifiedUser | null> {
   if (!accessToken) return null;
+  const cached = cachedUser(accessToken);
+  if (cached) return cached;
   try {
     const resp = await fetch(`${supabaseUrl}/auth/v1/user`, {
       headers: {
@@ -29,11 +62,13 @@ export async function verifySupabaseUser(
       user_metadata?: { avatar_url?: string };
     };
     if (!user.id) return null;
-    return {
+    const verifiedUser = {
       id: user.id,
       email: user.email ?? null,
       avatarUrl: user.user_metadata?.avatar_url ?? null,
     };
+    cacheUser(accessToken, verifiedUser);
+    return verifiedUser;
   } catch {
     return null;
   }
