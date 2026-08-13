@@ -1,0 +1,113 @@
+---
+import Base from '../layouts/Base.astro';
+
+const updated = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'Does a human decide the order creators appear in?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'No. Ranked lists on findbyface are ordered by FindRank, our engagement-based scoring system, not by an editor. Sponsored placements are the one exception, and those are always labeled.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Can creators pay to change their FindRank score?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'No. Sponsorship buys a specific, disclosed placement (like a category page or search results), never a change to the underlying score. Sponsored cards are always marked "Sponsored" or "Ad".',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'How often is the ranking updated?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Daily. We pull fresh engagement and pricing data every 24 hours and re-run FindRank, with verification status refreshed weekly.',
+      },
+    },
+  ],
+};
+const jsonLd = JSON.stringify(faqJsonLd);
+---
+
+<Base
+  title="How Our Search Engine Works | findbyface"
+  description="How findbyface ranks OnlyFans creators with FindRank, how our AI face-match search works, and how sponsored placements are disclosed."
+  canonical="https://findbyface.org/how-our-search-engine-works/"
+>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={jsonLd} />
+  </Fragment>
+
+  <article class="prose-page">
+    <div class="page-head">
+      <h1>How Our <span class="gradient-text">Search Engine</span> Works</h1>
+      <p>An honest, plain-language look at how findbyface ranks and matches creators.</p>
+      <p class="page-updated">Last updated: {updated}</p>
+    </div>
+
+    <div class="prose">
+      <h2>Two different search systems</h2>
+      <p>
+        findbyface actually runs two separate systems, and it's worth being upfront about which
+        one you're using. Browsing by category or typing a name into the search bar uses
+        <strong>FindRank</strong>, our engagement-based ranking. Uploading a photo on the
+        <a href="/onlyfans-finder-by-face/">face search tool</a> uses a completely different AI
+        visual-matching pipeline. Neither one involves a person manually choosing results.
+      </p>
+
+      <h2>How FindRank works</h2>
+      <p>
+        FindRank orders creators by real engagement signals pulled live from OnlyFans — primarily
+        favorited count and subscriber metrics. It's a straightforward popularity signal, not a
+        subjective "quality" judgment: more real engagement moves a profile up, nothing else does.
+        We re-pull this data and recalculate the ranking daily, so newly popular creators surface
+        within a day rather than sitting behind a stale list. Verification badges are refreshed on
+        a weekly cycle.
+      </p>
+      <p>
+        There is <strong>no human review</strong> of ranking order. No one at findbyface manually
+        bumps a profile up or down because of how it looks or who runs it. The only edits we ever
+        make by hand are removals — for example, honoring a valid <a href="/dmca/">DMCA</a> request
+        or a creator's own takedown request — never additions or reordering.
+      </p>
+
+      <h2>How face-match search works</h2>
+      <p>
+        Our <a href="/onlyfans-finder-by-face/">photo search</a> is a separate AI pipeline, unrelated
+        to FindRank. When you upload a photo, a face-recognition model detects the face and converts
+        it into a numeric descriptor — a mathematical fingerprint of facial geometry. We compare that
+        descriptor against creator profiles using vector similarity search and return the closest
+        visual matches, ranked by similarity score. It runs on appearance alone: no names, no reverse
+        lookups, and matches are for discovery, not identity confirmation. Read more in our
+        <a href="/about/">About page</a>.
+      </p>
+
+      <h2>Sponsored placements, fully disclosed</h2>
+      <p>
+        findbyface is free to use, and part of how that's funded is paid placements: a creator can
+        pay to appear in a specific spot, like the top of a category page or search results. We're
+        direct about what that does and doesn't buy:
+      </p>
+      <ul>
+        <li>It <strong>never</strong> changes a creator's FindRank score or face-match similarity score.</li>
+        <li>It <strong>never</strong> hides, blurs, or demotes organic (unpaid) results to make room.</li>
+        <li>Every sponsored card is labeled — you'll see a visible "Sponsored" or "Ad" tag, never a placement disguised as an organic result.</li>
+      </ul>
+
+      <h2>Why this page exists</h2>
+      <p>
+        We built findbyface to be a fast, honest way to browse and search OnlyFans creators, and we'd
+        rather explain exactly how the list you're looking at was built than leave it a mystery. If
+        something here doesn't match what you're seeing on the site, or you have questions we haven't
+        covered, <a href="/contact/">reach out</a> — we'll answer directly.
+      </p>
+    </div>
+  </article>
+</Base>

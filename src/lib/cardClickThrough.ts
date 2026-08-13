@@ -30,7 +30,7 @@ export function initCardClickThrough(): void {
     const href = card.dataset.href;
     if (href) {
       e.preventDefault();
-      window.location.assign(href);
+      window.open(href, '_blank', 'noopener');
     }
   }, true);
 }

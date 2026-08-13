@@ -70,7 +70,7 @@ const rel = profileUrl.startsWith('/go/') ? 'noopener nofollow sponsored' : 'noo
       fetchpriority={index === 0 ? 'high' : undefined}
       decoding="async"
       referrerpolicy="no-referrer"
-      onerror="if(this.src!=='/no-image.png'){this.removeAttribute('srcset');this.src='/no-image.png';}"
+      onerror="this.onerror=null;this.removeAttribute('srcset');this.src='/no-image.png';"
     />
     {matchPct && <span class="match-badge"><strong>{matchPct}%</strong><span>match</span></span>}
   </div>

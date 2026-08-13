@@ -108,6 +108,7 @@ const socialImageUrl = image ? new URL(image, canonicalUrl).href : null;
       </a>
       <nav class="footer-links">
         <a href="/about/">About</a>
+        <a href="/how-our-search-engine-works/">How Our Search Engine Works</a>
         <a href="/blog/">Blog</a>
         <a href="/onlyfans-search/">Search</a>
         <a href="/onlyfans-finder-by-face/">OnlyFans Finder</a>
@@ -121,7 +122,10 @@ const socialImageUrl = image ? new URL(image, canonicalUrl).href : null;
         <a href="/dmca/">DMCA</a>
         <a href="/sitemap/">Sitemap</a>
       </nav>
-      <p class="footer-legal">© {new Date().getFullYear()} findbyface.org — For entertainment purposes only. Results are based on visual similarity and are not an indication of identity.</p>
+      <div class="footer-legal-group">
+        <p class="footer-legal">© {new Date().getFullYear()} findbyface.org — For entertainment purposes only. Results are based on visual similarity and are not an indication of identity.</p>
+        <p class="footer-legal">All rights reserved. findbyface.org is neither owned nor affiliated with onlyfans.com, which is a registered trademark of Fenix International Limited.</p>
+      </div>
     </div>
   </footer>
 </body>
@@ -208,10 +212,16 @@ const socialImageUrl = image ? new URL(image, canonicalUrl).href : null;
 
   .footer-links a:hover { color: var(--text); }
 
+  .footer-legal-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 600px;
+  }
+
   .footer-legal {
     color: var(--text-muted);
     font-size: 12px;
-    max-width: 600px;
     line-height: 1.7;
   }
 

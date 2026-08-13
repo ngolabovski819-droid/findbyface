@@ -16,19 +16,38 @@ import Base from '../layouts/Base.astro';
     <div class="prose">
       <h2>What is findbyface?</h2>
       <p>
-        <strong>findbyface</strong> is an AI-powered visual search engine for OnlyFans. Upload a
-        clear photo of a face and our system instantly surfaces creators who share similar facial
-        features — same eyes, smile, and overall look. It's built for discovery: whether you spotted
-        someone on social media, have a celebrity crush, or simply want to find creators that match
-        your type, we help you find them in seconds.
+        <strong>findbyface</strong> is a search engine for OnlyFans creators, built two ways. You can
+        <a href="/onlyfans-search/">search or browse by name and category</a>, ranked by real
+        engagement, or upload a photo on our <a href="/onlyfans-finder-by-face/">AI face search</a> to
+        instantly find creators who share similar facial features — same eyes, smile, and overall
+        look. It's built for discovery: whether you spotted someone on social media, have a celebrity
+        crush, or simply want to find creators that match your type, we help you find them in seconds.
+      </p>
+      <p>
+        We also run a separate <a href="/pornstar-finder-by-face/">pornstar finder</a>, currently in
+        private beta. Upload a photo or video screenshot and it searches faces against a growing index
+        of adult videos, returning matches grouped by video and ranked by visual similarity — useful
+        for finding a scene when you only have a screenshot, not a name.
       </p>
 
       <h2>How it works</h2>
       <p>
-        Our matching runs entirely on visual similarity. When you upload a photo, a face-recognition
-        model detects the face and converts it into a numeric descriptor — a mathematical fingerprint
-        of facial geometry. We then compare that descriptor against creator profiles to rank the
-        closest visual matches. No names, reverse lookups, or personal data are required.
+        Browsing and search results are ordered by <strong>FindRank</strong>, our engagement-based
+        ranking — no human editor decides the order. Face search runs on a separate AI pipeline: when
+        you upload a photo, a face-recognition model detects the face and converts it into a numeric
+        descriptor — a mathematical fingerprint of facial geometry — then compares that descriptor
+        against creator profiles to rank the closest visual matches. No names, reverse lookups, or
+        personal data are required. For the full breakdown of both systems, see
+        <a href="/how-our-search-engine-works/">how our search engine works</a>.
+      </p>
+
+      <h2>Sponsored placements</h2>
+      <p>
+        findbyface is free to use, partly because creators can pay for a specific, disclosed
+        placement — like the top of a category page. Sponsorship never changes a FindRank or
+        face-match score and never hides organic results; every sponsored card is labeled
+        "Sponsored" or "Ad". Full details are on the
+        <a href="/how-our-search-engine-works/">methodology page</a>.
       </p>
 
       <h2>Privacy first</h2>
@@ -44,6 +63,12 @@ import Base from '../layouts/Base.astro';
         are based on appearance and are intended for discovery and entertainment only — they are
         <strong>not</strong> a confirmation of identity. A high match percentage does not mean two
         people are the same person.
+      </p>
+
+      <h2>Who's behind this</h2>
+      <p>
+        findbyface is built and maintained by <a href="/blog/author/nick/">Nick</a>, including
+        FindRank and the disclosed sponsor model described above.
       </p>
 
       <h2>Get in touch</h2>

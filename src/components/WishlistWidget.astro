@@ -1,0 +1,113 @@
+---
+// Reusable wishlist summary: icon, live count/limit, progress bar, and a sign-up nudge for
+// guests (hidden automatically once signed in — see the script below). Supports more than
+// one instance per page (dashboard + /wishlist could both render it) via class-scoped
+// queries rather than ids, so nothing collides if it's ever dropped in twice.
+---
+
+<div class="wishlist-widget">
+  <div class="ww-top">
+    <span class="ww-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M12 21s-6.6-4.06-9.33-7.86C.86 10.64 1.1 7.28 3.6 5.34c2.2-1.7 5.02-1.24 6.7.86L12 8.1l1.7-1.9c1.68-2.1 4.5-2.56 6.7-.86 2.5 1.94 2.74 5.3 0.93 7.8C18.6 16.94 12 21 12 21Z"/></svg>
+    </span>
+    <div class="ww-meta">
+      <span class="ww-label">Wishlist</span>
+      <strong class="ww-count"><span class="ww-current">0</span><span class="ww-slash">/</span><span class="ww-limit">10</span></strong>
+    </div>
+  </div>
+  <p class="ww-sub">Items saved</p>
+  <div class="ww-bar-track"><div class="ww-bar-fill" style="width:0%"></div></div>
+  <a href="/signup/?next=/wishlist/" class="ww-cta" hidden>Sign up for more space <span>→</span></a>
+</div>
+
+<script>
+  import { currentAccountId } from '../lib/accountSearchHistory';
+  import { getWishlist, getWishlistLimit } from '../lib/wishlist';
+
+  function initWidget(root: HTMLElement): void {
+    const current = root.querySelector<HTMLElement>('.ww-current')!;
+    const limitEl = root.querySelector<HTMLElement>('.ww-limit')!;
+    const fill = root.querySelector<HTMLElement>('.ww-bar-fill')!;
+    const cta = root.querySelector<HTMLElement>('.ww-cta');
+
+    function render(): void {
+      const count = getWishlist().length;
+      const limit = getWishlistLimit();
+      current.textContent = String(count);
+      limitEl.textContent = String(limit);
+      fill.style.width = `${Math.min(100, Math.round((count / limit) * 100))}%`;
+      fill.classList.toggle('full', count >= limit);
+      if (cta) cta.hidden = Boolean(currentAccountId());
+    }
+
+    render();
+    window.addEventListener('fbf:wishlist-changed', render);
+    window.addEventListener('storage', event => { if (event.key === 'fbf_user') render(); });
+  }
+
+  document.querySelectorAll<HTMLElement>('.wishlist-widget').forEach(initWidget);
+</script>
+
+<style is:global>
+  .wishlist-widget {
+    width: min(320px, 100%);
+    padding: 20px 22px 22px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+  }
+  .ww-top { display: flex; align-items: center; gap: 14px; }
+  .ww-icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: linear-gradient(145deg, rgba(124,58,237,.22), rgba(236,72,153,.16));
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+  }
+  .ww-icon svg { width: 22px; height: 22px; fill: url(#fbfWishlistHeartGradient); }
+  .ww-meta { display: flex; flex-direction: column; gap: 2px; }
+  .ww-label {
+    font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .ww-count { font-family: 'Manrope', sans-serif; font-size: 1.6rem; font-weight: 800; color: var(--text); line-height: 1.1; }
+  .ww-slash { color: var(--text-muted); font-weight: 600; margin: 0 2px; font-size: 1.1rem; }
+  .ww-limit { color: var(--text-muted); font-size: 1.1rem; font-weight: 700; }
+
+  .ww-sub { margin: 14px 0 8px; color: var(--text-muted); font-size: 13px; }
+
+  .ww-bar-track {
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.08);
+    overflow: hidden;
+  }
+  .ww-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #a855f7, #ec4899);
+    transition: width .3s cubic-bezier(.34,1.2,.64,1);
+  }
+  .ww-bar-fill.full { background: linear-gradient(90deg, #fb7185, #e11d48); }
+
+  .ww-cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 18px;
+    padding: 11px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-pink));
+    color: #fff;
+    font-size: 13.5px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .ww-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(124,58,237,.35); }
+  .ww-cta[hidden] { display: none; }
+</style>

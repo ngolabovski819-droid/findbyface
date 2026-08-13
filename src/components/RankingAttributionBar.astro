@@ -1,0 +1,60 @@
+---
+// Small trust/attribution line shown alongside ranked-list headings (category pages,
+// search results): who built the list, what ranks it, and how fresh it is.
+// Date is computed at request time so it always reflects "today" on a live render;
+// on edge-cached routes it reflects the moment of the last cache revalidation.
+interface Props {
+  // 'center' (default): standalone block under a heading, centered, own bottom margin.
+  // 'left': inline item in a flex row (e.g. next to a Grid/Feed toggle) — no forced margin.
+  align?: 'center' | 'left';
+}
+const { align = 'center' } = Astro.props;
+const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+---
+
+<p class={`rank-attribution rank-attribution-${align}`}>
+  Created by <a href="/blog/author/nick/">Nick</a>
+  <span class="rank-attribution-sep" aria-hidden="true">·</span>
+  Ranked by <a href="/how-our-search-engine-works/">FindRank</a>
+  <span class="rank-attribution-sep" aria-hidden="true">·</span>
+  no human review
+  <span class="rank-attribution-sep" aria-hidden="true">·</span>
+  Updated {today}
+</p>
+
+<style>
+  .rank-attribution {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 12.5px;
+  }
+
+  .rank-attribution-center {
+    justify-content: center;
+    margin: 0 0 28px;
+  }
+
+  .rank-attribution-left {
+    justify-content: flex-start;
+    margin: 0;
+  }
+
+  .rank-attribution a {
+    color: var(--text-muted);
+    text-decoration: underline;
+    text-decoration-color: var(--border);
+    text-underline-offset: 2px;
+    transition: color 0.2s;
+  }
+
+  .rank-attribution a:hover {
+    color: var(--accent-light);
+  }
+
+  .rank-attribution-sep {
+    color: var(--border);
+  }
+</style>

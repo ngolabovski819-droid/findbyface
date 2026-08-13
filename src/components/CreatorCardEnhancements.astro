@@ -1,7 +1,19 @@
+<!-- Shared gradient def for every card's wishlist heart fill (referenced via
+     fill="url(#fbfWishlistHeartGradient)"). One instance per page is enough — SVG resolves
+     url(#id) references against the whole document, not per-<svg> scope. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="fbfWishlistHeartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fb7185" />
+      <stop offset="100%" stop-color="#e11d48" />
+    </linearGradient>
+  </defs>
+</svg>
+
 <script>
   import { initCardClickThrough } from '../lib/cardClickThrough';
-
-  const STORAGE_KEY = 'findbyface:wishlist';
+  import { currentAccountId } from '../lib/accountSearchHistory';
+  import { WISHLIST_LIMIT_ACCOUNT, isInWishlist, readEntryFromCard, toggleWishlist } from '../lib/wishlist';
 
   // Keep whole-card navigation active even when Astro hot-reloads this component
   // after the visual enhancement layer has already been initialized.
@@ -17,17 +29,48 @@
     }
   }
 
-  function getWishlist(): string[] {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
-      return Array.isArray(parsed) ? parsed.filter(item => typeof item === 'string') : [];
-    } catch {
-      return [];
-    }
+  // Every card-rendering page listens for this to update its own wishlist-derived UI
+  // (nav badge, the /wishlist page's own list) without polling localStorage.
+  function notifyWishlistChanged(): void {
+    window.dispatchEvent(new CustomEvent('fbf:wishlist-changed'));
   }
 
-  function setWishlist(usernames: string[]): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(usernames));
+  function showWishlistToast(message: string): void {
+    const existing = document.querySelector('.wishlist-toast');
+    existing?.remove();
+    const toast = document.createElement('div');
+    toast.className = 'wishlist-toast';
+    toast.setAttribute('role', 'status');
+    toast.textContent = message;
+    document.body.append(toast);
+    window.setTimeout(() => toast.remove(), 3200);
+  }
+
+  const HEART_OUTLINE_PATH = 'M12 21s-6.6-4.06-9.33-7.86C.86 10.64 1.1 7.28 3.6 5.34c2.2-1.7 5.02-1.24 6.7.86L12 8.1l1.7-1.9c1.68-2.1 4.5-2.56 6.7-.86 2.5 1.94 2.74 5.3 0.93 7.8C18.6 16.94 12 21 12 21Z';
+
+  function heartIconMarkup(active: boolean): string {
+    return `<svg viewBox="0 0 24 24" class="heart-svg" aria-hidden="true">
+      <path class="heart-outline" d="${HEART_OUTLINE_PATH}"/>
+      <path class="heart-fill" d="${HEART_OUTLINE_PATH}"/>
+    </svg>`;
+  }
+
+  function burstHeart(button: HTMLElement): void {
+    const sparkCount = 7;
+    for (let i = 0; i < sparkCount; i++) {
+      const spark = document.createElement('span');
+      spark.className = 'heart-spark';
+      const angle = (360 / sparkCount) * i + (Math.random() * 18 - 9);
+      const distance = 16 + Math.random() * 6;
+      spark.style.setProperty('--angle', `${angle}deg`);
+      spark.style.setProperty('--distance', `${distance}px`);
+      button.append(spark);
+      spark.addEventListener('animationend', () => spark.remove(), { once: true });
+    }
+    button.classList.remove('bursting');
+    // Force a reflow so re-triggering the ring animation on rapid re-likes restarts cleanly.
+    void button.offsetWidth;
+    button.classList.add('bursting');
   }
 
   function imageUrl(url: string): string {
@@ -79,8 +122,8 @@
     wrap.querySelectorAll('.sponsored-badge').forEach(node => node.remove());
 
     if (username && !wrap.querySelector('.card-wishlist')) {
-      const selected = getWishlist().some(value => value.toLowerCase() === username.toLowerCase());
-      wrap.insertAdjacentHTML('beforeend', `<button type="button" class="card-wishlist${selected ? ' active' : ''}" data-wishlist-username="${username.replace(/"/g, '&quot;')}" aria-label="${selected ? 'Remove from wishlist' : 'Add to wishlist'}">${selected ? '♥' : '♡'}</button>`);
+      const selected = isInWishlist(username);
+      wrap.insertAdjacentHTML('beforeend', `<button type="button" class="card-wishlist${selected ? ' active' : ''}" data-wishlist-username="${username.replace(/"/g, '&quot;')}" aria-label="${selected ? 'Remove from wishlist' : 'Add to wishlist'}">${heartIconMarkup(selected)}</button>`);
     }
 
     if (sponsored && tags.length > 0 && !wrap.querySelector('.card-content-tags')) {
@@ -197,15 +240,20 @@
 
       const username = control.dataset.wishlistUsername;
       if (!username) return;
-      const current = getWishlist();
-      const exists = current.some(value => value.toLowerCase() === username.toLowerCase());
-      const next = exists
-        ? current.filter(value => value.toLowerCase() !== username.toLowerCase())
-        : [...current, username];
-      setWishlist(next);
-      control.classList.toggle('active', !exists);
-      control.textContent = exists ? '♡' : '♥';
-      control.setAttribute('aria-label', exists ? 'Add to wishlist' : 'Remove from wishlist');
+      const entry = readEntryFromCard(card, username);
+      const result = toggleWishlist(username, entry);
+
+      if (result.blocked) {
+        showWishlistToast(currentAccountId()
+          ? `Wishlist full (${result.limit}/${result.limit}) — remove something to add another`
+          : `Wishlist full (${result.limit}/${result.limit}) — sign up free for space for ${WISHLIST_LIMIT_ACCOUNT}`);
+        return;
+      }
+
+      control.classList.toggle('active', result.added);
+      control.setAttribute('aria-label', result.added ? 'Remove from wishlist' : 'Add to wishlist');
+      if (result.added) burstHeart(control);
+      notifyWishlistChanged();
     }, true);
   }
 </script>
@@ -213,32 +261,104 @@
 <style is:global>
   .creator-card .card-wishlist {
     position: absolute;
-    top: 8px;
-    left: 8px;
+    top: 9px;
+    left: 9px;
     z-index: 5;
     display: grid;
     place-items: center;
-    width: 32px;
-    height: 32px;
+    width: 33px;
+    height: 33px;
     padding: 0;
-    border: 1px solid rgba(255,255,255,.34);
+    border: 0;
     border-radius: 50%;
-    background: linear-gradient(145deg, rgba(42,42,46,.76), rgba(12,12,14,.64));
-    color: #fff;
-    box-shadow: 0 2px 8px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.12);
-    font-size: 17px;
-    line-height: 1;
+    background: rgba(15,14,20,.5);
+    box-shadow: 0 2px 10px rgba(0,0,0,.34), inset 0 0 0 1px rgba(255,255,255,.16);
     cursor: pointer;
-    transition: transform .18s, background .18s, border-color .18s, box-shadow .18s;
-    backdrop-filter: blur(6px);
+    overflow: visible;
+    transition: transform .15s cubic-bezier(.34,1.56,.64,1), background .2s ease, box-shadow .2s ease;
+    backdrop-filter: blur(7px) saturate(160%);
+    -webkit-backdrop-filter: blur(7px) saturate(160%);
   }
-  .creator-card .card-wishlist:hover { transform: scale(1.06); border-color: rgba(255,255,255,.62); }
-  .creator-card .card-wishlist.active {
-    border-color: rgba(255,255,255,.72);
-    background: linear-gradient(145deg, #38bdf8, #0284c7);
-    box-shadow: 0 3px 12px rgba(14,165,233,.38), inset 0 1px 0 rgba(255,255,255,.28);
-  }
+  .creator-card .card-wishlist:hover { transform: scale(1.08); background: rgba(15,14,20,.68); }
+  .creator-card .card-wishlist:active { transform: scale(.9); }
   .creator-card .card-wishlist:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+  .creator-card .card-wishlist .heart-svg { width: 17px; height: 17px; overflow: visible; }
+  .creator-card .card-wishlist .heart-outline {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 1.9px;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    opacity: .95;
+    transition: opacity .18s ease;
+  }
+  .creator-card .card-wishlist .heart-fill {
+    fill: url(#fbfWishlistHeartGradient);
+    opacity: 0;
+    transform-origin: 50% 55%;
+    transform: scale(0);
+    transition: opacity .2s ease, transform .4s cubic-bezier(.34,1.56,.64,1);
+  }
+  .creator-card .card-wishlist.active {
+    box-shadow: 0 3px 14px rgba(244,63,94,.45), inset 0 0 0 1px rgba(255,255,255,.22);
+  }
+  .creator-card .card-wishlist.active .heart-outline { opacity: 0; }
+  .creator-card .card-wishlist.active .heart-fill { opacity: 1; transform: scale(1); }
+
+  /* Expanding ring + confetti burst, played once per "like" via the .bursting class
+     (src/components/CreatorCardEnhancements.astro's burstHeart()) — never on unlike. */
+  .creator-card .card-wishlist.bursting::after {
+    content: '';
+    position: absolute;
+    inset: -7px;
+    z-index: -1;
+    border-radius: 50%;
+    border: 1.5px solid rgba(244,63,94,.55);
+    animation: fbfHeartRing .55s ease-out forwards;
+    pointer-events: none;
+  }
+  @keyframes fbfHeartRing {
+    0% { transform: scale(.5); opacity: .9; }
+    100% { transform: scale(1.7); opacity: 0; }
+  }
+  .heart-spark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fb7185, #f43f5e);
+    pointer-events: none;
+    transform: translate(-50%,-50%) rotate(var(--angle)) translateY(0) scale(1);
+    animation: fbfHeartSpark .5s cubic-bezier(.2,.7,.3,1) forwards;
+  }
+  @keyframes fbfHeartSpark {
+    0% { transform: translate(-50%,-50%) rotate(var(--angle)) translateY(0) scale(1); opacity: 1; }
+    100% { transform: translate(-50%,-50%) rotate(var(--angle)) translateY(calc(-1 * var(--distance))) scale(0); opacity: 0; }
+  }
+
+  .wishlist-toast {
+    position: fixed;
+    z-index: 999;
+    left: 50%;
+    bottom: 28px;
+    transform: translateX(-50%);
+    max-width: min(360px, calc(100vw - 32px));
+    padding: 12px 20px;
+    border-radius: 999px;
+    background: rgba(20,18,28,.96);
+    border: 1px solid rgba(244,63,94,.35);
+    box-shadow: 0 18px 45px rgba(0,0,0,.4);
+    color: #e8e3ec;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    animation: fbfToastIn .2s ease;
+  }
+  @keyframes fbfToastIn { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
   .creator-card .card-content-tags {
     position: absolute;

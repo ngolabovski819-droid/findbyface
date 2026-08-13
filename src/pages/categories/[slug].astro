@@ -2,6 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import CreatorCard from '../../components/CreatorCard.astro';
 import CategoryChips from '../../components/CategoryChips.astro';
+import RankingAttributionBar from '../../components/RankingAttributionBar.astro';
 import { slugToCategory } from '../../config/categories';
 import { categorySeo } from '../../config/seo-meta';
 import { resolvePlacements } from '../../lib/creatorFetch';
@@ -104,6 +105,7 @@ const jsonLd = JSON.stringify({
     </div>
 
     <CategoryChips activeSlug={slug} />
+    <RankingAttributionBar />
 
     <div class="category-content">
       {creators.length > 0 ? (
@@ -168,7 +170,7 @@ const jsonLd = JSON.stringify({
     return `<div class="creator-card" data-href="${profileUrl}" ${cardData}>
       <div class="card-img-wrap">
         <img src="${imgSrc}" alt="${c.name || c.username}" loading="lazy" decoding="async" referrerpolicy="no-referrer"
-          onerror="if(this.src!=='/no-image.png'){this.removeAttribute('srcset');this.src='/no-image.png';}">
+          onerror="this.onerror=null;this.removeAttribute('srcset');this.src='/no-image.png';">
       </div>
       <div class="card-body">
         <p class="creator-name">${c.name || c.username}</p>
