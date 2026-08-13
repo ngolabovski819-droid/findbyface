@@ -25,7 +25,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 function loadEnv() {
   const envPath = path.join(__dirname, '..', '.env');
   if (!fs.existsSync(envPath)) return;
-  const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
+  const lines = fs.readFileSync(envPath, 'utf8').split('\n');
   for (const line of lines) {
     const m = line.match(/^([A-Z_]+)\s*=\s*(.+)$/);
     if (m) process.env[m[1]] = m[2].trim();
@@ -35,9 +35,8 @@ loadEnv();
 
 const SUPABASE_URL = process.env.SUPABASE_URL?.replace(/\/+$/, '');
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
-const BATCH_SIZE    = 50;   // fetch 50 at a time from Supabase
-const CONCURRENCY   = 5;    // download 5 images in parallel
-const DELAY_MS      = 50;   // minimal delay to avoid hammering weserv.nl
+const BATCH_SIZE   = 20;
+const DELAY_MS     = 300;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error('ERROR: SUPABASE_URL and SUPABASE_KEY must be set in .env');
@@ -130,41 +129,22 @@ async function getDescriptor(buffer, faceapi) {
   }
 }
 
-// ── Retry helper ─────────────────────────────────────────────────────────────
-async function withRetry(fn, retries = 4, delayMs = 3000, label = '') {
-  for (let i = 0; i <= retries; i++) {
-    try { return await fn(); }
-    catch (e) {
-      if (i === retries) throw e;
-      console.log(`  [retry ${i+1}/${retries}] ${label}: ${e.message} — waiting ${delayMs}ms`);
-      await new Promise(r => setTimeout(r, delayMs * (i + 1)));
-    }
-  }
-}
-
 // ── Supabase helpers ──────────────────────────────────────────────────────────
-// NOTE: no `offset` param. We always fetch the current head of the unattempted
-// pool (face_embedding IS NULL AND face_embedding_checked_at IS NULL). Using a
-// fixed numeric offset here was a bug: every row that resolves (success,
-// no-face, or dead-link) drops out of that WHERE clause, which shifts every
-// later row's position — a static OFFSET then skips however many rows
-// resolved since the last page, silently losing candidates every batch.
-async function fetchBatch() {
-  return withRetry(async () => {
-    const params = new URLSearchParams({
-      select:                     'id,username,avatar',
-      'avatar':                   'not.is.null',
-      'face_embedding':           'is.null',
-      'face_embedding_checked_at':'is.null',
-      order:                      'favoritedcount.desc',
-      limit:                      String(BATCH_SIZE),
-    });
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/onlyfans_profiles?${params}`, {
-      headers: SB_HEADERS,
-    });
-    if (!res.ok) throw new Error(`Supabase fetch failed: ${res.status}`);
-    return res.json();
-  }, 4, 5000, 'fetchBatch');
+async function fetchBatch(offset) {
+  const params = new URLSearchParams({
+    select:          'id,username,avatar',
+    'avatar':        'not.is.null',
+    'face_embedding':'is.null',
+    order:           'favoritedcount.desc',
+    limit:           String(BATCH_SIZE),
+    offset:          String(offset),
+  });
+
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/onlyfans_profiles?${params}`, {
+    headers: SB_HEADERS,
+  });
+  if (!res.ok) throw new Error(`Supabase fetch failed: ${res.status}`);
+  return res.json();
 }
 
 async function storeEmbedding(id, descriptor) {
@@ -174,118 +154,61 @@ async function storeEmbedding(id, descriptor) {
     {
       method: 'PATCH',
       headers: SB_HEADERS,
-      body: JSON.stringify({ face_embedding: vectorStr, face_embedding_checked_at: new Date().toISOString() }),
+      body: JSON.stringify({ face_embedding: vectorStr }),
     }
   );
   return res.status === 200 || res.status === 204;
 }
 
-// Stamps a row as "attempted" without an embedding — no face found, or the
-// avatar is confirmedly dead (HTTP error from the source/proxy). This is
-// what makes future runs skip it instead of re-downloading forever.
-async function markChecked(id) {
-  try {
-    await fetch(
-      `${SUPABASE_URL}/rest/v1/onlyfans_profiles?id=eq.${id}`,
-      {
-        method: 'PATCH',
-        headers: SB_HEADERS,
-        body: JSON.stringify({ face_embedding_checked_at: new Date().toISOString() }),
-      }
-    );
-  } catch { /* best-effort — worst case this row gets retried next run */ }
-}
-
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
   console.log('findbyface — Face Embedding Generator (Node.js/TF.js)');
-  console.log(`Supabase: ${SUPABASE_URL}`);
+  console.log(`Supabase: ${SUPABASE_URL}\n`);
 
   const faceapi = await initFaceApi();
 
-  let totalOk = 0, totalNoFace = 0, totalErr = 0, totalDead = 0, batchNum = 0;
-  const startTime = Date.now();
+  let offset = 0, totalOk = 0, totalNoFace = 0, totalErr = 0;
 
   while (true) {
-    const batch = await fetchBatch();
+    const batch = await fetchBatch(offset);
     if (!batch.length) { console.log('\nAll done — no more creators to process.'); break; }
 
-    const valid = batch.filter(c => c.avatar?.startsWith('http'));
-    batchNum++;
-    console.log(`\nBatch #${batchNum} — ${batch.length} (${valid.length} with avatars)`);
+    console.log(`\nBatch offset=${offset} — ${batch.length} creators`);
 
-    // Rows with a non-http avatar value will never resolve — mark them so
-    // they don't keep coming back at the head of every future batch.
     for (const c of batch) {
-      if (!c.avatar?.startsWith('http')) {
-        await markChecked(c.id);
-        totalDead++;
+      const { id, username, avatar } = c;
+      process.stdout.write(`  ${username} (${id}) ... `);
+
+      if (!avatar?.startsWith('http')) { console.log('skip (no avatar)'); totalErr++; continue; }
+
+      try {
+        const buf = await downloadBuffer(proxyUrl(avatar));
+        const descriptor = await getDescriptor(buf, faceapi);
+
+        if (!descriptor) {
+          console.log('no face');
+          totalNoFace++;
+        } else {
+          await storeEmbedding(id, descriptor);
+          console.log(`ok (${descriptor.slice(0,3).map(v=>v.toFixed(3)).join(',')}...)`);
+          totalOk++;
+        }
+      } catch (err) {
+        console.log(`error: ${err.message}`);
+        totalErr++;
       }
+
+      await new Promise(r => setTimeout(r, DELAY_MS));
     }
 
-    // Split valid into chunks of CONCURRENCY, download images in parallel
-    for (let i = 0; i < valid.length; i += CONCURRENCY) {
-      const chunk = valid.slice(i, i + CONCURRENCY);
-
-      // Download all images in parallel
-      const downloaded = await Promise.all(
-        chunk.map(async c => {
-          try {
-            const buf = await downloadBuffer(proxyUrl(c.avatar));
-            return { c, buf, err: null };
-          } catch (e) {
-            return { c, buf: null, err: e.message };
-          }
-        })
-      );
-
-      // Detect + store sequentially (WASM is single-threaded)
-      for (const { c, buf, err } of downloaded) {
-        const { id, username } = c;
-        process.stdout.write(`  ${username} (${id}) ... `);
-
-        if (err) {
-          console.log(`download error: ${err}`);
-          totalErr++;
-          // A definitive HTTP status (404/403/etc) means the source/proxy
-          // responded — the object is confirmedly gone, not a network blip.
-          // Mark it so we stop retrying. Anything else (timeout, DNS,
-          // connection reset) is left unmarked so it's retried next run.
-          if (/^HTTP \d+$/.test(err)) await markChecked(id);
-          continue;
-        }
-
-        try {
-          const descriptor = await getDescriptor(buf, faceapi);
-          if (!descriptor) {
-            console.log('no face');
-            totalNoFace++;
-            await markChecked(id);
-          } else {
-            await storeEmbedding(id, descriptor);
-            console.log(`ok`);
-            totalOk++;
-          }
-        } catch (e) {
-          // Extraction threw (tensor/runtime issue) — leave unmarked, retry.
-          console.log(`error: ${e.message}`);
-          totalErr++;
-        }
-
-        await new Promise(r => setTimeout(r, DELAY_MS));
-      }
-    }
-
-    const elapsed = Math.round((Date.now() - startTime) / 1000);
-    const rate = totalOk > 0 ? (totalOk / elapsed * 60).toFixed(1) : '?';
-    console.log(`Progress: stored=${totalOk} no-face=${totalNoFace} dead=${totalDead} errors=${totalErr} | ${rate} embeddings/min`);
+    offset += BATCH_SIZE;
+    console.log(`Progress: stored=${totalOk} no-face=${totalNoFace} errors=${totalErr}`);
   }
 
   console.log('\n' + '='.repeat(40));
-  console.log(`Stored    : ${totalOk}`);
-  console.log(`No face   : ${totalNoFace}`);
-  console.log(`Dead links: ${totalDead}`);
-  console.log(`Errors    : ${totalErr}`);
+  console.log(`Stored   : ${totalOk}`);
+  console.log(`No face  : ${totalNoFace}`);
+  console.log(`Errors   : ${totalErr}`);
 }
 
 main().catch(err => { console.error(err); process.exit(1); });

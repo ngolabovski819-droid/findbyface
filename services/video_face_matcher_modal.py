@@ -162,45 +162,6 @@ def matcher_api():
     def vector_literal(vector: np.ndarray) -> str:
         return "[" + ",".join(f"{float(value):.8f}" for value in vector) + "]"
 
-    def match_video_faces(query: np.ndarray, request_headers: dict[str, str]) -> list[dict]:
-        """Call match_video_faces, retrying once on failure.
-
-        The HNSW index is large enough (130k+ rows) that a cold buffer cache
-        can push a single search past the function's statement_timeout,
-        which PostgREST reports back as a request failure. The pages that
-        attempt touched are cached afterward, so an immediate retry lands
-        warm and typically finishes in well under a second -- confirmed by
-        reproducing the failure directly against Supabase on 2026-08-07.
-        """
-        payload = {
-            "query_embedding": vector_literal(query),
-            "match_count": result_limit,
-            "min_similarity": threshold,
-            "candidate_count": 1000,
-        }
-        last_detail: str | None = None
-        for attempt in (1, 2):
-            response = requests.post(
-                f"{supabase_url}/rest/v1/rpc/match_video_faces",
-                headers=request_headers,
-                json=payload,
-                timeout=30,
-            )
-            if response.ok:
-                return response.json()
-            try:
-                last_detail = response.json().get("message")
-            except (ValueError, AttributeError):
-                last_detail = None
-            print(
-                f"match_video_faces attempt {attempt} failed: "
-                f"HTTP {response.status_code} {last_detail or response.text[:500]!r}"
-            )
-        raise HTTPException(
-            status_code=502,
-            detail=last_detail or "Supabase search failed after a retry.",
-        )
-
     def stable_thumbnail_url(video_id: int, extension: str) -> str:
         path = quote(f"videos/{video_id}.{extension}", safe="/")
         return (
@@ -462,7 +423,26 @@ def matcher_api():
         query /= norm
 
         request_headers = headers()
-        rows = match_video_faces(query, request_headers)
+        response = requests.post(
+            f"{supabase_url}/rest/v1/rpc/match_video_faces",
+            headers=request_headers,
+            json={
+                "query_embedding": vector_literal(query),
+                "match_count": result_limit,
+                "min_similarity": threshold,
+                "candidate_count": 1000,
+            },
+            timeout=30,
+        )
+        if not response.ok:
+            try:
+                detail = response.json().get("message")
+            except (ValueError, AttributeError):
+                detail = None
+            raise HTTPException(
+                status_code=502,
+                detail=detail or f"Supabase search failed with HTTP {response.status_code}.",
+            )
 
         results = [
             {
@@ -477,7 +457,7 @@ def matcher_api():
                 "supportingEmbeddings": row["supporting_embeddings"],
                 "bestTimestampSeconds": row["best_timestamp_seconds"],
             }
-            for row in rows
+            for row in response.json()
         ]
         cache_result_thumbnails(results)
         return {
