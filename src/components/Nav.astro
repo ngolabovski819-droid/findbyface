@@ -36,6 +36,10 @@ const isBattle = pathname.startsWith('/battle');
     </nav>
 
     <div class="nav-right">
+      <a href="/wishlist/" class="nav-wishlist-btn" id="navWishlistBtn" aria-label="Wishlist">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.6-4.06-9.33-7.86C.86 10.64 1.1 7.28 3.6 5.34c2.2-1.7 5.02-1.24 6.7.86L12 8.1l1.7-1.9c1.68-2.1 4.5-2.56 6.7-.86 2.5 1.94 2.74 5.3 0.93 7.8C18.6 16.94 12 21 12 21Z"/></svg>
+        <span class="nav-wishlist-count" id="navWishlistCount" hidden>0</span>
+      </a>
       <!-- Signed-out state (default, overridden by JS if signed in) -->
       <div class="auth-actions" id="authActions">
         <a href="/login/" class="login-btn">Log in</a>
@@ -81,6 +85,19 @@ const isBattle = pathname.startsWith('/battle');
 </header>
 
 <script>
+  import { currentAccountId, scopedSearchHistoryKey } from '../lib/accountSearchHistory';
+  import { getWishlist } from '../lib/wishlist';
+
+  const wishlistCount = document.getElementById('navWishlistCount')!;
+  function renderWishlistCount(): void {
+    const count = getWishlist().length;
+    wishlistCount.textContent = String(count > 99 ? '99+' : count);
+    wishlistCount.hidden = count === 0;
+  }
+  renderWishlistCount();
+  window.addEventListener('fbf:wishlist-changed', renderWishlistCount);
+  window.addEventListener('storage', event => { if (event.key === 'fbf_user') renderWishlistCount(); });
+
   const hamburger = document.getElementById('hamburger');
   const navLinks = document.getElementById('navLinks');
   hamburger?.addEventListener('click', () => {
@@ -143,28 +160,46 @@ const isBattle = pathname.startsWith('/battle');
     }
   }
 
+  function readCurrentStoredUser(): StoredUser | null {
+    try {
+      const value = JSON.parse(localStorage.getItem('fbf_user') || 'null');
+      return value && typeof value === 'object' ? value as StoredUser : null;
+    } catch {
+      return null;
+    }
+  }
+
   async function refreshStoredUser(user: StoredUser): Promise<StoredUser | null> {
-    if (!user.refresh_token) return null;
+    const ownerId = user.id;
+    const refreshToken = user.refresh_token;
+    if (!ownerId || !refreshToken) return null;
     try {
       const response = await fetch('/api/auth/refresh', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: user.refresh_token }),
+        body: JSON.stringify({ refresh_token: refreshToken }),
       });
       const payload = await response.json();
-      if (!response.ok || !payload.access_token || !payload.user) return null;
+      const current = readCurrentStoredUser();
+      if (current?.id !== ownerId || current.refresh_token !== refreshToken) {
+        return current?.access_token ? current : null;
+      }
+      if (!response.ok || !payload.access_token || payload.user?.id !== ownerId) return null;
       const refreshed: StoredUser = {
-        ...user,
+        ...current,
         ...payload.user,
         access_token: payload.access_token,
-        refresh_token: payload.refresh_token || user.refresh_token,
+        refresh_token: payload.refresh_token || refreshToken,
         expires_at: Date.now() + Number(payload.expires_in || 3600) * 1000,
       };
       localStorage.setItem('fbf_user', JSON.stringify(refreshed));
       localStorage.removeItem('fbf_pornstar_guest_search_day');
       return refreshed;
     } catch {
-      return null;
+      const current = readCurrentStoredUser();
+      return current?.id !== ownerId || current.refresh_token !== refreshToken
+        ? current
+        : null;
     }
   }
 
@@ -177,7 +212,13 @@ const isBattle = pathname.startsWith('/battle');
       if (!user.access_token || expiresAt <= Date.now() + 60_000) {
         const refreshed = await refreshStoredUser(user);
         if (!refreshed) {
+          const accountId = currentAccountId();
           localStorage.removeItem('fbf_user');
+          if (accountId) {
+            localStorage.removeItem(scopedSearchHistoryKey('fbf_history', accountId));
+            localStorage.removeItem(scopedSearchHistoryKey('fbf_pornstar_history', accountId));
+            localStorage.removeItem(scopedSearchHistoryKey('fbf_search_queries', accountId));
+          }
           return;
         }
         user = refreshed;
@@ -221,10 +262,17 @@ const isBattle = pathname.startsWith('/battle');
   });
 
   signOutBtn?.addEventListener('click', () => {
+    const accountId = currentAccountId();
     localStorage.removeItem('fbf_user');
     localStorage.removeItem('fbf_searches');
+    if (accountId) {
+      localStorage.removeItem(scopedSearchHistoryKey('fbf_history', accountId));
+      localStorage.removeItem(scopedSearchHistoryKey('fbf_pornstar_history', accountId));
+      localStorage.removeItem(scopedSearchHistoryKey('fbf_search_queries', accountId));
+    }
     localStorage.removeItem('fbf_history');
     localStorage.removeItem('fbf_pornstar_history');
+    localStorage.removeItem('fbf_search_queries');
     window.location.href = '/';
   });
 
@@ -322,6 +370,40 @@ const isBattle = pathname.startsWith('/battle');
     gap: 12px;
     margin-left: auto;
   }
+
+  .nav-wishlist-btn {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.025);
+    color: var(--text-muted);
+    transition: border-color 0.2s, background 0.2s, color 0.2s, transform 0.15s;
+  }
+  .nav-wishlist-btn:hover { border-color: rgba(244,63,94,0.5); background: rgba(244,63,94,0.1); color: #fb7185; transform: scale(1.05); }
+  .nav-wishlist-btn svg { width: 18px; height: 18px; fill: currentColor; }
+  .nav-wishlist-count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    display: grid;
+    place-items: center;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    border-radius: 999px;
+    border: 2px solid var(--bg);
+    background: linear-gradient(135deg, #fb7185, #e11d48);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .nav-wishlist-count[hidden] { display: none; }
 
   .auth-actions { display: flex; align-items: center; gap: 8px; }
   .login-btn,

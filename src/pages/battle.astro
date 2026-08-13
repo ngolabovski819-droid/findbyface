@@ -262,6 +262,8 @@ const structuredData = JSON.stringify([
 </Base>
 
 <script>
+  import { scopedSearchHistoryKey } from '../lib/accountSearchHistory';
+
   interface StoredUser {
     id?: string;
     name?: string;
@@ -418,27 +420,45 @@ const structuredData = JSON.stringify([
     }
   }
 
+  function readStoredUser(): StoredUser | null {
+    try {
+      const value = JSON.parse(localStorage.getItem('fbf_user') || 'null');
+      return value && typeof value === 'object' ? value as StoredUser : null;
+    } catch {
+      return null;
+    }
+  }
+
   async function refreshStoredUser(user: StoredUser): Promise<StoredUser | null> {
-    if (!user.refresh_token) return null;
+    const ownerId = user.id || decodeUserId(user.access_token) || undefined;
+    const refreshToken = user.refresh_token;
+    if (!ownerId || !refreshToken) return null;
     try {
       const response = await fetch('/api/auth/refresh', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: user.refresh_token }),
+        body: JSON.stringify({ refresh_token: refreshToken }),
       });
       const payload = await response.json();
-      if (!response.ok || !payload.access_token || !payload.user) return null;
+      const current = readStoredUser();
+      if (current?.id !== ownerId || current.refresh_token !== refreshToken) {
+        return current?.access_token ? current : null;
+      }
+      if (!response.ok || !payload.access_token || payload.user?.id !== ownerId) return null;
       const refreshed: StoredUser = {
-        ...user,
+        ...current,
         ...payload.user,
         access_token: payload.access_token,
-        refresh_token: payload.refresh_token || user.refresh_token,
+        refresh_token: payload.refresh_token || refreshToken,
         expires_at: Date.now() + Number(payload.expires_in || 3600) * 1000,
       };
       localStorage.setItem('fbf_user', JSON.stringify(refreshed));
       return refreshed;
     } catch {
-      return null;
+      const current = readStoredUser();
+      return current?.id !== ownerId || current.refresh_token !== refreshToken
+        ? current
+        : null;
     }
   }
 
@@ -454,6 +474,11 @@ const structuredData = JSON.stringify([
       const refreshed = await refreshStoredUser(user);
       if (!refreshed) {
         localStorage.removeItem('fbf_user');
+        if (user.id) {
+          localStorage.removeItem(scopedSearchHistoryKey('fbf_history', user.id));
+          localStorage.removeItem(scopedSearchHistoryKey('fbf_pornstar_history', user.id));
+          localStorage.removeItem(scopedSearchHistoryKey('fbf_search_queries', user.id));
+        }
         return null;
       }
       return refreshed;

@@ -185,19 +185,27 @@ export interface ResolvePlacementsParams {
   verified?: boolean;
   bundles?: boolean;
   price?: string;
+  /** Category pages may use a popular-results fallback. Free-text search disables it. */
+  allowFallback?: boolean;
 }
 
 export interface ResolvePlacementsResult {
   creators: MappedCreator[];
   total: number;
+  organicTotal: number;
+  sponsoredCount: number;
   usedFallback: boolean;
+  failed: boolean;
 }
 
 export async function resolvePlacements(
   scope: string,
   params: ResolvePlacementsParams,
 ): Promise<ResolvePlacementsResult> {
-  const { page, pageSize, termsOr, order, verified, bundles, price } = params;
+  const {
+    page, pageSize, termsOr, order, verified, bundles, price,
+    allowFallback = true,
+  } = params;
   const { pinned, excluded } = getPlacement(scope);
 
   const excludeUsernames = Array.from(new Set([...excluded, ...pinned.map(p => p.username)]));
@@ -213,9 +221,16 @@ export async function resolvePlacements(
   const organicLimit = pageSize - pinsInWindow.length;
 
   let organic = await fetchOrganicCreators({ termsOr, excludeUsernames, order, limit: organicLimit, offset: organicOffset, verified, bundles, price });
+  const matchedOrganicTotal = organic.total;
 
   let usedFallback = false;
-  if (termsOr && termsOr.length && organic.rows.length === 0) {
+  if (
+    allowFallback
+    && page === 1
+    && termsOr && termsOr.length
+    && !organic.failed
+    && matchedOrganicTotal === 0
+  ) {
     organic = await fetchOrganicCreators({ excludeUsernames, order, limit: organicLimit, offset: organicOffset, verified, bundles, price });
     usedFallback = true;
   }
@@ -241,6 +256,14 @@ export async function resolvePlacements(
   // Fallback total is capped to what's actually on this page — the real total would be
   // the unfiltered table's row count, which is meaningless under a category heading.
   const total = usedFallback ? creators.length : organic.total + pinned.length;
+  const sponsoredCount = creators.reduce((count, creator) => count + (creator.sponsored ? 1 : 0), 0);
 
-  return { creators, total, usedFallback };
+  return {
+    creators,
+    total,
+    organicTotal: usedFallback ? 0 : matchedOrganicTotal,
+    sponsoredCount,
+    usedFallback,
+    failed: organic.failed,
+  };
 }

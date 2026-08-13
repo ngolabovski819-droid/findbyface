@@ -72,7 +72,7 @@ import Base from '../layouts/Base.astro';
           </div>
           <span class="session-current">Current</span>
         </div>
-        <button class="set-btn outline-warn" id="logoutAllBtn">Logout from all devices</button>
+        <button class="set-btn outline-warn" id="logoutAllBtn">Log out on this device</button>
       </div>
 
       <!-- Saved Data -->
@@ -81,7 +81,7 @@ import Base from '../layouts/Base.astro';
         <div class="set-row-flex">
           <div>
             <p class="set-strong">Clear all saved data</p>
-            <p class="set-field-label">Remove your search history saved in this browser in one go.</p>
+            <p class="set-field-label">Remove all search history from your account and this device.</p>
           </div>
           <button class="set-btn outline-warn" id="clearDataBtn">🗑 Clear All</button>
         </div>
@@ -92,10 +92,10 @@ import Base from '../layouts/Base.astro';
         <h2 class="danger-title">Danger Zone</h2>
         <div class="set-row-flex">
           <div>
-            <p class="set-strong">Delete account</p>
-            <p class="set-field-label">Permanently delete your account, cancel subscriptions, and remove all data.</p>
+            <p class="set-strong">Request account deletion</p>
+            <p class="set-field-label">Contact us to permanently remove your account and associated data.</p>
           </div>
-          <button class="set-btn danger" id="deleteBtn">Delete</button>
+          <button class="set-btn danger" id="deleteBtn">Request deletion</button>
         </div>
       </div>
     </div>
@@ -103,6 +103,8 @@ import Base from '../layouts/Base.astro';
 </Base>
 
 <script>
+  import { clearAccountSearchHistoryForOwner, currentAccountId, scopedSearchHistoryKey } from '../lib/accountSearchHistory';
+
   function init() {
     let user = null;
     try { user = JSON.parse(localStorage.getItem('fbf_user') || 'null'); } catch { /* noop */ }
@@ -110,6 +112,12 @@ import Base from '../layouts/Base.astro';
     const gate = document.getElementById('setGate');
     const main = document.getElementById('setMain');
     if (!user) { gate.style.display = 'flex'; main.style.display = 'none'; return; }
+    const settingsAccountId = currentAccountId();
+    if (!settingsAccountId || settingsAccountId !== user.id) {
+      localStorage.removeItem('fbf_user');
+      window.location.reload();
+      return;
+    }
 
     gate.style.display = 'none';
     main.style.display = 'block';
@@ -198,29 +206,58 @@ import Base from '../layouts/Base.astro';
       `${navigator.platform || 'This device'} · ${new Date().toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}`;
 
     function signOut() {
+      const accountId = currentAccountId();
       localStorage.removeItem('fbf_user');
       localStorage.removeItem('fbf_searches');
+      if (accountId) {
+        localStorage.removeItem(scopedSearchHistoryKey('fbf_history', accountId));
+        localStorage.removeItem(scopedSearchHistoryKey('fbf_pornstar_history', accountId));
+        localStorage.removeItem(scopedSearchHistoryKey('fbf_search_queries', accountId));
+      }
+      // Remove only obsolete unowned caches; account-scoped outbox data remains
+      // available for a later retry by its owner.
       localStorage.removeItem('fbf_history');
       localStorage.removeItem('fbf_pornstar_history');
+      localStorage.removeItem('fbf_search_queries');
       window.location.href = '/';
     }
 
     document.getElementById('logoutAllBtn')?.addEventListener('click', signOut);
 
-    document.getElementById('clearDataBtn')?.addEventListener('click', (e) => {
+    document.getElementById('clearDataBtn')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      btn.disabled = true;
+      btn.textContent = 'Clearing…';
+      if (!(await clearAccountSearchHistoryForOwner(settingsAccountId))) {
+        btn.textContent = 'Could not clear — try again';
+        btn.disabled = false;
+        return;
+      }
+      const accountId = currentAccountId();
+      if (accountId) {
+        localStorage.removeItem(scopedSearchHistoryKey('fbf_history', accountId));
+        localStorage.removeItem(scopedSearchHistoryKey('fbf_pornstar_history', accountId));
+        localStorage.removeItem(scopedSearchHistoryKey('fbf_search_queries', accountId));
+      }
       localStorage.removeItem('fbf_history');
       localStorage.removeItem('fbf_pornstar_history');
+      localStorage.removeItem('fbf_search_queries');
       localStorage.removeItem('fbf_searches');
-      const btn = e.currentTarget as HTMLButtonElement;
       btn.textContent = 'Cleared ✓';
       btn.disabled = true;
     });
 
     document.getElementById('deleteBtn')?.addEventListener('click', () => {
-      const ok = window.confirm('Permanently delete your account and all saved data? This cannot be undone.');
+      const ok = window.confirm('Open the contact page to request permanent account deletion?');
       if (!ok) return;
-      // No app-side user record — clear local session and return home.
-      signOut();
+      // Deletion is handled as a verified support request; signing out never deletes server data.
+      window.location.href = '/contact/';
+    });
+
+    window.addEventListener('storage', event => {
+      if (event.key === 'fbf_user' && currentAccountId() !== settingsAccountId) {
+        window.location.reload();
+      }
     });
   }
   init();

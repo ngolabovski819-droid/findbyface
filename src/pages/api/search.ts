@@ -4,7 +4,36 @@ import { resolvePlacements } from '../../lib/creatorFetch';
 import { applySponsorOverrides } from '../../lib/sponsorOverrides';
 
 const CACHE_TTL = 60_000;
+const CACHE_MAX_ENTRIES = 250;
+const SEARCH_TIMEOUT_MS = 8_000;
 const cache = new Map<string, { data: unknown; ts: number }>();
+
+function setCached(key: string, data: unknown): void {
+  const now = Date.now();
+  for (const [candidate, entry] of cache) {
+    if (now - entry.ts >= CACHE_TTL) cache.delete(candidate);
+  }
+  while (cache.size >= CACHE_MAX_ENTRIES) {
+    const oldest = cache.keys().next().value as string | undefined;
+    if (!oldest) break;
+    cache.delete(oldest);
+  }
+  cache.set(key, { data, ts: now });
+}
+
+function parseTerms(query: string): string[] {
+  return query
+    .normalize('NFKC')
+    .split(/[|,]/)
+    .map(term => term
+      .replace(/[\u0000-\u001f\u007f]/g, ' ')
+      .replace(/[()*%_"\\]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 80))
+    .filter(Boolean)
+    .slice(0, 5);
+}
 
 const CARD_COLS = [
   'id', 'username', 'name', 'about', 'avatar', 'header',
@@ -25,21 +54,36 @@ export const GET: APIRoute = async ({ url }) => {
   const cached = cache.get(cacheKey);
   if (cached && Date.now() - cached.ts < CACHE_TTL) {
     return new Response(JSON.stringify(cached.data), {
-      headers: { 'Content-Type': 'application/json', 'X-Cache': 'HIT' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+        'X-Cache': 'HIT',
+      },
     });
   }
 
-  const q        = url.searchParams.get('q')?.trim() ?? '';
+  const q        = (url.searchParams.get('q')?.trim() ?? '').slice(0, 160);
   const verified = url.searchParams.get('verified') ?? '';
   const bundles  = url.searchParams.get('bundles') ?? '';
   const price    = url.searchParams.get('price') ?? '';
   const sort     = url.searchParams.get('sort') ?? '';
   const scope    = url.searchParams.get('scope') ?? '';
-  const page     = parseInt(url.searchParams.get('page') ?? '1') || 1;
+  const page     = Math.max(1, parseInt(url.searchParams.get('page') ?? '1') || 1);
   const pageSize = Math.min(parseInt(url.searchParams.get('page_size') ?? '20') || 20, 100);
   const order    = sort === 'newest'
     ? 'first_seen_at.desc.nullslast,favoritedcount.desc'
     : 'favoritedcount.desc,subscribeprice.asc';
+  const queryTerms = q ? parseTerms(q) : [];
+
+  if (q && queryTerms.length === 0) {
+    const data = { creators: [], total: 0, organicTotal: 0, sponsoredCount: 0, usedFallback: false, hasMore: false };
+    return new Response(JSON.stringify(data), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+      },
+    });
+  }
 
   // Pinning only ever activates for the fixed 'home' / 'category:<slug>' / 'onlyfans-search'
   // scopes that index.astro, categories/[slug].astro, and onlyfans-search.astro explicitly
@@ -51,18 +95,25 @@ export const GET: APIRoute = async ({ url }) => {
       const category = slugToCategory(scope.slice('category:'.length));
       if (category) termsOr = category.terms;
     } else if (scope === 'onlyfans-search' && q) {
-      termsOr = q.split(/[|,]/).map(s => s.trim()).filter(Boolean);
+      termsOr = queryTerms;
     }
-    const { creators: placedCreators, total } = await resolvePlacements(scope, {
+    const { creators: placedCreators, total, organicTotal, sponsoredCount, usedFallback, failed } = await resolvePlacements(scope, {
       page, pageSize, order, termsOr,
       verified: verified === 'true',
       bundles: bundles === 'true',
       price,
+      allowFallback: scope !== 'onlyfans-search',
     });
+    if (failed) {
+      return new Response(JSON.stringify({ error: 'Search is temporarily unavailable' }), {
+        status: 502,
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      });
+    }
     const creators = applySponsorOverrides(placedCreators);
     const hasMore = (page - 1) * pageSize + creators.length < total;
-    const data = { creators, total, hasMore };
-    cache.set(cacheKey, { data, ts: Date.now() });
+    const data = { creators, total, organicTotal, sponsoredCount, usedFallback, hasMore };
+    setCached(cacheKey, data);
     return new Response(JSON.stringify(data), {
       headers: {
         'Content-Type': 'application/json',
@@ -79,8 +130,7 @@ export const GET: APIRoute = async ({ url }) => {
   params.set('order', order);
 
   if (q) {
-    const terms = q.split(/[|,]/).map(s => s.trim()).filter(Boolean);
-    const exprs = terms.flatMap(t => [
+    const exprs = queryTerms.flatMap(t => [
       `username.ilike.*${t}*`,
       `name.ilike.*${t}*`,
       `about.ilike.*${t}*`,
@@ -94,14 +144,27 @@ export const GET: APIRoute = async ({ url }) => {
   else if (price === '5')  params.set('subscribeprice', 'lte.5');
   else if (price === '10') params.set('subscribeprice', 'lte.10');
 
-  const resp = await fetch(`${SUPABASE_URL}/rest/v1/onlyfans_profiles?${params}`, {
-    headers: {
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      'Accept-Profile': 'public',
-      Prefer: 'count=estimated',
-    },
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), SEARCH_TIMEOUT_MS);
+  let resp: Response;
+  try {
+    resp = await fetch(`${SUPABASE_URL}/rest/v1/onlyfans_profiles?${params}`, {
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        'Accept-Profile': 'public',
+        Prefer: 'count=estimated',
+      },
+      signal: controller.signal,
+    });
+  } catch {
+    return new Response(JSON.stringify({ error: 'Search request timed out' }), {
+      status: 504,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!resp.ok) {
     return new Response(JSON.stringify({ error: 'Supabase error', status: resp.status }), { status: 502 });
@@ -130,7 +193,7 @@ export const GET: APIRoute = async ({ url }) => {
   })));
 
   const data = { creators, total, hasMore };
-  cache.set(cacheKey, { data, ts: Date.now() });
+  setCached(cacheKey, data);
 
   return new Response(JSON.stringify(data), {
     headers: {

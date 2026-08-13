@@ -1,0 +1,6 @@
+[preview] The @astrojs/vercel adapter does not support the preview command.
+  [1mLocation:[22m
+    [4mC:\Users\nickg\findbyface\node_modules\astro\dist\core\preview\index.js:48:11[24m
+  [1mStack trace:[22m
+[2m    at preview (file:///C:/Users/nickg/findbyface/node_modules/astro/dist/core/preview/index.js:48:11)
+    at async runCommand (file:///C:/Users/nickg/findbyface/node_modules/astro/dist/cli/index.js:211:22)[22m

@@ -236,10 +236,13 @@ const rouletteSrcs = await getRouletteAvatars(
 </div>
 
 <script>
+  import { currentAccountId, newSearchHistoryId, saveAccountSearchHistoryForOwner, scopedSearchHistoryKey } from '../lib/accountSearchHistory';
   import { initCardClickThrough } from '../lib/cardClickThrough';
   import { creatorCardDataAttributes } from '../lib/creatorCardUi';
 
   type HomepageVideoResult = {
+    videoId?: number;
+    externalId?: string;
     title: string;
     sourceUrl?: string;
     thumbnailUrl?: string;
@@ -435,30 +438,74 @@ const rouletteSrcs = await getRouletteAvatars(
   function incrementSearchCount(): void {
     if (!isSignedIn()) localStorage.setItem('fbf_searches', String(getSearchCount() + 1));
   }
-  function recordSearchHistory(results: Record<string, unknown>[], topName?: string): void {
-    if (!isSignedIn()) return;
+  function recordCreatorSearchHistory(
+    results: Record<string, unknown>[],
+    topName?: string,
+    ownerAccountId = currentAccountId(),
+  ): void {
+    if (!ownerAccountId || currentAccountId() !== ownerAccountId) return;
+    const clientSearchId = newSearchHistoryId('creator_face');
+    // Store only compact match references; the uploaded query photo is never retained.
+    const saved = results.slice(0, 18).map(c => ({
+      username: c.username,
+      name: c.name || c.username,
+      avatar: c.avatar,
+      subscribePrice: c.subscribePrice ?? c.subscribeprice,
+      matchPct: c.matchPct,
+    }));
+    const entry = {
+      id: clientSearchId,
+      type: 'image',
+      label: topName ? `Photo search · top match ${topName}` : 'Photo search',
+      count: results.length,
+      date: new Date().toISOString(),
+      results: saved,
+    };
     try {
-      const raw = localStorage.getItem('fbf_history');
+      const cacheKey = scopedSearchHistoryKey('fbf_history', ownerAccountId);
+      const raw = localStorage.getItem(cacheKey);
       const history = raw ? JSON.parse(raw) as Array<Record<string, unknown>> : [];
-      // Store a compact copy of the top matches so they can be re-viewed later
-      const saved = results.slice(0, 18).map(c => ({
-        username: c.username,
-        name: c.name || c.username,
-        avatar: c.avatar,
-        subscribePrice: c.subscribePrice ?? c.subscribeprice,
-        matchPct: c.matchPct,
-      }));
-      history.unshift({
-        id: Date.now(),
-        type: 'image',
-        label: topName ? `Photo search · top match ${topName}` : 'Photo search',
-        count: results.length,
-        date: new Date().toISOString(),
-        results: saved,
-      });
+      history.unshift(entry);
       // Keep most recent 25
-      localStorage.setItem('fbf_history', JSON.stringify(history.slice(0, 25)));
+      localStorage.setItem(cacheKey, JSON.stringify(history.slice(0, 25)));
     } catch { /* ignore */ }
+    void saveAccountSearchHistoryForOwner(ownerAccountId, {
+      clientSearchId,
+      searchType: 'creator_face',
+      label: entry.label,
+      resultCount: entry.count,
+      results: saved,
+      createdAt: entry.date,
+    });
+  }
+
+  function recordVideoSearchHistory(
+    payload: HomepageVideoResponse,
+    ownerAccountId = currentAccountId(),
+  ): void {
+    if (!ownerAccountId || currentAccountId() !== ownerAccountId || !payload.ok) return;
+    const results = (payload.results ?? []).slice(0, 10).map(result => ({
+      videoId: result.videoId,
+      externalId: result.externalId,
+      title: result.title,
+      sourceUrl: result.sourceUrl,
+      thumbnailUrl: result.thumbnailUrl,
+      durationSeconds: result.durationSeconds,
+      similarity: result.similarity,
+      supportingEmbeddings: result.supportingEmbeddings,
+    }));
+    void saveAccountSearchHistoryForOwner(ownerAccountId, {
+      clientSearchId: newSearchHistoryId('video_face'),
+      searchType: 'video_face',
+      label: 'Pornstar face search',
+      resultCount: payload.results?.length ?? 0,
+      filters: {
+        indexedVideos: payload.indexedVideos ?? 0,
+        elapsedSeconds: payload.elapsedSeconds ?? 0,
+      },
+      results,
+      createdAt: new Date().toISOString(),
+    });
   }
   function showAuthModal(): void { 
     prepareUnlockFlow();
@@ -702,6 +749,7 @@ const rouletteSrcs = await getRouletteAvatars(
   }
 
   async function handleFile(file: File): Promise<void> {
+    const searchOwnerId = currentAccountId();
     if (!isSignedIn() && getSearchCount() >= 2) { showAuthModal(); return; }
     uploadError.style.display = 'none';
 
@@ -794,7 +842,10 @@ const rouletteSrcs = await getRouletteAvatars(
         : 'Analyzing your image across creator profiles and indexed adult videos.');
       const results = data.results ?? [];
       const topName = results[0] ? ((results[0].name || results[0].username) as string) : undefined;
-      recordSearchHistory(results, topName);
+      // Each requested source owns exactly one history record. In video-only mode
+      // `data.results` is deliberately empty, so never mislabel it as creator history.
+      if (wantsOnlyfans) recordCreatorSearchHistory(results, topName, searchOwnerId);
+      if (wantsPornstars && pornstarData.ok) recordVideoSearchHistory(pornstarData, searchOwnerId);
       showResults(results, data.mode, pornstarData, undefined, wantsOnlyfans, wantsPornstars);
     } catch (err: any) {
       const pornstarData = await pornstarSearch;
@@ -805,6 +856,9 @@ const rouletteSrcs = await getRouletteAvatars(
         : 'Analyzing your image across creator profiles and indexed adult videos.');
       const msg = err?.message ?? String(err);
       if (wantsPornstars && pornstarData.ok) {
+        // The creator lookup may fail independently while the video lookup completes.
+        // Preserve the successful source without creating a bogus creator entry.
+        recordVideoSearchHistory(pornstarData, searchOwnerId);
         uploadDone.style.display = 'flex';
         showResults([], undefined, pornstarData, msg.length > 10 ? msg : 'OnlyFans creator search was unavailable.', wantsOnlyfans, wantsPornstars);
       } else {
@@ -848,7 +902,7 @@ const rouletteSrcs = await getRouletteAvatars(
         <div class="card-img-wrap">
           <img src="${imgSrc}" alt="Locked creator" loading="lazy" decoding="async" referrerpolicy="no-referrer"
             style="filter:blur(10px);transform:scale(1.08);"
-            onerror="if(this.src!=='/no-image.png'){this.src='/no-image.png';}">
+            onerror="this.onerror=null;this.src='/no-image.png';">
           ${matchBadge}
           <div class="lock-overlay">
             <a class="unlock-btn" href="${unlockHref}">🔓 Unlock</a>
@@ -868,7 +922,7 @@ const rouletteSrcs = await getRouletteAvatars(
       <div class="card-img-wrap">
         <img src="${imgSrc}" alt="${(c.name || c.username) as string}" loading="${index === 0 ? 'eager' : 'lazy'}"
           decoding="async" referrerpolicy="no-referrer"
-          onerror="if(this.src!=='/no-image.png'){this.src='/no-image.png';}">
+          onerror="this.onerror=null;this.src='/no-image.png';">
         ${matchBadge}
       </div>
       <div class="card-body">
@@ -1049,7 +1103,7 @@ const rouletteSrcs = await getRouletteAvatars(
     const topName = pending.results[0]
       ? ((pending.results[0].name || pending.results[0].username) as string)
       : undefined;
-    recordSearchHistory(pending.results, topName);
+    recordCreatorSearchHistory(pending.results, topName);
 
     try { localStorage.removeItem(PENDING_FACE_RESULTS_KEY); } catch { /* noop */ }
     const cleanUrl = new URL(window.location.href);

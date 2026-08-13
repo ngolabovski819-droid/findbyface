@@ -8,3 +8,8 @@ cookies.json
 failed_batch.json
 models/*.onnx
 logs/
+.tmp-*/
+.venv*/
+.vscode/
+scripts/__pycache__/
+scripts/_pornhub_*_videos.json

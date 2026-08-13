@@ -321,6 +321,8 @@ const rouletteSrcs = await getRouletteAvatars(
 </script>
 <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstileLoad" async defer></script>
 <script>
+  import { currentAccountId, newSearchHistoryId, saveAccountSearchHistoryForOwner, scopedSearchHistoryKey } from '../lib/accountSearchHistory';
+
   type VideoResult = {
     videoId: number;
     externalId: string;
@@ -343,6 +345,7 @@ const rouletteSrcs = await getRouletteAvatars(
   };
 
   type AuthUser = {
+    id?: string;
     name?: string;
     email?: string;
     avatar?: string;
@@ -442,27 +445,36 @@ const rouletteSrcs = await getRouletteAvatars(
   }
 
   async function refreshUser(user: AuthUser): Promise<AuthUser | null> {
-    if (!user.refresh_token) return null;
+    const ownerId = user.id;
+    const refreshToken = user.refresh_token;
+    if (!ownerId || !refreshToken) return null;
     try {
       const response = await fetch('/api/auth/refresh', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: user.refresh_token }),
+        body: JSON.stringify({ refresh_token: refreshToken }),
       });
       const payload = await response.json();
-      if (!response.ok || !payload.access_token || !payload.user) return null;
+      const current = currentUser();
+      if (current?.id !== ownerId || current.refresh_token !== refreshToken) {
+        return current?.access_token ? current : null;
+      }
+      if (!response.ok || !payload.access_token || payload.user?.id !== ownerId) return null;
       const refreshed: AuthUser = {
-        ...user,
+        ...current,
         ...payload.user,
         access_token: payload.access_token,
-        refresh_token: payload.refresh_token || user.refresh_token,
+        refresh_token: payload.refresh_token || refreshToken,
         expires_at: Date.now() + Number(payload.expires_in || 3600) * 1000,
       };
       localStorage.setItem('fbf_user', JSON.stringify(refreshed));
       localStorage.removeItem(GUEST_DAY_KEY);
       return refreshed;
     } catch {
-      return null;
+      const current = currentUser();
+      return current?.id !== ownerId || current.refresh_token !== refreshToken
+        ? current
+        : null;
     }
   }
 
@@ -476,7 +488,13 @@ const rouletteSrcs = await getRouletteAvatars(
     if (expiresAt > Date.now() + 60_000) return { user: stored, expired: false };
     const refreshed = await refreshUser(stored);
     if (refreshed) return { user: refreshed, expired: false };
+    const accountId = stored.id;
     localStorage.removeItem('fbf_user');
+    if (accountId) {
+      localStorage.removeItem(scopedSearchHistoryKey('fbf_history', accountId));
+      localStorage.removeItem(scopedSearchHistoryKey(HISTORY_KEY, accountId));
+      localStorage.removeItem(scopedSearchHistoryKey('fbf_search_queries', accountId));
+    }
     return { user: null, expired: true };
   }
 
@@ -516,7 +534,8 @@ const rouletteSrcs = await getRouletteAvatars(
   limitClose.addEventListener('click', closeLimitModal);
   limitLater.addEventListener('click', closeLimitModal);
 
-  function savePornstarHistory(payload: SearchResponse): void {
+  function savePornstarHistory(payload: SearchResponse, ownerAccountId = currentAccountId()): void {
+    if (!ownerAccountId || currentAccountId() !== ownerAccountId) return;
     const results = (payload.results ?? []).slice(0, 10).map(result => ({
       videoId: result.videoId,
       externalId: result.externalId,
@@ -528,20 +547,36 @@ const rouletteSrcs = await getRouletteAvatars(
       robustSimilarity: result.robustSimilarity,
       supportingEmbeddings: result.supportingEmbeddings,
     }));
+    const clientSearchId = newSearchHistoryId('video_face');
+    const entry = {
+      id: clientSearchId,
+      date: new Date().toISOString(),
+      count: payload.results?.length ?? 0,
+      indexedVideos: payload.indexedVideos ?? 0,
+      elapsedSeconds: payload.elapsedSeconds ?? 0,
+      results,
+    };
     try {
-      const stored = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+      const cacheKey = scopedSearchHistoryKey(HISTORY_KEY, ownerAccountId);
+      const stored = JSON.parse(localStorage.getItem(cacheKey) || '[]');
       const history = Array.isArray(stored) ? stored : [];
-      history.unshift({
-        date: new Date().toISOString(),
-        count: payload.results?.length ?? 0,
-        indexedVideos: payload.indexedVideos ?? 0,
-        elapsedSeconds: payload.elapsedSeconds ?? 0,
-        results,
-      });
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 25)));
+      history.unshift(entry);
+      localStorage.setItem(cacheKey, JSON.stringify(history.slice(0, 25)));
     } catch {
       // Search results still work if browser storage is unavailable.
     }
+    void saveAccountSearchHistoryForOwner(ownerAccountId, {
+      clientSearchId,
+      searchType: 'video_face',
+      label: 'Pornstar face search',
+      resultCount: entry.count,
+      filters: {
+        indexedVideos: entry.indexedVideos,
+        elapsedSeconds: entry.elapsedSeconds,
+      },
+      results,
+      createdAt: entry.date,
+    });
   }
 
   function showError(message: string): void {
@@ -820,12 +855,19 @@ const rouletteSrcs = await getRouletteAvatars(
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!selectedFile || searching) return;
+    const initiatingOwnerId = currentAccountId();
     const auth = await resolveUserForSearch();
     const user = auth.user;
-    if (auth.expired) {
+    if (auth.expired && initiatingOwnerId && currentAccountId() === null) {
       openLimitModal('expired');
       return;
     }
+    if (currentAccountId() !== initiatingOwnerId || (user?.id || null) !== initiatingOwnerId) {
+      window.location.reload();
+      return;
+    }
+    const searchOwnerId = initiatingOwnerId;
+    const requestAccessToken = user?.access_token || null;
     if (!user?.access_token && localStorage.getItem(GUEST_DAY_KEY) === todayUtc()) {
       openLimitModal('guest');
       return;
@@ -864,8 +906,23 @@ const rouletteSrcs = await getRouletteAvatars(
         signal: controller.signal,
       });
       const payload = await response.json() as SearchResponse;
+      if (currentAccountId() !== searchOwnerId) {
+        window.location.reload();
+        return;
+      }
       if (response.status === 401 && payload.code === 'session_expired') {
-        localStorage.removeItem('fbf_user');
+        const accountId = user?.id;
+        const activeUser = currentUser();
+        if (accountId && (activeUser?.id !== accountId || activeUser.access_token !== requestAccessToken)) {
+          window.location.reload();
+          return;
+        }
+        if (accountId && currentAccountId() === accountId) {
+          localStorage.removeItem('fbf_user');
+          localStorage.removeItem(scopedSearchHistoryKey('fbf_history', accountId));
+          localStorage.removeItem(scopedSearchHistoryKey(HISTORY_KEY, accountId));
+          localStorage.removeItem(scopedSearchHistoryKey('fbf_search_queries', accountId));
+        }
         openLimitModal('expired');
         return;
       }
@@ -881,7 +938,7 @@ const rouletteSrcs = await getRouletteAvatars(
       if (typeof payload.indexedVideos === 'number') {
         displayIndexedVideoCount(payload.indexedVideos);
       }
-      savePornstarHistory(payload);
+      savePornstarHistory(payload, searchOwnerId);
       renderResults(payload);
     } catch (error) {
       const message = error instanceof DOMException && error.name === 'AbortError'

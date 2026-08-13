@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 
-const updated = 'June 7, 2026';
+const updated = 'August 12, 2026';
 ---
 
 <Base
@@ -35,6 +35,7 @@ const updated = 'June 7, 2026';
         <li><strong>Usage data:</strong> pages visited, searches performed, and general interaction data, collected through analytics.</li>
         <li><strong>Device data:</strong> browser type, device type, and approximate region derived from your IP address.</li>
         <li><strong>Account data (optional):</strong> if you sign in, we receive your name, email, and profile image from your authentication provider.</li>
+        <li><strong>Account search history:</strong> for signed-in users, we save submitted search terms, selected filters, result counts, and a limited set of result references so searches can be revisited across devices. We do not include uploaded photos or facial descriptors in search history.</li>
         <li><strong>Contact data:</strong> if you contact us, we receive the name, email, and message you provide.</li>
       </ul>
 
@@ -48,6 +49,7 @@ const updated = 'June 7, 2026';
       <h2>4. How we use information</h2>
       <ul>
         <li>To operate and improve the face-search and discovery features.</li>
+        <li>To provide private, cross-device search history for signed-in accounts.</li>
         <li>To measure performance, diagnose issues, and prevent abuse.</li>
         <li>To respond to your inquiries and support requests.</li>
       </ul>
@@ -61,8 +63,10 @@ const updated = 'June 7, 2026';
 
       <h2>6. Data retention</h2>
       <p>
-        Uploaded photos are not retained after a search. Other data, such as analytics and contact
-        messages, is retained only as long as necessary for the purposes described above.
+        Uploaded photos and facial descriptors are not retained after a search. Signed-in search
+        history is retained until you delete individual searches, clear your history, or your
+        account is deleted. Other data, such as analytics and contact messages, is retained only as
+        long as necessary for the purposes described above.
       </p>
 
       <h2>7. Your rights</h2>

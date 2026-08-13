@@ -1,0 +1,41 @@
+
+> findbyface@1.0.0 dev
+> astro dev --host 127.0.0.1 --port 4398
+
+[vite] connected.
+[2m21:45:35[22m [34m[types][39m Generated [2m1ms[22m
+[vite] connected.
+[2m21:45:35[22m [34m[content][39m Syncing content
+[2m21:45:35[22m [34m[content][39m Astro config changed
+[2m21:45:35[22m [34m[content][39m Clearing content store
+[2m21:45:35[22m [34m[content][39m Synced content
+[2m21:45:35[22m [34m[vite][39m Re-optimizing dependencies because vite config has changed
+[42m[1m astro [22m[49m [32mv6.1.5[39m [2mready in[22m 28721 [2mms[22m
+[2m┃[22m Local    [36mhttp://127.0.0.1:4398/[39m
+[2m21:45:35[22m [32mwatching for file changes...[39m
+[2m21:45:50[22m [34m[200][39m /onlyfans-search/ [2m100ms[22m
+[2m21:45:50[22m [34m[vite][39m [32m✨ new dependencies optimized: [33mastro/runtime/client/dev-toolbar/entrypoint.js, botid/client/core[32m[39m
+[2m21:45:50[22m [34m[vite][39m [32m✨ optimized dependencies changed. reloading[39m
+[2m21:45:51[22m [34m[200][39m /api/search [2m260ms[22m
+[2m21:45:51[22m [33m[404][39m /149e9513-01fa-4fb0-aad4-566afd725d1b/2d206a39-8ed7-437e-a3be-862e0f06eea3/a-4-a/c.js [2m5ms[22m
+[2m21:45:52[22m [34m[200][39m /api/search-ad [2m99ms[22m
+[2m21:45:52[22m [34m[200][39m /api/search [2m669ms[22m
+[2m21:46:04[22m [34m[200][39m /onlyfans-search/ [2m9ms[22m
+[2m21:46:04[22m [34m[200][39m /api/search [2m1ms[22m
+[2m21:46:04[22m [33m[404][39m /149e9513-01fa-4fb0-aad4-566afd725d1b/2d206a39-8ed7-437e-a3be-862e0f06eea3/a-4-a/c.js [2m1ms[22m
+[2m21:46:05[22m [34m[200][39m /api/search-ad [2m1ms[22m
+[2m21:46:05[22m [34m[200][39m /api/search [2m2ms[22m
+[2m21:46:18[22m [34m[200][39m /onlyfans-search/ [2m5ms[22m
+[2m21:46:18[22m [34m[200][39m /api/search [2m1ms[22m
+[2m21:46:18[22m [33m[404][39m /149e9513-01fa-4fb0-aad4-566afd725d1b/2d206a39-8ed7-437e-a3be-862e0f06eea3/a-4-a/c.js [2m1ms[22m
+[2m21:46:19[22m [34m[200][39m /api/search [2m0ms[22m
+[2m21:46:28[22m [34m[200][39m /onlyfans-search/ [2m6ms[22m
+[2m21:46:29[22m [34m[200][39m /api/search [2m1ms[22m
+[2m21:46:29[22m [33m[404][39m /149e9513-01fa-4fb0-aad4-566afd725d1b/2d206a39-8ed7-437e-a3be-862e0f06eea3/a-4-a/c.js [2m1ms[22m
+[2m21:46:29[22m [34m[200][39m /api/search-ad [2m0ms[22m
+[2m21:46:30[22m [34m[200][39m /api/search [2m0ms[22m
+[2m21:46:42[22m [34m[200][39m /onlyfans-search/ [2m4ms[22m
+[2m21:46:43[22m [34m[200][39m /api/search [2m0ms[22m
+[2m21:46:43[22m [33m[404][39m /149e9513-01fa-4fb0-aad4-566afd725d1b/2d206a39-8ed7-437e-a3be-862e0f06eea3/a-4-a/c.js [2m1ms[22m
+[2m21:46:43[22m [34m[200][39m /api/search-ad [2m0ms[22m
+[2m21:46:44[22m [34m[200][39m /api/search [2m0ms[22m
