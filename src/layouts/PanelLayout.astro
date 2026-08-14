@@ -39,12 +39,13 @@ const showModelSwitcher = modelSwitcherOptions ? modelOptions.length > 1 : (role
 // nav the moment a second campaign gets added. campaigns.astro's own route guard still governs
 // what a guest actually SEES there (their own slugs only), this just controls the link itself.
 
-interface NavItem { href: string; label: string; extra?: boolean }
+interface NavItem { href: string; label: string; extra?: boolean; adminOnly?: boolean }
 const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Dashboard' },
   { href: '/activity/', label: 'Activity log' },
   { href: '/account/', label: 'Account' },
   { href: '/campaigns/', label: 'Campaigns', extra: true },
+  { href: '/comments/', label: 'Comment moderation', extra: true, adminOnly: true },
 ];
 
 // Astro.url reflects the REWRITTEN path (always /panel/... internally, regardless of which
@@ -97,10 +98,12 @@ const publicPath = `${base}${innerPath}`;
           ))}
 
           <span class="nav-group-label">{role === 'admin' ? 'Admin' : 'More'}</span>
-          {NAV_ITEMS.filter(item => item.extra).map(item => (
+          {NAV_ITEMS.filter(item => item.extra && (!item.adminOnly || role === 'admin')).map(item => (
             <a href={`${base}${item.href}`} class={`nav-link ${isActive(item.href) ? 'active' : ''}`} aria-current={isActive(item.href) ? 'page' : undefined}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              {item.href === '/campaigns/' && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>}
+              {item.href === '/comments/' && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path><path d="M8 9h8M8 13h5"></path></svg>}
               <span>{item.label}</span>
+              {item.href === '/comments/' && <span class="nav-count" id="commentsPendingBadge" aria-label="Pending comments" hidden></span>}
             </a>
           ))}
         </nav>
@@ -219,6 +222,7 @@ const publicPath = `${base}${innerPath}`;
   .nav-group-label:first-child { margin-top: 2px; }
   .nav-link { display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 9px; color: var(--text-muted); font-size: 0.83rem; font-weight: 600; transition: background 0.15s, color 0.15s; }
   .nav-link svg { width: 17px; height: 17px; flex-shrink: 0; }
+  .nav-count { margin-left: auto; min-width: 21px; padding: 1px 6px; border-radius: 999px; background: #f59e0b; color: #160d00; font-size: 0.63rem; font-weight: 800; line-height: 19px; text-align: center; }
   .nav-link:hover { background: rgba(255,255,255,0.045); color: var(--text); }
   .nav-link.active { background: rgba(124,58,237,0.18); color: #fff; }
   .nav-link.active svg { color: #c084fc; }
@@ -298,6 +302,25 @@ const publicPath = `${base}${innerPath}`;
 </style>
 
 <script>
+  // Keep the admin's pending queue visible throughout the panel. The moderation page owns
+  // this badge while open (it already fetches the full queue); other admin pages make one
+  // small count request. Guests never render the badge and therefore never make this call.
+  const commentsPendingBadge = document.getElementById('commentsPendingBadge');
+  if (commentsPendingBadge && !document.querySelector('.comments-page')) {
+    fetch('/api/panel/comments?status=pending&limit=1', { headers: { Accept: 'application/json' }, cache: 'no-store' })
+      .then(response => response.ok ? response.json() : null)
+      .then((payload: unknown) => {
+        if (!payload || typeof payload !== 'object') return;
+        const counts = (payload as { counts?: Record<string, unknown> }).counts;
+        const pending = Number(counts?.pending ?? 0);
+        if (!Number.isFinite(pending) || pending < 1) return;
+        commentsPendingBadge.textContent = pending > 99 ? '99+' : pending.toLocaleString();
+        commentsPendingBadge.hidden = false;
+        commentsPendingBadge.setAttribute('aria-label', `${pending.toLocaleString()} pending ${pending === 1 ? 'comment' : 'comments'}`);
+      })
+      .catch(() => { /* Badge failure must not interfere with the rest of the panel. */ });
+  }
+
   document.getElementById('panelLogoutBtn')?.addEventListener('click', async () => {
     try {
       await fetch('/api/panel/logout', { method: 'POST' });

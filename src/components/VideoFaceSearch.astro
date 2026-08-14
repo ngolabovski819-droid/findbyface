@@ -342,6 +342,7 @@ const rouletteSrcs = await getRouletteAvatars(
     indexedVideos?: number;
     elapsedSeconds?: number;
     results?: VideoResult[];
+    searchProof?: string;
   };
 
   type AuthUser = {
@@ -940,6 +941,12 @@ const rouletteSrcs = await getRouletteAvatars(
       }
       savePornstarHistory(payload, searchOwnerId);
       renderResults(payload);
+      if (typeof payload.searchProof === 'string') {
+        try { sessionStorage.setItem('fbf_search_proof_pornstar', payload.searchProof); } catch { /* storage can be unavailable */ }
+        window.dispatchEvent(new CustomEvent('fbf:search-complete', {
+          detail: { finder: 'pornstar', searchProof: payload.searchProof },
+        }));
+      }
     } catch (error) {
       const message = error instanceof DOMException && error.name === 'AbortError'
         ? 'The search timed out. Confirm the local Python worker is available.'

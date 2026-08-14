@@ -4,7 +4,8 @@
  * Creates (or updates) a Supabase Auth user for the panel.findbyface.org client portal.
  * Accounts created this way are pre-confirmed (email_confirm: true) — Supabase never sends a
  * confirmation email, so the address doesn't need to be a real, receivable inbox. It's just a
- * login identifier tagged with panel_role/client_slugs metadata that src/lib/panelAuth.ts checks.
+ * login identifier tagged with server-controlled panel_role/client_slugs app metadata that
+ * src/lib/panelAuth.ts checks.
  *
  * Usage:
  *   node scripts/provision_panel_user.mjs --email=admin@findbyface.org --role=admin --name="Nick"
@@ -26,11 +27,12 @@
  *               --name/--password. Use this to fully retire a login (e.g. one superseded by a
  *               better-named replacement), not just to change what it can see.
  *
- * .env must have SUPABASE_URL and SUPABASE_KEY (service role key — this calls the Admin API).
+ * .env must have SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or the legacy SUPABASE_KEY when
+ * that value is the service-role key — this script calls the Admin API).
  *
  * If the email already exists (e.g. re-running to change role/client), the script does NOT
  * overwrite that account's password unless --password was explicitly passed — it only merges
- * the panel_role/client_slugs/name fields into whatever user_metadata already exists there.
+ * the panel_role/client_slugs fields into app_metadata and the display name into user_metadata.
  */
 
 import fs from 'fs';
@@ -52,7 +54,7 @@ function loadEnv() {
 loadEnv();
 
 const SUPABASE_URL = process.env.SUPABASE_URL?.replace(/\/+$/, '');
-const SUPABASE_KEY = process.env.SUPABASE_KEY;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
 
 function parseArgs() {
   const args = {};
@@ -148,11 +150,12 @@ async function main() {
     process.exit(1);
   }
 
-  const user_metadata = { panel_role: role, client_slugs: clientSlugs, name };
+  const app_metadata = { panel_role: role, client_slugs: clientSlugs };
+  const user_metadata = { name };
 
   const createResp = await supaFetch('/auth/v1/admin/users', {
     method: 'POST',
-    body: JSON.stringify({ email, password, email_confirm: true, user_metadata }),
+    body: JSON.stringify({ email, password, email_confirm: true, app_metadata, user_metadata }),
   });
 
   let passwordWasSet = true;
@@ -169,8 +172,13 @@ async function main() {
       process.exit(1);
     }
 
-    const mergedMetadata = { ...(existing.user_metadata || {}), ...user_metadata };
-    const updateBody = { user_metadata: mergedMetadata };
+    const mergedAppMetadata = { ...(existing.app_metadata || {}), ...app_metadata };
+    const mergedUserMetadata = { ...(existing.user_metadata || {}), ...user_metadata };
+    // Remove any legacy authorization fields from the user-editable metadata while migrating.
+    delete mergedUserMetadata.panel_role;
+    delete mergedUserMetadata.client_slug;
+    delete mergedUserMetadata.client_slugs;
+    const updateBody = { app_metadata: mergedAppMetadata, user_metadata: mergedUserMetadata };
     if (args.password) updateBody.password = password; // only touch password if explicitly requested
     else passwordWasSet = false;
 
@@ -182,7 +190,7 @@ async function main() {
       console.error(`Failed to update existing user: ${await updateResp.text()}`);
       process.exit(1);
     }
-    console.log(`Updated the existing account for ${email} — merged panel_role=${role}${clientSlugs.length ? `, client_slugs=${clientSlugs.join(',')}` : ''} into it.`);
+    console.log(`Updated the existing account for ${email} — stored server-controlled panel_role=${role}${clientSlugs.length ? `, client_slugs=${clientSlugs.join(',')}` : ''}.`);
   }
 
   console.log('');

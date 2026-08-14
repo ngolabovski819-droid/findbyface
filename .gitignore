@@ -1,4 +1,5 @@
 .env
+.env.local
 node_modules/
 dist/
 .astro/
@@ -12,4 +13,5 @@ logs/
 .venv*/
 .vscode/
 scripts/__pycache__/
+__pycache__/
 scripts/_pornhub_*_videos.json

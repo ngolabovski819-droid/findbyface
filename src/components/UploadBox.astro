@@ -258,6 +258,7 @@ const rouletteSrcs = await getRouletteAvatars(
     indexedVideos?: number;
     elapsedSeconds?: number;
     results?: HomepageVideoResult[];
+    searchProof?: string;
   };
 
   // Build Google OAuth URL dynamically so localhost dev doesn't redirect to production
@@ -847,6 +848,12 @@ const rouletteSrcs = await getRouletteAvatars(
       if (wantsOnlyfans) recordCreatorSearchHistory(results, topName, searchOwnerId);
       if (wantsPornstars && pornstarData.ok) recordVideoSearchHistory(pornstarData, searchOwnerId);
       showResults(results, data.mode, pornstarData, undefined, wantsOnlyfans, wantsPornstars);
+      if (searchMode === 'onlyfans' && typeof data.searchProof === 'string') {
+        try { sessionStorage.setItem('fbf_search_proof_onlyfans', data.searchProof); } catch { /* storage can be unavailable */ }
+        window.dispatchEvent(new CustomEvent('fbf:search-complete', {
+          detail: { finder: 'onlyfans', searchProof: data.searchProof },
+        }));
+      }
     } catch (err: any) {
       const pornstarData = await pornstarSearch;
       stopScanFX();

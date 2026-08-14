@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 
-const updated = 'August 12, 2026';
+const updated = 'August 13, 2026';
 ---
 
 <Base
@@ -36,6 +36,9 @@ const updated = 'August 12, 2026';
         <li><strong>Device data:</strong> browser type, device type, and approximate region derived from your IP address.</li>
         <li><strong>Account data (optional):</strong> if you sign in, we receive your name, email, and profile image from your authentication provider.</li>
         <li><strong>Account search history:</strong> for signed-in users, we save submitted search terms, selected filters, result counts, and a limited set of result references so searches can be revisited across devices. We do not include uploaded photos or facial descriptors in search history.</li>
+        <li><strong>Search Stories:</strong> if you contribute, we process the public nickname, search outcome, optional public creator username or performer stage name, story or reply, and notification choice that you submit. Your email address is used privately to verify ownership and send requested service notifications; it is not displayed with your contribution.</li>
+        <li><strong>Community interactions:</strong> we process Helpful votes, reports, moderation status, and limited anti-abuse information. A first-party cookie remembers whether your browser marked a contribution Helpful. We may temporarily process a salted or keyed network identifier to rate-limit abuse, but we do not attach your uploaded image, facial descriptor, or private result list to a story, reply, vote, or report.</li>
+        <li><strong>Search-completion feedback:</strong> after a search, you may privately select "Found them," "Close match," or "Not yet." We store this as aggregate product feedback. A short-lived signed proof confirms that a search completed without containing the uploaded image, facial descriptor, or search results.</li>
         <li><strong>Contact data:</strong> if you contact us, we receive the name, email, and message you provide.</li>
       </ul>
 
@@ -50,6 +53,9 @@ const updated = 'August 12, 2026';
       <ul>
         <li>To operate and improve the face-search and discovery features.</li>
         <li>To provide private, cross-device search history for signed-in accounts.</li>
+        <li>To verify, publish, moderate, and let contributors manage Search Stories and replies.</li>
+        <li>To deliver requested comment-status and reply notifications using neutral email subjects.</li>
+        <li>To understand aggregate finder outcomes and which community contributions readers find useful.</li>
         <li>To measure performance, diagnose issues, and prevent abuse.</li>
         <li>To respond to your inquiries and support requests.</li>
       </ul>
@@ -57,22 +63,31 @@ const updated = 'August 12, 2026';
       <h2>5. Sharing of information</h2>
       <p>
         We do not sell your personal information. We may share limited data with service providers
-        (such as hosting, authentication, and analytics) who process it on our behalf, and where
-        required by law.
+        (such as hosting, database, authentication, transactional email, anti-abuse, and analytics
+        providers) who process it on our behalf, and where required by law. Publicly approved Search
+        Stories, replies, nicknames, outcomes, and optional public creator usernames or performer
+        stage names can be read by anyone and may be indexed by search engines.
       </p>
 
       <h2>6. Data retention</h2>
       <p>
         Uploaded photos and facial descriptors are not retained after a search. Signed-in search
         history is retained until you delete individual searches, clear your history, or your
-        account is deleted. Other data, such as analytics and contact messages, is retained only as
-        long as necessary for the purposes described above.
+        account is deleted. Expired comment-verification drafts are removed or anonymized on a short
+        operational schedule. Approved community contributions remain public until they are deleted
+        by their owner or removed through moderation. Rejected or removed contributions, reports,
+        and moderation records may be retained as reasonably necessary to handle appeals, enforce
+        our guidelines, protect users, and prevent repeat abuse. Helpful-vote and anti-abuse records
+        may be retained as reasonably necessary for integrity and rate limiting. Other data, such as analytics and contact messages,
+        is retained only as long as necessary for the purposes described above.
       </p>
 
       <h2>7. Your rights</h2>
       <p>
         Depending on your location, you may have rights to access, correct, or delete your personal
-        data. To make a request, contact us via our <a href="/contact/">contact page</a>.
+        data. Verified contributors can request deletion of their contributions, and anyone who is
+        named or affected can request correction or removal. To make a request, use the controls
+        provided with the contribution or contact us via our <a href="/contact/">contact page</a>.
       </p>
 
       <h2>8. Children</h2>

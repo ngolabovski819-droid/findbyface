@@ -1,0 +1,919 @@
+---
+import PanelLayout from '../../layouts/PanelLayout.astro';
+import { panelBase } from '../../lib/panelHost';
+
+const session = Astro.locals.panelUser;
+const base = panelBase(Astro.request);
+
+if (!session) {
+  return Astro.redirect(`${base}/login/`, 302);
+}
+
+// This is deliberately enforced here as well as in the API. Hiding the navigation item is
+// only presentation; an authenticated client account must not be able to open this URL.
+if (session.role !== 'admin') {
+  return new Response('Forbidden', {
+    status: 403,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+  });
+}
+---
+<PanelLayout title="Comment moderation — findbyface Panel" accountName={session.name} role={session.role} clientSlugs={session.clientSlugs} nav>
+  <div class="comments-page">
+    <header class="page-head comments-head">
+      <div>
+        <span class="kicker">Community safety</span>
+        <h1>Comment moderation</h1>
+        <p>Review search stories and replies exactly as submitted. Comments cannot be silently edited.</p>
+      </div>
+      <button class="refresh-button" id="refreshComments" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"></path></svg>
+        Refresh
+      </button>
+    </header>
+
+    <section class="moderation-toolbar" aria-label="Moderation filters">
+      <div class="status-tabs" id="statusTabs" role="tablist" aria-label="Comment status">
+        <button type="button" role="tab" aria-selected="true" aria-controls="moderationGrid" tabindex="0" data-status="pending">
+          Pending <span class="tab-count" data-count="pending">0</span>
+        </button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="moderationGrid" tabindex="-1" data-status="approved">
+          Approved <span class="tab-count" data-count="approved">0</span>
+        </button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="moderationGrid" tabindex="-1" data-status="rejected">
+          Rejected <span class="tab-count" data-count="rejected">0</span>
+        </button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="moderationGrid" tabindex="-1" data-status="under_review">
+          Reported <span class="tab-count" data-count="under_review">0</span>
+        </button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="moderationGrid" tabindex="-1" data-status="removed">
+          Removed <span class="tab-count" data-count="removed">0</span>
+        </button>
+      </div>
+
+      <form class="filter-row" id="commentFilters">
+        <label class="search-control">
+          <span class="sr-only">Search comments</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m15.5 15.5 5 5"></path></svg>
+          <input type="search" id="commentSearch" name="q" placeholder="Search alias, subject, or text" maxlength="80" autocomplete="off" />
+        </label>
+        <label class="select-control">
+          <span>Finder</span>
+          <select id="finderFilter" name="finder">
+            <option value="">Both finders</option>
+            <option value="onlyfans">OnlyFans Finder</option>
+            <option value="pornstar">Pornstar Finder</option>
+          </select>
+        </label>
+        <button class="filter-button" type="submit">Apply filters</button>
+      </form>
+    </section>
+
+    <p class="live-status sr-only" id="moderationLive" role="status" aria-live="polite" aria-atomic="true"></p>
+
+    <div class="moderation-grid" aria-busy="true" id="moderationGrid">
+      <section class="queue-panel panel-card" aria-labelledby="queueHeading">
+        <div class="queue-heading">
+          <div>
+            <h2 id="queueHeading">Pending queue</h2>
+            <p id="queueSummary">Loading comments…</p>
+          </div>
+          <span class="selection-hint">Select a row for full context</span>
+        </div>
+
+        <div class="queue-table-wrap">
+          <table class="queue-table">
+            <thead>
+              <tr>
+                <th scope="col">Comment</th>
+                <th scope="col">Finder</th>
+                <th scope="col">Submitted</th>
+                <th scope="col"><span class="sr-only">Quick actions</span></th>
+              </tr>
+            </thead>
+            <tbody id="queueTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="queue-cards" id="queueCards"></div>
+
+        <div class="queue-empty" id="queueEmpty" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path><path d="m8 11 2.5 2.5L16 8"></path></svg>
+          <h3>Nothing in this queue</h3>
+          <p>Try another status, finder, or search phrase.</p>
+        </div>
+
+        <nav class="pagination" aria-label="Comment queue pages" id="pagination" hidden>
+          <button type="button" id="previousPage">Previous</button>
+          <span id="pageStatus">Page 1</span>
+          <button type="button" id="nextPage">Next</button>
+        </nav>
+      </section>
+
+      <aside class="detail-panel panel-card" id="commentDetail" aria-labelledby="detailHeading" tabindex="-1">
+        <div class="detail-placeholder" id="detailPlaceholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path></svg>
+          <h2 id="detailHeading">Select a comment</h2>
+          <p>The complete text, reply context, reports, and moderation history will appear here.</p>
+        </div>
+
+        <div id="detailContent" hidden>
+          <div class="detail-topline">
+            <div class="detail-badges" id="detailBadges"></div>
+            <span class="detail-id" id="detailId"></span>
+          </div>
+          <h2 id="detailAlias"></h2>
+          <dl class="comment-meta" id="detailMeta"></dl>
+
+          <section class="comment-copy" aria-labelledby="commentTextHeading">
+            <h3 id="commentTextHeading">Submitted text</h3>
+            <p id="detailBody"></p>
+          </section>
+
+          <section class="context-section" id="parentSection" aria-labelledby="parentHeading" hidden>
+            <h3 id="parentHeading">Replying to</h3>
+            <div class="parent-context">
+              <strong id="parentAlias"></strong>
+              <p id="parentBody"></p>
+            </div>
+          </section>
+
+          <section class="context-section" id="reportsSection" aria-labelledby="reportsHeading" hidden>
+            <div class="section-title-row">
+              <h3 id="reportsHeading">Reports</h3>
+              <span class="section-count" id="reportsCount"></span>
+            </div>
+            <div class="stack-list" id="reportsList"></div>
+          </section>
+
+          <section class="context-section" id="historySection" aria-labelledby="historyHeading">
+            <h3 id="historyHeading">Moderation history</h3>
+            <div class="stack-list" id="historyList"></div>
+          </section>
+
+          <div class="moderation-actions" id="moderationActions"></div>
+
+          <form class="reject-form" id="rejectForm" hidden>
+            <h3>Reject this comment</h3>
+            <label>
+              <span>Reason</span>
+              <select id="rejectReason" required>
+                <option value="">Choose a reason</option>
+                <option value="private_identity">Reveals a hidden identity</option>
+                <option value="personal_information">Personal information or location</option>
+                <option value="underage_safety">Underage safety concern</option>
+                <option value="non_consensual_content">Non-consensual or leaked content</option>
+                <option value="harassment">Harassment or abuse</option>
+                <option value="explicit_description">Unnecessary explicit description</option>
+                <option value="spam">Spam, promotion, or links</option>
+                <option value="duplicate">Duplicate submission</option>
+                <option value="off_topic">Off-topic</option>
+                <option value="low_quality">Too little useful detail</option>
+                <option value="other">Other policy reason</option>
+              </select>
+            </label>
+            <label>
+              <span>Private moderator note <small>(optional)</small></span>
+              <textarea id="rejectNote" rows="3" maxlength="500" placeholder="Add context for the audit history"></textarea>
+            </label>
+            <div class="reject-buttons">
+              <button type="button" class="button-secondary" id="cancelReject">Cancel</button>
+              <button type="submit" class="button-danger" id="confirmReject">Reject comment</button>
+            </div>
+          </form>
+        </div>
+      </aside>
+    </div>
+  </div>
+</PanelLayout>
+
+<script>
+  type Finder = 'onlyfans' | 'pornstar';
+  type ModerationStatus = 'pending' | 'approved' | 'rejected' | 'under_review' | 'removed';
+
+  interface LooseRecord { [key: string]: unknown }
+  interface ViewComment {
+    id: string;
+    finder: Finder;
+    status: ModerationStatus;
+    alias: string;
+    outcome: string;
+    subjectName: string;
+    body: string;
+    createdAt: string;
+    publishedAt: string;
+    parentId: string;
+    parentAlias: string;
+    parentBody: string;
+    helpfulCount: number;
+    reportCount: number;
+    reportSummary: string;
+    reports: LooseRecord[];
+    history: LooseRecord[];
+    raw: LooseRecord;
+  }
+
+  interface ListState {
+    comments: ViewComment[];
+    counts: Record<ModerationStatus, number>;
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }
+
+  const statusLabels: Record<ModerationStatus, string> = {
+    pending: 'Pending', approved: 'Approved', rejected: 'Rejected', under_review: 'Reported', removed: 'Removed',
+  };
+  const statusHeadings: Record<ModerationStatus, string> = {
+    pending: 'Pending queue', approved: 'Approved comments', rejected: 'Rejected comments', under_review: 'Reported comments', removed: 'Removed comments',
+  };
+  const validStatuses = new Set(Object.keys(statusLabels));
+
+  const state: { status: ModerationStatus; finder: '' | Finder; query: string; page: number; selectedId: string; data: ListState | null; busy: boolean } = {
+    status: 'pending', finder: '', query: '', page: 1, selectedId: '', data: null, busy: false,
+  };
+
+  const grid = document.getElementById('moderationGrid')!;
+  const tableBody = document.getElementById('queueTableBody')!;
+  const cards = document.getElementById('queueCards')!;
+  const empty = document.getElementById('queueEmpty')!;
+  const summary = document.getElementById('queueSummary')!;
+  const queueHeading = document.getElementById('queueHeading')!;
+  const detailPanel = document.getElementById('commentDetail') as HTMLElement;
+  const detailPlaceholder = document.getElementById('detailPlaceholder')!;
+  const detailContent = document.getElementById('detailContent')!;
+  const live = document.getElementById('moderationLive')!;
+  const rejectForm = document.getElementById('rejectForm') as HTMLFormElement;
+  const reasonSelect = document.getElementById('rejectReason') as HTMLSelectElement;
+  const noteInput = document.getElementById('rejectNote') as HTMLTextAreaElement;
+  const pagination = document.getElementById('pagination')!;
+  const previousPage = document.getElementById('previousPage') as HTMLButtonElement;
+  const nextPage = document.getElementById('nextPage') as HTMLButtonElement;
+  const pageStatus = document.getElementById('pageStatus')!;
+
+  function firstString(source: LooseRecord, keys: string[], fallback = ''): string {
+    for (const key of keys) {
+      const value = source[key];
+      if (typeof value === 'string' && value.trim()) return value;
+    }
+    return fallback;
+  }
+
+  function firstNumber(source: LooseRecord, keys: string[], fallback = 0): number {
+    for (const key of keys) {
+      const value = Number(source[key]);
+      if (Number.isFinite(value)) return value;
+    }
+    return fallback;
+  }
+
+  function recordValue(value: unknown): LooseRecord {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as LooseRecord : {};
+  }
+
+  function recordArray(value: unknown): LooseRecord[] {
+    return Array.isArray(value) ? value.filter(item => item && typeof item === 'object') as LooseRecord[] : [];
+  }
+
+  function readableSummary(value: unknown): string {
+    if (typeof value === 'string') return value;
+    const record = recordValue(value);
+    return Object.entries(record)
+      .filter(([, count]) => Number.isFinite(Number(count)) && Number(count) > 0)
+      .map(([reason, count]) => `${reason.replace(/[_-]+/g, ' ')}: ${Number(count).toLocaleString()}`)
+      .join(' · ');
+  }
+
+  function normaliseComment(input: unknown): ViewComment {
+    const raw = recordValue(input);
+    const parent = recordValue(raw.parent ?? raw.parentComment ?? raw.parent_comment);
+    const finderRaw = firstString(raw, ['finder', 'finderType', 'finder_type']);
+    const statusRaw = firstString(raw, ['status', 'moderationStatus', 'moderation_status'], 'pending');
+    const reports = recordArray(raw.reports ?? raw.reportDetails ?? raw.report_details);
+    const history = recordArray(raw.history ?? raw.moderationHistory ?? raw.moderation_history);
+    if (!history.length && firstString(raw, ['moderatedAt', 'moderated_at'])) {
+      history.push({
+        action: firstString(raw, ['moderationAction', 'moderation_action'], statusRaw),
+        reason: firstString(raw, ['moderationReason', 'moderation_reason']),
+        note: firstString(raw, ['moderationNotes', 'moderation_notes']),
+        moderator: firstString(raw, ['moderatedBy', 'moderated_by']),
+        createdAt: firstString(raw, ['moderatedAt', 'moderated_at']),
+      });
+    }
+    return {
+      id: firstString(raw, ['id', 'commentId', 'comment_id']),
+      finder: finderRaw === 'pornstar' ? 'pornstar' : 'onlyfans',
+      status: (validStatuses.has(statusRaw) ? statusRaw : 'pending') as ModerationStatus,
+      alias: firstString(raw, ['alias', 'displayAlias', 'display_alias', 'authorAlias', 'author_alias'], 'Anonymous visitor'),
+      outcome: firstString(raw, ['outcome', 'searchOutcome', 'search_outcome']),
+      subjectName: firstString(raw, ['subjectName', 'subject_name', 'publicSubjectName', 'public_subject_name', 'creatorUsername', 'creator_username', 'stageName', 'stage_name']),
+      body: firstString(raw, ['body', 'comment', 'content', 'text']),
+      createdAt: firstString(raw, ['createdAt', 'created_at', 'submittedAt', 'submitted_at']),
+      publishedAt: firstString(raw, ['publishedAt', 'published_at', 'approvedAt', 'approved_at']),
+      parentId: firstString(raw, ['parentId', 'parent_id'], firstString(parent, ['id'])),
+      parentAlias: firstString(raw, ['parentAlias', 'parent_alias'], firstString(parent, ['alias', 'displayAlias', 'display_alias'], 'Original commenter')),
+      parentBody: firstString(raw, ['parentBody', 'parent_body'], firstString(parent, ['body', 'comment', 'content', 'text'])),
+      helpfulCount: firstNumber(raw, ['helpfulCount', 'helpful_count']),
+      reportCount: Math.max(reports.length, firstNumber(raw, ['openReportCount', 'open_report_count', 'reportCount', 'report_count', 'unresolvedReportCount', 'unresolved_report_count'])),
+      reportSummary: readableSummary(raw.reportSummary ?? raw.report_summary),
+      reports,
+      history,
+      raw,
+    };
+  }
+
+  function normaliseCounts(value: unknown): Record<ModerationStatus, number> {
+    const source = recordValue(value);
+    const reported = firstNumber(source, ['under_review', 'underReview', 'reported']);
+    return {
+      pending: firstNumber(source, ['pending']),
+      approved: firstNumber(source, ['approved']),
+      rejected: firstNumber(source, ['rejected']),
+      under_review: reported,
+      removed: firstNumber(source, ['removed']),
+    };
+  }
+
+  function normaliseList(payload: unknown): ListState {
+    const root = recordValue(payload);
+    const nested = recordValue(root.data);
+    const source = Object.keys(nested).length ? nested : root;
+    const rawComments = (source.comments ?? source.items ?? source.results) as unknown;
+    const comments = (Array.isArray(rawComments) ? rawComments : []).map(normaliseComment).filter(comment => comment.id);
+    const page = Math.max(1, firstNumber(source, ['page'], state.page));
+    const pageSize = Math.max(1, firstNumber(source, ['pageSize', 'page_size', 'limit'], 30));
+    const total = Math.max(comments.length, firstNumber(source, ['total', 'totalCount', 'total_count'], comments.length));
+    const totalPages = Math.max(1, firstNumber(source, ['totalPages', 'total_pages'], Math.ceil(total / pageSize)));
+    return { comments, counts: normaliseCounts(source.counts ?? root.counts), total, page, pageSize, totalPages };
+  }
+
+  function el<K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text = ''): HTMLElementTagNameMap[K] {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text) node.textContent = text;
+    return node;
+  }
+
+  function formatDate(value: string): string {
+    if (!value) return '—';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+  }
+
+  function compactDate(value: string): string {
+    if (!value) return '—';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(date);
+  }
+
+  function finderLabel(finder: Finder): string {
+    return finder === 'pornstar' ? 'Pornstar' : 'OnlyFans';
+  }
+
+  function outcomeLabel(value: string): string {
+    const normalised = value.toLowerCase().replace(/[ _-]+/g, ' ');
+    if (normalised === 'found' || normalised === 'found them') return 'Found them';
+    if (normalised === 'close' || normalised === 'close match') return 'Close match';
+    if (normalised === 'not found' || normalised === 'not yet') return 'Not yet';
+    return value || 'Not provided';
+  }
+
+  function statusBadge(comment: ViewComment): HTMLElement {
+    const badge = el('span', `status-badge status-${comment.status}`, statusLabels[comment.status]);
+    return badge;
+  }
+
+  function finderBadge(comment: ViewComment): HTMLElement {
+    return el('span', `finder-badge finder-${comment.finder}`, finderLabel(comment.finder));
+  }
+
+  function summaryText(comment: ViewComment): string {
+    return comment.body.length > 125 ? `${comment.body.slice(0, 124)}…` : comment.body;
+  }
+
+  function makeQueueButton(comment: ViewComment, className: string): HTMLButtonElement {
+    const button = el('button', className) as HTMLButtonElement;
+    button.type = 'button';
+    button.dataset.commentId = comment.id;
+    button.setAttribute('aria-pressed', String(state.selectedId === comment.id));
+    button.setAttribute('aria-label', `Review comment by ${comment.alias}`);
+    return button;
+  }
+
+  function makeQuickAction(comment: ViewComment): HTMLElement {
+    const wrap = el('div', 'quick-actions');
+    if (comment.status === 'pending' || comment.status === 'under_review') {
+      const approve = el('button', 'quick-approve', 'Approve') as HTMLButtonElement;
+      approve.type = 'button'; approve.dataset.action = 'approve'; approve.dataset.id = comment.id;
+      approve.setAttribute('aria-label', `Approve comment by ${comment.alias}`);
+      wrap.append(approve);
+      const reject = el('button', 'quick-reject', 'Reject') as HTMLButtonElement;
+      reject.type = 'button'; reject.dataset.action = 'reject-form'; reject.dataset.id = comment.id;
+      reject.setAttribute('aria-label', `Reject comment by ${comment.alias}`);
+      wrap.append(reject);
+    } else if (comment.status === 'approved') {
+      const remove = el('button', 'quick-remove', 'Remove') as HTMLButtonElement;
+      remove.type = 'button'; remove.dataset.action = 'remove'; remove.dataset.id = comment.id;
+      remove.setAttribute('aria-label', `Remove comment by ${comment.alias}`);
+      wrap.append(remove);
+    } else {
+      const restore = el('button', 'quick-restore', 'Restore') as HTMLButtonElement;
+      restore.type = 'button'; restore.dataset.action = 'restore'; restore.dataset.id = comment.id;
+      restore.setAttribute('aria-label', `Restore comment by ${comment.alias}`);
+      wrap.append(restore);
+    }
+    return wrap;
+  }
+
+  function renderQueue(): void {
+    const data = state.data;
+    tableBody.replaceChildren();
+    cards.replaceChildren();
+    queueHeading.textContent = statusHeadings[state.status];
+    if (!data) return;
+
+    summary.textContent = `${data.total.toLocaleString()} ${data.total === 1 ? 'comment' : 'comments'}${state.query ? ' matching your search' : ''}`;
+    empty.hidden = data.comments.length > 0;
+
+    for (const comment of data.comments) {
+      const row = el('tr', state.selectedId === comment.id ? 'selected' : '');
+      row.dataset.commentId = comment.id;
+
+      const summaryCell = el('td');
+      const select = makeQueueButton(comment, 'row-select');
+      const line = el('span', 'row-title');
+      line.append(el('strong', '', comment.alias));
+      if (comment.parentId) line.append(el('span', 'reply-label', 'Reply'));
+      if (comment.subjectName) line.append(el('span', 'subject-label', comment.subjectName));
+      select.append(line, el('span', 'row-copy', summaryText(comment)));
+      summaryCell.append(select);
+
+      const finderCell = el('td'); finderCell.append(finderBadge(comment));
+      const dateCell = el('td', 'date-cell', compactDate(comment.createdAt));
+      const actionCell = el('td', 'quick-cell'); actionCell.append(makeQuickAction(comment));
+      row.append(summaryCell, finderCell, dateCell, actionCell);
+      tableBody.append(row);
+
+      const card = el('article', `queue-card${state.selectedId === comment.id ? ' selected' : ''}`);
+      card.dataset.commentId = comment.id;
+      const cardSelect = makeQueueButton(comment, 'card-select');
+      const top = el('span', 'card-top');
+      const identity = el('span', 'card-identity');
+      identity.append(el('strong', '', comment.alias));
+      if (comment.parentId) identity.append(el('span', 'reply-label', 'Reply'));
+      top.append(identity, el('span', 'card-date', compactDate(comment.createdAt)));
+      const badges = el('span', 'card-badges'); badges.append(finderBadge(comment), statusBadge(comment));
+      cardSelect.append(top, badges, el('span', 'card-copy', summaryText(comment)));
+      card.append(cardSelect, makeQuickAction(comment));
+      cards.append(card);
+    }
+
+    pagination.hidden = data.totalPages <= 1;
+    previousPage.disabled = data.page <= 1;
+    nextPage.disabled = data.page >= data.totalPages;
+    pageStatus.textContent = `Page ${data.page.toLocaleString()} of ${data.totalPages.toLocaleString()}`;
+  }
+
+  function appendMeta(term: string, value: string): void {
+    const list = document.getElementById('detailMeta')!;
+    list.append(el('dt', '', term), el('dd', '', value || '—'));
+  }
+
+  function reportLabel(report: LooseRecord): string {
+    return firstString(report, ['reasonLabel', 'reason_label', 'reason', 'category'], 'Reported');
+  }
+
+  function renderStackItem(item: LooseRecord, kind: 'report' | 'history'): HTMLElement {
+    const block = el('article', 'stack-item');
+    const top = el('div', 'stack-item-top');
+    const title = kind === 'report'
+      ? reportLabel(item)
+      : firstString(item, ['actionLabel', 'action_label', 'action'], 'Moderation action');
+    top.append(el('strong', '', title));
+    const date = firstString(item, ['createdAt', 'created_at', 'reportedAt', 'reported_at']);
+    if (date) top.append(el('time', '', compactDate(date)));
+    block.append(top);
+    const detail = firstString(item, ['note', 'details', 'description', 'reason']);
+    if (detail && detail !== title) block.append(el('p', '', detail));
+    const moderator = firstString(item, ['moderatorName', 'moderator_name', 'moderator', 'actor']);
+    if (kind === 'history' && moderator) block.append(el('small', '', `By ${moderator}`));
+    return block;
+  }
+
+  function actionButton(label: string, action: string, className: string, id: string): HTMLButtonElement {
+    const button = el('button', className, label) as HTMLButtonElement;
+    button.type = 'button'; button.dataset.action = action; button.dataset.id = id;
+    return button;
+  }
+
+  function renderDetails(comment: ViewComment | undefined): void {
+    rejectForm.hidden = true;
+    reasonSelect.value = '';
+    noteInput.value = '';
+    if (!comment) {
+      detailPlaceholder.hidden = false;
+      detailContent.hidden = true;
+      return;
+    }
+
+    detailPlaceholder.hidden = true;
+    detailContent.hidden = false;
+    const badges = document.getElementById('detailBadges')!;
+    badges.replaceChildren(finderBadge(comment), statusBadge(comment));
+    if (comment.parentId) badges.append(el('span', 'reply-label detail-reply', 'Reply'));
+    document.getElementById('detailId')!.textContent = `ID ${comment.id}`;
+    document.getElementById('detailAlias')!.textContent = comment.alias;
+    document.getElementById('detailBody')!.textContent = comment.body || 'No text returned.';
+
+    const meta = document.getElementById('detailMeta')!;
+    meta.replaceChildren();
+    appendMeta('Outcome', outcomeLabel(comment.outcome));
+    appendMeta(comment.finder === 'pornstar' ? 'Public stage name' : 'Public username', comment.subjectName || 'Not provided');
+    appendMeta('Submitted', formatDate(comment.createdAt));
+    appendMeta('Published', formatDate(comment.publishedAt));
+    appendMeta('Helpful votes', comment.helpfulCount.toLocaleString());
+
+    const parentSection = document.getElementById('parentSection')!;
+    parentSection.hidden = !comment.parentId;
+    document.getElementById('parentAlias')!.textContent = comment.parentAlias;
+    document.getElementById('parentBody')!.textContent = comment.parentBody || 'Parent comment text was not returned.';
+
+    const reportsSection = document.getElementById('reportsSection')!;
+    reportsSection.hidden = comment.reportCount === 0 && !comment.reportSummary;
+    document.getElementById('reportsCount')!.textContent = comment.reportCount.toLocaleString();
+    const reportsList = document.getElementById('reportsList')!;
+    reportsList.replaceChildren(...comment.reports.map(report => renderStackItem(report, 'report')));
+    if (comment.reportSummary) reportsList.prepend(el('p', 'report-summary', comment.reportSummary));
+    if (!comment.reports.length && !comment.reportSummary && comment.reportCount) reportsList.append(el('p', 'empty-context', `${comment.reportCount.toLocaleString()} unresolved ${comment.reportCount === 1 ? 'report' : 'reports'}.`));
+
+    const historyList = document.getElementById('historyList')!;
+    historyList.replaceChildren();
+    if (comment.history.length) {
+      historyList.append(...comment.history.map(history => renderStackItem(history, 'history')));
+    } else {
+      historyList.append(el('p', 'empty-context', 'No moderation actions yet.'));
+    }
+
+    const actions = document.getElementById('moderationActions')!;
+    actions.replaceChildren();
+    if (comment.status !== 'approved') actions.append(actionButton('Approve', 'approve', 'button-success', comment.id));
+    if (comment.status !== 'rejected' && comment.status !== 'removed') actions.append(actionButton('Reject…', 'reject-form', 'button-secondary', comment.id));
+    if (comment.status === 'approved' || comment.status === 'under_review') actions.append(actionButton('Remove', 'remove', 'button-danger-outline', comment.id));
+    if (comment.status === 'rejected' || comment.status === 'removed') actions.append(actionButton('Restore to review', 'restore', 'button-secondary', comment.id));
+    if (comment.status === 'pending' || comment.status === 'approved') actions.append(actionButton('Mark for review', 'review', 'button-warning', comment.id));
+  }
+
+  function updateCounts(): void {
+    if (!state.data) return;
+    for (const [status, count] of Object.entries(state.data.counts)) {
+      const element = document.querySelector<HTMLElement>(`[data-count="${status}"]`);
+      if (element) element.textContent = count.toLocaleString();
+    }
+    const badge = document.getElementById('commentsPendingBadge');
+    const pending = state.data.counts.pending;
+    if (badge) {
+      badge.textContent = pending > 99 ? '99+' : pending.toLocaleString();
+      badge.hidden = pending === 0;
+      badge.setAttribute('aria-label', `${pending.toLocaleString()} pending ${pending === 1 ? 'comment' : 'comments'}`);
+    }
+  }
+
+  function selectedComment(): ViewComment | undefined {
+    return state.data?.comments.find(comment => comment.id === state.selectedId);
+  }
+
+  function setSelected(id: string, focusDetail = false): void {
+    state.selectedId = id;
+    renderQueue();
+    renderDetails(selectedComment());
+    if (focusDetail) {
+      detailPanel.focus({ preventScroll: true });
+      detailPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function announce(message: string): void {
+    live.textContent = '';
+    window.setTimeout(() => { live.textContent = message; }, 20);
+  }
+
+  async function loadComments(options: { announce?: boolean; preserveSelection?: boolean } = {}): Promise<void> {
+    if (state.busy) return;
+    state.busy = true;
+    grid.setAttribute('aria-busy', 'true');
+    const previousSelection = options.preserveSelection ? state.selectedId : '';
+    try {
+      const params = new URLSearchParams({ status: state.status, page: String(state.page), limit: '30' });
+      if (state.finder) params.set('finder', state.finder);
+      if (state.query) params.set('q', state.query);
+      const response = await fetch(`/api/panel/comments?${params}`, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(firstString(recordValue(payload), ['error'], 'Could not load comments.'));
+      state.data = normaliseList(payload);
+      state.page = state.data.page;
+      state.selectedId = previousSelection && state.data.comments.some(comment => comment.id === previousSelection)
+        ? previousSelection
+        : (state.data.comments[0]?.id ?? '');
+      renderQueue();
+      renderDetails(selectedComment());
+      updateCounts();
+      if (options.announce) announce(`${state.data.total.toLocaleString()} comments loaded.`);
+    } catch (error) {
+      state.data = { comments: [], counts: { pending: 0, approved: 0, rejected: 0, under_review: 0, removed: 0 }, total: 0, page: 1, pageSize: 30, totalPages: 1 };
+      renderQueue();
+      renderDetails(undefined);
+      const message = error instanceof Error ? error.message : 'Could not load comments.';
+      summary.textContent = message;
+      announce(message);
+    } finally {
+      state.busy = false;
+      grid.setAttribute('aria-busy', 'false');
+    }
+  }
+
+  async function moderate(id: string, action: string, reason = '', note = ''): Promise<void> {
+    if (state.busy) return;
+    if (action === 'remove' && !window.confirm('Remove this comment from public view? Its text and audit history will be retained, and it can be restored later.')) return;
+    const currentIndex = state.data?.comments.findIndex(comment => comment.id === id) ?? 0;
+    state.busy = true;
+    grid.setAttribute('aria-busy', 'true');
+    document.querySelectorAll<HTMLButtonElement>('[data-action], #confirmReject').forEach(button => { button.disabled = true; });
+    try {
+      const response = await fetch('/api/panel/comments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ id, action, ...(reason ? { reason } : {}), ...(note ? { note } : {}) }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(firstString(recordValue(payload), ['error'], 'The moderation action failed.'));
+      state.busy = false;
+      await loadComments();
+      const successLabels: Record<string, string> = { approve: 'approved', reject: 'rejected', remove: 'removed', restore: 'restored', review: 'marked for review' };
+      announce(`Comment ${successLabels[action] ?? 'updated'}.`);
+      const candidates = Array.from(document.querySelectorAll<HTMLButtonElement>('.row-select, .card-select'));
+      const target = candidates[Math.min(Math.max(currentIndex, 0), Math.max(candidates.length - 1, 0))];
+      if (target) target.focus();
+      else document.querySelector<HTMLButtonElement>(`[data-status="${state.status}"]`)?.focus();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'The moderation action failed.';
+      announce(message);
+      window.alert(message);
+    } finally {
+      state.busy = false;
+      grid.setAttribute('aria-busy', 'false');
+      document.querySelectorAll<HTMLButtonElement>('[data-action], #confirmReject').forEach(button => { button.disabled = false; });
+    }
+  }
+
+  function openReject(id: string): void {
+    setSelected(id, true);
+    rejectForm.hidden = false;
+    reasonSelect.focus();
+  }
+
+  document.getElementById('statusTabs')?.addEventListener('click', event => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-status]');
+    if (!button || !validStatuses.has(button.dataset.status ?? '')) return;
+    state.status = button.dataset.status as ModerationStatus;
+    state.page = 1;
+    document.querySelectorAll<HTMLButtonElement>('#statusTabs [role="tab"]').forEach(tab => {
+      tab.setAttribute('aria-selected', String(tab === button));
+      tab.tabIndex = tab === button ? 0 : -1;
+    });
+    loadComments({ announce: true });
+  });
+
+  document.getElementById('statusTabs')?.addEventListener('keydown', event => {
+    if (!(event instanceof KeyboardEvent) || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('#statusTabs [role="tab"]'));
+    const current = tabs.indexOf(document.activeElement as HTMLButtonElement);
+    if (current < 0) return;
+    event.preventDefault();
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    tabs[next].focus();
+    tabs[next].click();
+  });
+
+  document.getElementById('commentFilters')?.addEventListener('submit', event => {
+    event.preventDefault();
+    state.query = (document.getElementById('commentSearch') as HTMLInputElement).value.trim();
+    state.finder = (document.getElementById('finderFilter') as HTMLSelectElement).value as '' | Finder;
+    state.page = 1;
+    loadComments({ announce: true });
+  });
+
+  document.getElementById('finderFilter')?.addEventListener('change', () => {
+    state.finder = (document.getElementById('finderFilter') as HTMLSelectElement).value as '' | Finder;
+    state.page = 1;
+    loadComments({ announce: true });
+  });
+
+  document.getElementById('refreshComments')?.addEventListener('click', () => loadComments({ announce: true, preserveSelection: true }));
+  previousPage.addEventListener('click', () => { if (state.page > 1) { state.page--; loadComments({ announce: true }); } });
+  nextPage.addEventListener('click', () => { if (state.data && state.page < state.data.totalPages) { state.page++; loadComments({ announce: true }); } });
+
+  function handleQueueClick(event: Event): void {
+    const target = event.target as HTMLElement;
+    const actionButton = target.closest<HTMLButtonElement>('[data-action]');
+    if (actionButton) {
+      const id = actionButton.dataset.id ?? '';
+      const action = actionButton.dataset.action ?? '';
+      if (action === 'reject-form') openReject(id);
+      else moderate(id, action);
+      return;
+    }
+    const select = target.closest<HTMLButtonElement>('[data-comment-id]');
+    if (select?.dataset.commentId) setSelected(select.dataset.commentId, window.matchMedia('(max-width: 980px)').matches);
+  }
+  tableBody.addEventListener('click', handleQueueClick);
+  cards.addEventListener('click', handleQueueClick);
+  document.getElementById('moderationActions')?.addEventListener('click', handleQueueClick);
+
+  rejectForm.addEventListener('submit', event => {
+    event.preventDefault();
+    if (!state.selectedId || !reasonSelect.value) {
+      reasonSelect.focus();
+      announce('Choose a rejection reason.');
+      return;
+    }
+    moderate(state.selectedId, 'reject', reasonSelect.value, noteInput.value.trim());
+  });
+  document.getElementById('cancelReject')?.addEventListener('click', () => { rejectForm.hidden = true; reasonSelect.value = ''; noteInput.value = ''; });
+
+  loadComments();
+</script>
+
+<!-- Most queue rows are created after an API response, so these selectors must be global;
+     client-created nodes cannot receive Astro's compile-time scope attribute. All class names
+     remain deliberately moderation-specific to avoid leaking styles into other panel pages. -->
+<style is:global>
+  .comments-page { width: min(1500px, calc(100% - 40px)); margin: 0 auto; padding: 36px 0 80px; }
+  .comments-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+  .comments-head.page-head { margin-bottom: 20px; }
+  .refresh-button, .filter-button, .pagination button, .moderation-actions button, .reject-buttons button {
+    min-height: 40px; padding: 8px 14px; border-radius: 9px; border: 1px solid var(--border); background: #15141f;
+    color: var(--text); font: 700 0.78rem 'Inter', sans-serif; cursor: pointer;
+  }
+  .refresh-button { display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0; }
+  .refresh-button svg { width: 15px; height: 15px; }
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid #c084fc; outline-offset: 2px; }
+  button:disabled { opacity: 0.45; cursor: wait; }
+
+  .moderation-toolbar { margin-bottom: 16px; }
+  .status-tabs { display: flex; gap: 5px; overflow-x: auto; padding: 4px; border: 1px solid var(--border); border-radius: 12px; background: #0d0c13; }
+  .status-tabs button { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: max-content; padding: 8px 13px; border: 0; border-radius: 8px; background: transparent; color: var(--text-muted); font: 700 0.76rem 'Inter', sans-serif; cursor: pointer; }
+  .status-tabs button:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+  .status-tabs button[aria-selected="true"] { color: #fff; background: rgba(124,58,237,0.24); }
+  .tab-count { min-width: 23px; padding: 1px 6px; border-radius: 999px; background: rgba(255,255,255,0.08); font-size: 0.65rem; }
+  .status-tabs button[aria-selected="true"] .tab-count { background: rgba(192,132,252,0.22); }
+  .filter-row { display: flex; align-items: flex-end; gap: 10px; margin-top: 10px; }
+  .search-control { display: flex; align-items: center; gap: 8px; height: 42px; flex: 1; min-width: 220px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: #0d0c13; }
+  .search-control svg { width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0; }
+  .search-control input { min-width: 0; width: 100%; height: 100%; border: 0; outline: 0; color: var(--text); background: transparent; font: 500 0.82rem 'Inter', sans-serif; }
+  .search-control input::placeholder { color: var(--text-muted); }
+  .select-control { display: grid; gap: 3px; }
+  .select-control > span, .reject-form label > span { color: var(--text-muted); font-size: 0.63rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
+  .select-control select, .reject-form select, .reject-form textarea { border: 1px solid var(--border); border-radius: 9px; color: var(--text); background: #0d0c13; font: 500 0.8rem 'Inter', sans-serif; }
+  .select-control select { height: 42px; min-width: 180px; padding: 0 34px 0 11px; }
+  .filter-button { height: 42px; background: rgba(124,58,237,0.24); border-color: rgba(168,85,247,0.38); }
+
+  .moderation-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(340px, 0.75fr); gap: 16px; align-items: start; }
+  .moderation-grid[aria-busy="true"] { cursor: progress; }
+  .queue-panel, .detail-panel { padding: 0; overflow: hidden; }
+  .queue-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 14px; padding: 18px 20px; border-bottom: 1px solid var(--border); }
+  .queue-heading h2, .detail-panel h2 { font-size: 1rem; }
+  .queue-heading p, .selection-hint { color: var(--text-muted); font-size: 0.7rem; }
+  .selection-hint { white-space: nowrap; }
+  .queue-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .queue-table th { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 0.61rem; text-align: left; text-transform: uppercase; letter-spacing: 0.06em; }
+  .queue-table th:first-child { width: 52%; padding-left: 20px; }
+  .queue-table th:nth-child(2) { width: 15%; }
+  .queue-table th:nth-child(3) { width: 17%; }
+  .queue-table th:last-child { width: 16%; }
+  .queue-table td { border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: middle; }
+  .queue-table tr:last-child td { border-bottom: 0; }
+  .queue-table tr:hover, .queue-table tr.selected { background: rgba(124,58,237,0.08); }
+  .queue-table tr.selected { box-shadow: inset 3px 0 #a855f7; }
+  .row-select { display: grid; width: 100%; gap: 3px; padding: 11px 10px 11px 20px; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
+  .row-title { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .row-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.76rem; }
+  .row-copy { overflow: hidden; color: var(--text-muted); font-size: 0.7rem; text-overflow: ellipsis; white-space: nowrap; }
+  .subject-label, .reply-label { display: inline-block; max-width: 130px; padding: 1px 6px; border-radius: 5px; overflow: hidden; color: #c4b5fd; background: rgba(124,58,237,0.13); font-size: 0.58rem; text-overflow: ellipsis; white-space: nowrap; }
+  .reply-label { color: #67e8f9; background: rgba(6,182,212,0.12); text-transform: uppercase; font-weight: 800; }
+  .finder-badge, .status-badge { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 0.62rem; font-weight: 800; white-space: nowrap; }
+  .finder-onlyfans { color: #f0abfc; background: rgba(217,70,239,0.13); }
+  .finder-pornstar { color: #fda4af; background: rgba(244,63,94,0.13); }
+  .status-pending { color: #fcd34d; background: rgba(245,158,11,0.14); }
+  .status-approved { color: #86efac; background: rgba(34,197,94,0.14); }
+  .status-rejected, .status-removed { color: #fca5a5; background: rgba(239,68,68,0.14); }
+  .status-under_review { color: #fdba74; background: rgba(249,115,22,0.14); }
+  .date-cell { padding: 10px 5px; color: var(--text-muted); font-size: 0.66rem; white-space: nowrap; }
+  .quick-cell { padding: 8px 12px 8px 4px; }
+  .quick-actions { display: flex; justify-content: flex-end; gap: 5px; }
+  .quick-actions button { min-height: 32px; padding: 5px 8px; border-radius: 7px; border: 1px solid var(--border); color: var(--text-muted); background: #14131c; font: 700 0.64rem 'Inter', sans-serif; cursor: pointer; }
+  .quick-actions .quick-approve { color: #86efac; border-color: rgba(34,197,94,0.28); }
+  .quick-actions .quick-reject, .quick-actions .quick-remove { color: #fca5a5; border-color: rgba(239,68,68,0.25); }
+  .queue-cards { display: none; }
+  .queue-empty { display: grid; justify-items: center; padding: 55px 20px; color: var(--text-muted); text-align: center; }
+  .queue-empty[hidden] { display: none; }
+  .queue-empty svg { width: 38px; margin-bottom: 10px; color: #6d5a8f; }
+  .queue-empty h3 { color: var(--text); font-size: 0.88rem; }
+  .queue-empty p { font-size: 0.72rem; }
+  .pagination { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 12px; border-top: 1px solid var(--border); }
+  .pagination[hidden] { display: none; }
+  .pagination span { color: var(--text-muted); font-size: 0.7rem; }
+
+  .detail-panel { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; }
+  .detail-placeholder { display: grid; justify-items: center; padding: 70px 30px; color: var(--text-muted); text-align: center; }
+  .detail-placeholder svg { width: 42px; margin-bottom: 13px; color: #6d5a8f; }
+  .detail-placeholder p { max-width: 300px; margin-top: 6px; font-size: 0.74rem; }
+  #detailContent { padding: 20px; }
+  .detail-topline { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .detail-badges { display: flex; flex-wrap: wrap; gap: 5px; }
+  .detail-id { max-width: 135px; overflow: hidden; color: var(--text-muted); font: 500 0.6rem 'Consolas', monospace; text-overflow: ellipsis; white-space: nowrap; }
+  #detailAlias { margin-top: 13px; font-size: 1.12rem; }
+  .comment-meta { display: grid; grid-template-columns: minmax(90px, auto) minmax(0, 1fr); gap: 5px 12px; margin-top: 12px; font-size: 0.7rem; }
+  .comment-meta dt { color: var(--text-muted); }
+  .comment-meta dd { overflow-wrap: anywhere; text-align: right; }
+  .comment-copy, .context-section { margin-top: 18px; }
+  .comment-copy h3, .context-section h3, .reject-form h3 { margin-bottom: 7px; color: var(--text-muted); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  .comment-copy p { padding: 14px; border: 1px solid rgba(168,85,247,0.18); border-radius: 10px; background: rgba(124,58,237,0.06); font-size: 0.82rem; line-height: 1.65; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .parent-context { padding: 11px 13px; border-left: 3px solid #22d3ee; border-radius: 0 8px 8px 0; background: rgba(6,182,212,0.06); }
+  .parent-context strong { font-size: 0.68rem; }
+  .parent-context p { margin-top: 3px; color: var(--text-muted); font-size: 0.7rem; overflow-wrap: anywhere; }
+  .section-title-row { display: flex; align-items: center; gap: 7px; }
+  .section-count { min-width: 20px; padding: 1px 5px; border-radius: 999px; color: #fdba74; background: rgba(249,115,22,0.14); font-size: 0.6rem; font-weight: 800; text-align: center; }
+  .stack-list { display: grid; gap: 6px; }
+  .stack-item { padding: 9px 11px; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; background: rgba(255,255,255,0.018); }
+  .stack-item-top { display: flex; justify-content: space-between; gap: 10px; }
+  .stack-item strong { font-size: 0.68rem; }
+  .stack-item time, .stack-item small { color: var(--text-muted); font-size: 0.6rem; }
+  .stack-item p, .empty-context { margin-top: 3px; color: var(--text-muted); font-size: 0.68rem; overflow-wrap: anywhere; }
+  .report-summary { padding: 8px 10px; border-radius: 8px; color: #fdba74; background: rgba(249,115,22,0.08); font-size: 0.68rem; overflow-wrap: anywhere; }
+  .moderation-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .moderation-actions button { flex: 1; min-width: 105px; }
+  .moderation-actions .button-success { color: #dcfce7; border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.18); }
+  .moderation-actions .button-warning { color: #fed7aa; border-color: rgba(249,115,22,0.35); background: rgba(249,115,22,0.1); }
+  .moderation-actions .button-danger-outline, .button-danger { color: #fecaca; border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.12); }
+  .reject-form { margin-top: 14px; padding: 14px; border: 1px solid rgba(239,68,68,0.26); border-radius: 10px; background: rgba(127,29,29,0.08); }
+  .reject-form label { display: grid; gap: 5px; margin-top: 10px; }
+  .reject-form select { height: 40px; padding: 0 10px; }
+  .reject-form textarea { resize: vertical; min-height: 74px; padding: 9px 10px; line-height: 1.45; }
+  .reject-form small { text-transform: none; letter-spacing: 0; }
+  .reject-buttons { display: flex; justify-content: flex-end; gap: 7px; margin-top: 11px; }
+  .sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+  @media (max-width: 1160px) {
+    .moderation-grid { grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr); }
+    .queue-table th:nth-child(2), .queue-table td:nth-child(2) { display: none; }
+    .queue-table th:first-child { width: 60%; }
+    .queue-table th:nth-child(3) { width: 20%; }
+    .queue-table th:last-child { width: 20%; }
+  }
+
+  @media (max-width: 980px) {
+    .moderation-grid { grid-template-columns: 1fr; }
+    .detail-panel { position: static; max-height: none; grid-row: 1; }
+    .queue-panel { grid-row: 2; }
+    .selection-hint { display: none; }
+  }
+
+  @media (max-width: 680px) {
+    .comments-page { width: min(100% - 24px, 1500px); padding: 24px 0 60px; }
+    .comments-head { align-items: flex-start; }
+    .comments-head .refresh-button { min-width: 42px; padding: 9px; font-size: 0; }
+    .comments-head .refresh-button svg { width: 19px; height: 19px; }
+    .status-tabs { margin-inline: -12px; padding-inline: 12px; border-inline: 0; border-radius: 0; }
+    .filter-row { display: grid; grid-template-columns: 1fr auto; align-items: end; }
+    .search-control { grid-column: 1 / -1; min-width: 0; }
+    .select-control select { min-width: 0; width: 100%; }
+    .queue-table-wrap { display: none; }
+    .queue-cards { display: grid; }
+    .queue-card { border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .queue-card:last-child { border-bottom: 0; }
+    .queue-card.selected { background: rgba(124,58,237,0.08); box-shadow: inset 3px 0 #a855f7; }
+    .card-select { display: grid; gap: 8px; width: 100%; padding: 15px 16px 10px; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
+    .card-top, .card-identity, .card-badges { display: flex; align-items: center; gap: 7px; }
+    .card-top { justify-content: space-between; }
+    .card-identity { min-width: 0; }
+    .card-identity strong { overflow: hidden; font-size: 0.8rem; text-overflow: ellipsis; white-space: nowrap; }
+    .card-date { color: var(--text-muted); font-size: 0.62rem; white-space: nowrap; }
+    .card-copy { color: var(--text-muted); font-size: 0.73rem; line-height: 1.5; overflow-wrap: anywhere; }
+    .queue-card > .quick-actions { padding: 0 16px 14px; }
+    .queue-card > .quick-actions button { flex: 1; min-height: 44px; font-size: 0.72rem; }
+    #detailContent { padding: 17px; }
+    .moderation-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .moderation-actions button { min-height: 46px; min-width: 0; }
+    .reject-buttons button { min-height: 46px; flex: 1; }
+  }
+
+  @media (max-width: 420px) {
+    .filter-row { grid-template-columns: 1fr; }
+    .search-control { grid-column: auto; }
+    .filter-button { width: 100%; }
+    .comment-meta { grid-template-columns: 1fr; gap: 1px; }
+    .comment-meta dd { margin-bottom: 7px; text-align: left; }
+    .moderation-actions { grid-template-columns: 1fr; }
+  }
+</style>

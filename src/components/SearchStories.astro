@@ -1,0 +1,878 @@
+---
+import { getPublishedFinderComments } from '../lib/finderComments';
+
+export interface Props {
+  finder: 'onlyfans' | 'pornstar';
+}
+
+type Outcome = 'found' | 'close' | 'not_yet';
+type Finder = Props['finder'];
+
+interface Story {
+  id: string;
+  finder: Finder;
+  parentId: string | null;
+  alias: string;
+  outcome: Outcome | null;
+  subjectName: string | null;
+  body: string;
+  createdAt: string;
+  helpfulCount: number;
+  viewerHelpful: boolean;
+  replies: Story[];
+}
+
+const { finder } = Astro.props;
+
+let initialStories: Story[] = [];
+let nextCursor: string | null = null;
+try {
+  const voterKey = Astro.cookies.get('fbf_story_voter')?.value;
+  const published = await getPublishedFinderComments(finder, 10, voterKey);
+  if (Array.isArray(published)) {
+    initialStories = published as Story[];
+  } else if (published && typeof published === 'object') {
+    const result = published as { comments?: Story[]; nextCursor?: string | null };
+    initialStories = Array.isArray(result.comments) ? result.comments : [];
+    nextCursor = typeof result.nextCursor === 'string' ? result.nextCursor : null;
+  }
+} catch (error) {
+  console.warn(`[SearchStories] Initial ${finder} comments unavailable`, error);
+}
+
+const isOnlyFans = finder === 'onlyfans';
+const subjectLabel = isOnlyFans
+  ? 'Public OnlyFans username (optional)'
+  : 'Public performer stage name (optional)';
+const subjectHelp = isOnlyFans
+  ? 'Only share a username the creator publicly uses. Never reveal a real name, location, or hidden identity.'
+  : 'Use a public stage name only—never a private legal name or location.';
+const emptyCopy = isOnlyFans
+  ? 'Be the first to share a useful, privacy-conscious OnlyFans search experience.'
+  : 'Be the first to share what helped with a performer search.';
+const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
+---
+
+<section
+  class="search-stories"
+  data-search-stories
+  data-finder={finder}
+  data-next-cursor={nextCursor || ''}
+  data-turnstile-site-key={turnstileSiteKey}
+  aria-labelledby={`search-stories-title-${finder}`}
+>
+  <div class="stories-heading">
+    <div>
+      <span class="stories-eyebrow">Community search stories</span>
+      <h2 id={`search-stories-title-${finder}`}>What helped other searchers</h2>
+      <p>Real, moderated experiences. Your uploaded image, search results, and email are never attached to a public story.</p>
+    </div>
+    <div class="privacy-chip" aria-label="Privacy information">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3m-9 0h8a2 2 0 0 1 2 2v7H6v-7a2 2 0 0 1 2-2Z" /></svg>
+      Photos and results stay private
+    </div>
+  </div>
+
+  <div class="contribute-card">
+    <div class="locked-prompt" data-locked-prompt>
+      <div class="prompt-icon" aria-hidden="true">✦</div>
+      <div>
+        <strong>Complete a search to share your experience</strong>
+        <p>Everyone can read and mark stories helpful. Search first to write your own.</p>
+      </div>
+      <a href={isOnlyFans ? '#onlyfans-face-search' : '#video-search-heading'}>Start a search</a>
+    </div>
+
+    <div class="feedback-step" data-feedback-step hidden>
+      <p class="step-label">Did the finder help?</p>
+      <div class="outcome-buttons" role="group" aria-label="Your private search result">
+        <button type="button" data-feedback="found"><span aria-hidden="true">✓</span> Found them</button>
+        <button type="button" data-feedback="close"><span aria-hidden="true">≈</span> Close match</button>
+        <button type="button" data-feedback="not_yet"><span aria-hidden="true">↗</span> Not yet</button>
+      </div>
+      <p class="feedback-note">This answer is private and is never attached to your photo or public story.</p>
+    </div>
+
+    <div class="share-prompt" data-share-prompt hidden>
+      <div>
+        <strong>Help the next searcher</strong>
+        <p>Share what worked—or constructive feedback that can make the finder better.</p>
+      </div>
+      <button type="button" class="primary-button" data-open-composer>Share your story</button>
+    </div>
+
+    <form class="story-form" data-story-form hidden novalidate>
+      <div class="form-heading">
+        <div>
+          <span class="step-label">Your search story</span>
+          <h3>What was your experience?</h3>
+        </div>
+        <button type="button" class="icon-button" data-close-form aria-label="Close story form">×</button>
+      </div>
+
+      <fieldset>
+        <legend>Search outcome <span aria-hidden="true">*</span></legend>
+        <div class="choice-row">
+          <label><input type="radio" name="outcome" value="found" required /> <span>Found them</span></label>
+          <label><input type="radio" name="outcome" value="close" /> <span>Close match</span></label>
+          <label><input type="radio" name="outcome" value="not_yet" /> <span>Not yet</span></label>
+        </div>
+      </fieldset>
+
+      <label class="field">
+        <span>{subjectLabel}</span>
+        <input name="subjectName" type="text" maxlength="64" autocomplete="off" />
+        <small>{subjectHelp}</small>
+      </label>
+
+      <label class="field">
+        <span>Public nickname</span>
+        <input name="alias" type="text" minlength="3" maxlength="32" autocomplete="nickname" placeholder="e.g. PurpleFox82" />
+        <small>Use the suggested private nickname or choose your own. Your email is never public.</small>
+      </label>
+
+      <label class="field">
+        <span>Your experience <span aria-hidden="true">*</span></span>
+        <textarea name="body" minlength="60" maxlength="600" rows="5" required placeholder="What kind of photo, crop, angle, or screenshot helped? What could work better?"></textarea>
+        <small class="character-count"><span data-character-count>0</span>/600 characters · minimum 60</small>
+      </label>
+
+      <div class="email-field" data-email-field hidden>
+        <label class="field">
+          <span>Email to verify your story <span aria-hidden="true">*</span></span>
+          <input name="email" type="email" maxlength="254" autocomplete="email" />
+          <small>We will send one private verification link. No password or public profile is required.</small>
+        </label>
+        {turnstileSiteKey && <div class="turnstile-slot" data-turnstile aria-label="Human verification"></div>}
+      </div>
+
+      <label class="check-field">
+        <input type="checkbox" name="notifyReplies" checked />
+        <span>Email me when an approved reply is posted</span>
+      </label>
+
+      <label class="honeypot" aria-hidden="true">
+        Company
+        <input name="company" type="text" tabindex="-1" autocomplete="off" />
+      </label>
+
+      <p class="rules-copy">
+        First-hand and constructive experiences only. No links, harassment, real names, locations, hidden identities, or personal information. All stories are reviewed before publishing. By submitting, you agree to our <a href="/terms-of-use/">Terms</a> and <a href="/privacy-policy/">Privacy Policy</a>.
+      </p>
+      <div class="form-actions">
+        <button type="submit" class="primary-button" data-submit-story>Submit for review</button>
+        <button type="button" class="text-button" data-close-form>Cancel</button>
+      </div>
+      <p class="form-status" data-form-status role="status" aria-live="polite"></p>
+    </form>
+
+    <div class="success-state" data-success-state hidden tabindex="-1">
+      <span aria-hidden="true">✓</span>
+      <div><strong data-success-title>Story received</strong><p data-success-copy>Your story is awaiting review. We’ll email you when it is approved.</p></div>
+    </div>
+  </div>
+
+  <div class="stories-list" data-stories-list>
+    {initialStories.map((story) => (
+      <article class="story-card" data-story-id={story.id}>
+        <div class="story-topline">
+          <div class="avatar" aria-hidden="true">{(story.alias || 'S').slice(0, 1).toUpperCase()}</div>
+          <div class="story-author"><strong>{story.alias || 'Anonymous searcher'}</strong><time datetime={story.createdAt}>{new Date(story.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</time></div>
+          {story.outcome && <span class:list={['outcome-badge', `outcome-${story.outcome}`]}>{story.outcome === 'found' ? 'Found them' : story.outcome === 'close' ? 'Close match' : 'Not yet'}</span>}
+        </div>
+        {story.subjectName && <p class="subject-name">{isOnlyFans ? 'Public username' : 'Stage name'}: <strong>{story.subjectName}</strong></p>}
+        <p class="story-body">{story.body}</p>
+        <div class="story-actions">
+          <button type="button" class:list={['helpful-button', { active: story.viewerHelpful }]} data-helpful aria-pressed={String(Boolean(story.viewerHelpful))}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10v10H4V10h3Zm3 10V9l3-6c1.7.4 2.3 2 1.8 4L14 10h5a2 2 0 0 1 2 2l-1.2 6a2.5 2.5 0 0 1-2.5 2H10Z" /></svg>
+            Helpful <span data-helpful-count>{Math.max(0, Number(story.helpfulCount) || 0)}</span>
+          </button>
+          <button type="button" class="action-button" data-reply>Reply</button>
+          <button type="button" class="action-button" data-report>Report</button>
+        </div>
+        <div class="inline-slot" data-inline-slot></div>
+        {Array.isArray(story.replies) && story.replies.length > 0 && (
+          <div class="replies" aria-label="Replies">
+            {story.replies.map((reply) => (
+              <article class="reply-card" data-story-id={reply.id}>
+                <div class="story-topline">
+                  <div class="avatar small" aria-hidden="true">{(reply.alias || 'S').slice(0, 1).toUpperCase()}</div>
+                  <div class="story-author"><strong>{reply.alias || 'Anonymous searcher'}</strong><time datetime={reply.createdAt}>{new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</time></div>
+                </div>
+                <p class="story-body">{reply.body}</p>
+                <div class="story-actions">
+                  <button type="button" class:list={['helpful-button', { active: reply.viewerHelpful }]} data-helpful aria-pressed={String(Boolean(reply.viewerHelpful))}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10v10H4V10h3Zm3 10V9l3-6c1.7.4 2.3 2 1.8 4L14 10h5a2 2 0 0 1 2 2l-1.2 6a2.5 2.5 0 0 1-2.5 2H10Z" /></svg>
+                    Helpful <span data-helpful-count>{Math.max(0, Number(reply.helpfulCount) || 0)}</span>
+                  </button>
+                  <button type="button" class="action-button" data-report>Report</button>
+                </div>
+                <div class="inline-slot" data-inline-slot></div>
+              </article>
+            ))}
+          </div>
+        )}
+      </article>
+    ))}
+  </div>
+  <p class="sr-status" data-action-status role="status" aria-live="polite"></p>
+
+  <div class="empty-stories" data-empty-stories hidden={initialStories.length > 0}>
+    <span aria-hidden="true">✦</span>
+    <p>{emptyCopy}</p>
+  </div>
+
+  <div class="load-more-wrap" data-load-more-wrap hidden={!nextCursor}>
+    <button type="button" class="secondary-button" data-load-more>Load more stories</button>
+    <p data-list-status role="status" aria-live="polite"></p>
+  </div>
+
+  <template data-reply-template>
+    <form class="inline-form reply-form" novalidate>
+      <div class="inline-form-head"><strong>Reply to this story</strong><button type="button" data-inline-close aria-label="Close reply form">×</button></div>
+      <label class="field"><span>Public nickname</span><input name="alias" type="text" minlength="3" maxlength="32" autocomplete="nickname" placeholder="e.g. PurpleFox82" /></label>
+      <label class="field"><span>Your reply <span aria-hidden="true">*</span></span><textarea name="body" minlength="20" maxlength="600" rows="4" required></textarea><small><span data-character-count>0</span>/600 characters · minimum 20</small></label>
+      <div data-inline-email hidden>
+        <label class="field"><span>Email to verify your reply <span aria-hidden="true">*</span></span><input name="email" type="email" maxlength="254" autocomplete="email" /></label>
+        {turnstileSiteKey && <div class="turnstile-slot" data-turnstile aria-label="Human verification"></div>}
+      </div>
+      <label class="check-field"><input type="checkbox" name="notifyReplies" checked /><span>Email me when an approved reply is posted</span></label>
+      <label class="honeypot" aria-hidden="true">Company<input name="company" type="text" tabindex="-1" autocomplete="off" /></label>
+      <p class="rules-copy">Be constructive. No personal information, identity claims, harassment, or links. Replies are reviewed before publishing.</p>
+      <div class="form-actions"><button type="submit" class="primary-button">Submit reply</button><button type="button" class="text-button" data-inline-close>Cancel</button></div>
+      <p class="form-status" data-inline-status role="status" aria-live="polite"></p>
+    </form>
+  </template>
+
+  <template data-report-template>
+    <form class="inline-form report-form" novalidate>
+      <div class="inline-form-head"><strong>Report this comment</strong><button type="button" data-inline-close aria-label="Close report form">×</button></div>
+      <label class="field"><span>Reason <span aria-hidden="true">*</span></span><select name="reason" required><option value="">Choose a reason</option><option value="private_identity">Reveals a private or hidden identity</option><option value="personal_information">Contains personal information</option><option value="non_consensual">Non-consensual or leaked content</option><option value="harassment">Harassment or abuse</option><option value="spam">Spam or misleading content</option><option value="underage">Possible underage content</option><option value="other">Something else</option></select></label>
+      <label class="field"><span>Details (optional)</span><textarea name="detail" maxlength="500" rows="3"></textarea></label>
+      <label class="honeypot" aria-hidden="true">Company<input name="company" type="text" tabindex="-1" autocomplete="off" /></label>
+      <div class="form-actions"><button type="submit" class="primary-button danger-button">Send report</button><button type="button" class="text-button" data-inline-close>Cancel</button></div>
+      <p class="form-status" data-inline-status role="status" aria-live="polite"></p>
+    </form>
+  </template>
+</section>
+
+<script>
+  type Finder = 'onlyfans' | 'pornstar';
+  type Outcome = 'found' | 'close' | 'not_yet';
+  type ClientStory = {
+    id: string;
+    finder: Finder;
+    parentId: string | null;
+    alias: string;
+    outcome: Outcome | null;
+    subjectName: string | null;
+    body: string;
+    createdAt: string;
+    helpfulCount: number;
+    viewerHelpful: boolean;
+    replies: ClientStory[];
+  };
+  type TurnstileApi = {
+    render: (container: HTMLElement, options: Record<string, unknown>) => string;
+    getResponse: (widgetId: string) => string;
+    reset: (widgetId: string) => void;
+  };
+  type TurnstileWindow = typeof window & {
+    turnstile?: TurnstileApi;
+    __turnstileReady?: Array<() => void>;
+    onTurnstileLoad?: () => void;
+  };
+  type AnalyticsWindow = typeof window & {
+    gtag?: (command: 'event', eventName: string, parameters: Record<string, string>) => void;
+  };
+
+  const OUTCOME_LABELS: Record<Outcome, string> = { found: 'Found them', close: 'Close match', not_yet: 'Not yet' };
+
+  document.querySelectorAll<HTMLElement>('[data-search-stories]').forEach((root) => {
+    if (root.dataset.initialized === 'true') return;
+    root.dataset.initialized = 'true';
+
+    const finder = root.dataset.finder as Finder;
+    const turnstileSiteKey = root.dataset.turnstileSiteKey || '';
+    const proofKey = `fbf_search_proof_${finder}`;
+    const draftKey = `fbf_pending_comment_${finder}`;
+    const lockedPrompt = root.querySelector<HTMLElement>('[data-locked-prompt]')!;
+    const feedbackStep = root.querySelector<HTMLElement>('[data-feedback-step]')!;
+    const sharePrompt = root.querySelector<HTMLElement>('[data-share-prompt]')!;
+    const storyForm = root.querySelector<HTMLFormElement>('[data-story-form]')!;
+    const emailField = root.querySelector<HTMLElement>('[data-email-field]')!;
+    const successState = root.querySelector<HTMLElement>('[data-success-state]')!;
+    const list = root.querySelector<HTMLElement>('[data-stories-list]')!;
+    const empty = root.querySelector<HTMLElement>('[data-empty-stories]')!;
+    const loadMoreWrap = root.querySelector<HTMLElement>('[data-load-more-wrap]')!;
+    const loadMoreButton = root.querySelector<HTMLButtonElement>('[data-load-more]')!;
+    const listStatus = root.querySelector<HTMLElement>('[data-list-status]')!;
+    const actionStatus = root.querySelector<HTMLElement>('[data-action-status]')!;
+    const scopeAttribute = root.getAttributeNames().find((name) => name.startsWith('data-astro-cid-')) || '';
+    let searchProof = '';
+    let feedbackOutcome: Outcome | null = null;
+    const turnstileWidgets = new WeakMap<HTMLFormElement, string>();
+
+    function track(eventName: string, parameters: { action?: string; status?: string } = {}): void {
+      const analytics = window as AnalyticsWindow;
+      if (typeof analytics.gtag !== 'function') return;
+      analytics.gtag('event', eventName, {
+        finder,
+        ...(parameters.action ? { action: parameters.action } : {}),
+        ...(parameters.status ? { status: parameters.status } : {}),
+      });
+    }
+
+    function withTurnstile(callback: (api: TurnstileApi) => void): void {
+      if (!turnstileSiteKey) return;
+      const turnstileWindow = window as TurnstileWindow;
+      if (turnstileWindow.turnstile) {
+        callback(turnstileWindow.turnstile);
+        return;
+      }
+      turnstileWindow.__turnstileReady ||= [];
+      turnstileWindow.__turnstileReady.push(() => {
+        if (turnstileWindow.turnstile) callback(turnstileWindow.turnstile);
+      });
+      if (!turnstileWindow.onTurnstileLoad) {
+        turnstileWindow.onTurnstileLoad = () => {
+          const callbacks = turnstileWindow.__turnstileReady?.splice(0) || [];
+          callbacks.forEach((ready) => ready());
+        };
+      }
+      if (!document.querySelector<HTMLScriptElement>('script[src*="challenges.cloudflare.com/turnstile"]')) {
+        const script = document.createElement('script');
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstileLoad';
+        script.async = true;
+        script.defer = true;
+        document.head.append(script);
+      }
+    }
+
+    function renderTurnstile(form: HTMLFormElement): void {
+      if (!turnstileSiteKey || turnstileWidgets.has(form)) return;
+      const slot = form.querySelector<HTMLElement>('[data-turnstile]');
+      if (!slot) return;
+      withTurnstile((api) => {
+        if (turnstileWidgets.has(form) || !form.isConnected) return;
+        const widgetId = api.render(slot, { sitekey: turnstileSiteKey, theme: 'dark' });
+        turnstileWidgets.set(form, widgetId);
+      });
+    }
+
+    function turnstileToken(form: HTMLFormElement): string {
+      const widgetId = turnstileWidgets.get(form);
+      const api = (window as TurnstileWindow).turnstile;
+      return widgetId && api ? api.getResponse(widgetId) : '';
+    }
+
+    function resetTurnstile(form: HTMLFormElement): void {
+      const widgetId = turnstileWidgets.get(form);
+      const api = (window as TurnstileWindow).turnstile;
+      if (widgetId && api) api.reset(widgetId);
+    }
+
+    function readStoredProof(): string {
+      try { return sessionStorage.getItem(proofKey) || ''; } catch { return ''; }
+    }
+
+    function currentToken(): string {
+      try {
+        const user = JSON.parse(localStorage.getItem('fbf_user') || 'null');
+        return typeof user?.access_token === 'string' ? user.access_token : '';
+      } catch { return ''; }
+    }
+
+    function randomAlias(): string {
+      const adjectives = ['Purple', 'Bright', 'Quiet', 'Silver', 'Lucky', 'Curious', 'Velvet', 'Cosmic'];
+      const animals = ['Fox', 'Owl', 'Panda', 'Otter', 'Falcon', 'Koala', 'Lynx', 'Robin'];
+      const bytes = new Uint32Array(3);
+      crypto.getRandomValues(bytes);
+      return `${adjectives[bytes[0] % adjectives.length]}${animals[bytes[1] % animals.length]}${String(bytes[2] % 100_000_000).padStart(8, '0')}`;
+    }
+
+    function setSearchReady(proof: string, showFeedback = true): void {
+      if (!proof) return;
+      searchProof = proof;
+      try { sessionStorage.setItem(proofKey, proof); } catch { /* storage unavailable */ }
+      lockedPrompt.hidden = true;
+      if (showFeedback && !feedbackOutcome) feedbackStep.hidden = false;
+      else sharePrompt.hidden = false;
+    }
+
+    function openComposer(parentId?: string): void {
+      if (!searchProof) {
+        lockedPrompt.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      if (parentId) return;
+      track('story_composer_start', { action: 'story' });
+      sharePrompt.hidden = true;
+      feedbackStep.hidden = true;
+      successState.hidden = true;
+      storyForm.hidden = false;
+      const alias = storyForm.elements.namedItem('alias') as HTMLInputElement;
+      if (!alias.value) alias.value = randomAlias();
+      const checked = storyForm.querySelector<HTMLInputElement>('input[name="outcome"]:checked');
+      if (!checked && feedbackOutcome) {
+        const outcome = storyForm.querySelector<HTMLInputElement>(`input[name="outcome"][value="${feedbackOutcome}"]`);
+        if (outcome) outcome.checked = true;
+      }
+      emailField.hidden = Boolean(currentToken());
+      const email = storyForm.elements.namedItem('email') as HTMLInputElement;
+      email.required = !currentToken();
+      if (!currentToken()) renderTurnstile(storyForm);
+      requestAnimationFrame(() => (storyForm.elements.namedItem('body') as HTMLTextAreaElement).focus());
+    }
+
+    function closeComposer(): void {
+      storyForm.hidden = true;
+      sharePrompt.hidden = false;
+      root.querySelector<HTMLButtonElement>('[data-open-composer]')?.focus();
+    }
+
+    async function parseResponse(response: Response): Promise<Record<string, unknown>> {
+      try { return await response.json() as Record<string, unknown>; } catch { return {}; }
+    }
+
+    function errorMessage(payload: Record<string, unknown>, fallback: string): string {
+      return typeof payload.error === 'string' ? payload.error : typeof payload.message === 'string' ? payload.message : fallback;
+    }
+
+    async function sendFeedback(outcome: Outcome, button: HTMLButtonElement): Promise<void> {
+      if (!searchProof) return;
+      root.querySelectorAll<HTMLButtonElement>('[data-feedback]').forEach((item) => { item.disabled = true; });
+      try {
+        const response = await fetch('/api/finder-comments/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ finder, outcome, proof: searchProof }),
+        });
+        if (!response.ok) throw new Error('Feedback could not be saved.');
+        feedbackOutcome = outcome;
+        feedbackStep.hidden = true;
+        sharePrompt.hidden = false;
+        button.setAttribute('aria-pressed', 'true');
+        track('story_feedback_submit', { status: 'success' });
+        actionStatus.textContent = 'Thanks—your private feedback was saved. Sharing a public story is optional.';
+      } catch {
+        feedbackOutcome = outcome;
+        feedbackStep.hidden = true;
+        sharePrompt.hidden = false;
+        track('story_feedback_submit', { status: 'error' });
+        actionStatus.textContent = 'We could not save the private feedback, but sharing a public story is still optional.';
+      } finally {
+        root.querySelectorAll<HTMLButtonElement>('[data-feedback]').forEach((item) => { item.disabled = false; });
+      }
+    }
+
+    function payloadFromForm(form: HTMLFormElement, parentId: string | null): Record<string, unknown> {
+      const data = new FormData(form);
+      return {
+        finder,
+        parentId,
+        outcome: parentId ? undefined : data.get('outcome'),
+        subjectName: parentId ? undefined : String(data.get('subjectName') || '').trim() || undefined,
+        alias: String(data.get('alias') || '').trim() || randomAlias(),
+        body: String(data.get('body') || '').trim(),
+        notifyReplies: data.get('notifyReplies') === 'on',
+        proof: searchProof,
+        company: String(data.get('company') || ''),
+      };
+    }
+
+    async function submitContribution(form: HTMLFormElement, parentId: string | null, status: HTMLElement): Promise<void> {
+      const data = new FormData(form);
+      const body = String(data.get('body') || '').trim();
+      const minimum = parentId ? 20 : 60;
+      if (!parentId && !data.get('outcome')) {
+        status.textContent = 'Choose your search outcome.';
+        form.querySelector<HTMLInputElement>('input[name="outcome"]')?.focus();
+        return;
+      }
+      if (body.length < minimum || body.length > 600) {
+        status.textContent = `Write between ${minimum} and 600 characters.`;
+        (form.elements.namedItem('body') as HTMLTextAreaElement).focus();
+        return;
+      }
+      const token = currentToken();
+      const email = String(data.get('email') || '').trim();
+      if (!token && !/^\S+@\S+\.\S+$/.test(email)) {
+        status.textContent = 'Enter a valid email for the verification link.';
+        (form.elements.namedItem('email') as HTMLInputElement)?.focus();
+        return;
+      }
+      const payload = payloadFromForm(form, parentId);
+      if (!token) {
+        payload.email = email;
+        payload.turnstileToken = turnstileToken(form);
+        payload.returnTo = `${window.location.pathname}#search-stories-title-${finder}`;
+        if (turnstileSiteKey && !payload.turnstileToken) {
+          status.textContent = 'Complete the human verification before submitting.';
+          return;
+        }
+      }
+      const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+      submit.disabled = true;
+      status.textContent = token ? 'Submitting…' : 'Sending your verification link…';
+      try {
+        const response = await fetch(token ? '/api/finder-comments' : '/api/finder-comments/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: JSON.stringify(payload),
+        });
+        const result = await parseResponse(response);
+        if (!response.ok) throw new Error(errorMessage(result, 'We could not submit this right now. Please try again.'));
+        if (!token) track('story_verification_requested', { action: parentId ? 'reply' : 'story', status: 'success' });
+        track(parentId ? 'story_reply_submit' : 'story_submit', { action: token ? 'submitted' : 'verification_pending', status: 'success' });
+        if (!token) {
+          try {
+            sessionStorage.setItem(draftKey, JSON.stringify({ pending: true, parentId, createdAt: Date.now(), anchor: `search-stories-title-${finder}` }));
+          } catch { /* storage unavailable */ }
+        }
+        form.reset();
+        if (parentId) {
+          const container = form.parentElement;
+          if (container) {
+            container.replaceChildren();
+            const message = element('p', 'inline-success', token ? 'Your reply is awaiting review.' : 'Check your inbox to verify your reply. It will then await review.');
+            container.append(message);
+          }
+        } else {
+          storyForm.hidden = true;
+          sharePrompt.hidden = true;
+          successState.hidden = false;
+          root.querySelector<HTMLElement>('[data-success-title]')!.textContent = token ? 'Story received' : 'Check your inbox';
+          root.querySelector<HTMLElement>('[data-success-copy]')!.textContent = token
+            ? 'Your story is awaiting review. We’ll email you when it is approved.'
+            : 'Click the private verification link to submit your story for review.';
+          successState.focus();
+        }
+      } catch (error) {
+        status.textContent = error instanceof Error ? error.message : 'Something went wrong. Please try again.';
+        if (!token) track('story_verification_requested', { action: parentId ? 'reply' : 'story', status: 'error' });
+        track(parentId ? 'story_reply_submit' : 'story_submit', { action: token ? 'submitted' : 'verification_pending', status: 'error' });
+        if (!token) resetTurnstile(form);
+      } finally {
+        submit.disabled = false;
+      }
+    }
+
+    function avatarText(alias: string): string { return (alias.trim().charAt(0) || 'S').toUpperCase(); }
+    function formatDate(value: string): string {
+      const date = new Date(value);
+      return Number.isNaN(date.valueOf()) ? '' : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    function element<K extends keyof HTMLElementTagNameMap>(name: K, className?: string, text?: string): HTMLElementTagNameMap[K] {
+      const node = document.createElement(name);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      if (scopeAttribute) node.setAttribute(scopeAttribute, '');
+      return node;
+    }
+
+    function buildStory(story: ClientStory, isReply = false): HTMLElement {
+      const article = element('article', isReply ? 'reply-card' : 'story-card');
+      article.dataset.storyId = String(story.id);
+      const top = element('div', 'story-topline');
+      const avatar = element('div', isReply ? 'avatar small' : 'avatar', avatarText(story.alias || ''));
+      avatar.setAttribute('aria-hidden', 'true');
+      const author = element('div', 'story-author');
+      author.append(element('strong', '', story.alias || 'Anonymous searcher'));
+      const time = element('time', '', formatDate(story.createdAt));
+      time.dateTime = story.createdAt;
+      author.append(time);
+      top.append(avatar, author);
+      if (!isReply && story.outcome && OUTCOME_LABELS[story.outcome]) {
+        top.append(element('span', `outcome-badge outcome-${story.outcome}`, OUTCOME_LABELS[story.outcome]));
+      }
+      article.append(top);
+      if (!isReply && story.subjectName) {
+        const subject = element('p', 'subject-name');
+        subject.append(`${finder === 'onlyfans' ? 'Public username' : 'Stage name'}: `, element('strong', '', story.subjectName));
+        article.append(subject);
+      }
+      article.append(element('p', 'story-body', story.body));
+      const actions = element('div', 'story-actions');
+      const helpful = element('button', `helpful-button${story.viewerHelpful ? ' active' : ''}`);
+      helpful.type = 'button';
+      helpful.dataset.helpful = '';
+      helpful.setAttribute('aria-pressed', String(Boolean(story.viewerHelpful)));
+      helpful.append('Helpful ', element('span', '', String(Math.max(0, Number(story.helpfulCount) || 0))));
+      helpful.querySelector('span')!.dataset.helpfulCount = '';
+      actions.append(helpful);
+      if (!isReply) {
+        const reply = element('button', 'action-button', 'Reply'); reply.type = 'button'; reply.dataset.reply = ''; actions.append(reply);
+      }
+      const report = element('button', 'action-button', 'Report'); report.type = 'button'; report.dataset.report = ''; actions.append(report);
+      article.append(actions);
+      const slot = element('div', 'inline-slot'); slot.dataset.inlineSlot = ''; article.append(slot);
+      if (!isReply && Array.isArray(story.replies) && story.replies.length) {
+        const replies = element('div', 'replies'); replies.setAttribute('aria-label', 'Replies');
+        story.replies.forEach((item) => replies.append(buildStory(item, true)));
+        article.append(replies);
+      }
+      return article;
+    }
+
+    function closeInlineForms(): void {
+      root.querySelectorAll<HTMLElement>('[data-inline-slot]').forEach((slot) => slot.replaceChildren());
+    }
+
+    function prepareInlineForm(card: HTMLElement, kind: 'reply' | 'report'): HTMLFormElement | null {
+      const slot = card.querySelector<HTMLElement>(':scope > [data-inline-slot]');
+      const template = root.querySelector<HTMLTemplateElement>(kind === 'reply' ? '[data-reply-template]' : '[data-report-template]');
+      if (!slot || !template) return null;
+      closeInlineForms();
+      slot.append(template.content.cloneNode(true));
+      if (scopeAttribute) slot.querySelectorAll<HTMLElement>('*').forEach((node) => node.setAttribute(scopeAttribute, ''));
+      const form = slot.querySelector<HTMLFormElement>('form')!;
+      form.querySelectorAll<HTMLButtonElement>('[data-inline-close]').forEach((button) => button.addEventListener('click', () => {
+        slot.replaceChildren();
+        card.querySelector<HTMLButtonElement>(kind === 'reply' ? '[data-reply]' : '[data-report]')?.focus();
+      }));
+      form.querySelectorAll<HTMLTextAreaElement>('textarea').forEach((textarea) => textarea.addEventListener('input', () => {
+        const count = form.querySelector<HTMLElement>('[data-character-count]'); if (count) count.textContent = String(textarea.value.length);
+      }));
+      requestAnimationFrame(() => form.querySelector<HTMLElement>('select, textarea, input:not([type="hidden"])')?.focus());
+      return form;
+    }
+
+    async function toggleHelpful(button: HTMLButtonElement, card: HTMLElement): Promise<void> {
+      const commentId = card.dataset.storyId;
+      if (!commentId) return;
+      const count = button.querySelector<HTMLElement>('[data-helpful-count]');
+      button.disabled = true;
+      try {
+        const response = await fetch('/api/finder-comments/helpful', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ commentId }) });
+        const result = await parseResponse(response);
+        if (!response.ok) throw new Error(errorMessage(result, 'Could not update helpful vote.'));
+        const active = typeof result.helpful === 'boolean' ? result.helpful : !button.classList.contains('active');
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+        if (count) {
+          const previous = Number(count.textContent) || 0;
+          count.textContent = String(typeof result.helpfulCount === 'number' ? result.helpfulCount : Math.max(0, previous + (active ? 1 : -1)));
+        }
+        track('story_helpful_toggle', { action: active ? 'add' : 'remove', status: 'success' });
+      } catch (error) {
+        button.title = error instanceof Error ? error.message : 'Could not update helpful vote.';
+        actionStatus.textContent = button.title;
+        track('story_helpful_toggle', { action: 'toggle', status: 'error' });
+      } finally { button.disabled = false; }
+    }
+
+    root.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement;
+      const feedbackButton = target.closest<HTMLButtonElement>('[data-feedback]');
+      if (feedbackButton) { void sendFeedback(feedbackButton.dataset.feedback as Outcome, feedbackButton); return; }
+      if (target.closest('[data-open-composer]')) { openComposer(); return; }
+      if (target.closest('[data-close-form]')) { closeComposer(); return; }
+      const card = target.closest<HTMLElement>('[data-story-id]');
+      if (!card) return;
+      const helpful = target.closest<HTMLButtonElement>('[data-helpful]');
+      if (helpful) { void toggleHelpful(helpful, card); return; }
+      if (target.closest('[data-reply]')) {
+        if (!searchProof) { lockedPrompt.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+        const form = prepareInlineForm(card, 'reply');
+        if (!form) return;
+        track('story_reply_start', { action: 'open' });
+        const alias = form.elements.namedItem('alias') as HTMLInputElement; alias.value = randomAlias();
+        const inlineEmail = form.querySelector<HTMLElement>('[data-inline-email]')!;
+        inlineEmail.hidden = Boolean(currentToken());
+        (form.elements.namedItem('email') as HTMLInputElement).required = !currentToken();
+        if (!currentToken()) renderTurnstile(form);
+        form.addEventListener('submit', (submitEvent) => {
+          submitEvent.preventDefault();
+          void submitContribution(form, card.dataset.storyId || null, form.querySelector<HTMLElement>('[data-inline-status]')!);
+        });
+        return;
+      }
+      if (target.closest('[data-report]')) {
+        const form = prepareInlineForm(card, 'report');
+        if (!form) return;
+        form.addEventListener('submit', async (submitEvent) => {
+          submitEvent.preventDefault();
+          const data = new FormData(form);
+          const reason = String(data.get('reason') || '');
+          const status = form.querySelector<HTMLElement>('[data-inline-status]')!;
+          if (!reason) { status.textContent = 'Choose a report reason.'; return; }
+          const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]')!; submit.disabled = true; status.textContent = 'Sending report…';
+          try {
+            const response = await fetch('/api/finder-comments/report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ commentId: card.dataset.storyId, reason, details: String(data.get('detail') || '').trim() || undefined, website: String(data.get('company') || '') }) });
+            const result = await parseResponse(response);
+            if (!response.ok) throw new Error(errorMessage(result, 'Could not send this report.'));
+            const slot = form.parentElement!; slot.replaceChildren(element('p', 'inline-success', 'Thanks. Our moderation team will review this comment.'));
+            track('story_report_submit', { status: 'success' });
+          } catch (error) {
+            status.textContent = error instanceof Error ? error.message : 'Could not send this report.';
+            track('story_report_submit', { status: 'error' });
+          }
+          finally { submit.disabled = false; }
+        });
+      }
+    });
+
+    storyForm.addEventListener('submit', (event) => { event.preventDefault(); void submitContribution(storyForm, null, root.querySelector<HTMLElement>('[data-form-status]')!); });
+    const mainBody = storyForm.elements.namedItem('body') as HTMLTextAreaElement;
+    mainBody.addEventListener('input', () => { root.querySelector<HTMLElement>('[data-character-count]')!.textContent = String(mainBody.value.length); });
+
+    loadMoreButton?.addEventListener('click', async () => {
+      const cursor = root.dataset.nextCursor;
+      if (!cursor) return;
+      loadMoreButton.disabled = true; listStatus.textContent = 'Loading more stories…';
+      try {
+        const response = await fetch(`/api/finder-comments?finder=${encodeURIComponent(finder)}&cursor=${encodeURIComponent(cursor)}`);
+        const result = await parseResponse(response);
+        if (!response.ok) throw new Error(errorMessage(result, 'Could not load more stories.'));
+        const comments = Array.isArray(result.comments) ? result.comments as ClientStory[] : [];
+        comments.forEach((story) => list.append(buildStory(story)));
+        empty.hidden = list.childElementCount > 0;
+        root.dataset.nextCursor = typeof result.nextCursor === 'string' ? result.nextCursor : '';
+        loadMoreWrap.hidden = !root.dataset.nextCursor;
+        listStatus.textContent = comments.length ? `${comments.length} more ${comments.length === 1 ? 'story' : 'stories'} loaded.` : 'No more stories.';
+      } catch (error) { listStatus.textContent = error instanceof Error ? error.message : 'Could not load more stories.'; }
+      finally { loadMoreButton.disabled = false; }
+    });
+
+    window.addEventListener('fbf:search-complete', (event: Event) => {
+      const detail = (event as CustomEvent<{ finder?: Finder; searchProof?: string }>).detail;
+      if (detail?.finder === finder && typeof detail.searchProof === 'string' && detail.searchProof) {
+        setSearchReady(detail.searchProof);
+        track('story_prompt_view', { action: 'search_complete' });
+      }
+    });
+
+    searchProof = readStoredProof();
+    if (searchProof) setSearchReady(searchProof);
+
+    try {
+      const marker = JSON.parse(sessionStorage.getItem(draftKey) || 'null') as { pending?: boolean; createdAt?: number } | null;
+      const params = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const verified = ['comment_verified', 'verified', 'finder_comment'].some((key) => params.get(key) === '1' || hashParams.get(key) === '1');
+      const verificationState = params.get('comment_verification');
+      const verificationFailed = verificationState === 'failed' || verificationState === 'expired' || params.get('comment_error') === 'verification';
+      if (verified && (!marker?.createdAt || Date.now() - marker.createdAt < 86_400_000)) {
+        lockedPrompt.hidden = true; feedbackStep.hidden = true; sharePrompt.hidden = true; storyForm.hidden = true; successState.hidden = false;
+        root.querySelector<HTMLElement>('[data-success-title]')!.textContent = 'Email verified';
+        root.querySelector<HTMLElement>('[data-success-copy]')!.textContent = 'Your story is awaiting review. We’ll email you when it is approved.';
+        sessionStorage.removeItem(draftKey);
+        root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (verificationFailed) {
+        if (marker?.pending) lockedPrompt.hidden = true;
+        feedbackStep.hidden = true; sharePrompt.hidden = Boolean(marker?.pending); storyForm.hidden = true; successState.hidden = false;
+        root.querySelector<HTMLElement>('[data-success-title]')!.textContent = 'Verification link did not work';
+        root.querySelector<HTMLElement>('[data-success-copy]')!.textContent = 'The link may have expired. Return here after another search and submit again for a new private verification link.';
+        root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } catch { /* ignore invalid callback marker */ }
+  });
+</script>
+
+<style>
+  .search-stories { width: min(960px, calc(100% - 40px)); margin: 72px auto 0; color: #f5f2fb; scroll-margin-top: 90px; }
+  .search-stories, .search-stories * { box-sizing: border-box; }
+  .stories-heading { display: flex; align-items: end; justify-content: space-between; gap: 28px; margin-bottom: 24px; }
+  .stories-eyebrow, .step-label { display: block; color: #bd83ef; font-size: .7rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+  .stories-heading h2 { margin: 9px 0 7px; color: #fff; font-family: 'Manrope', sans-serif; font-size: clamp(1.7rem, 3.4vw, 2.6rem); letter-spacing: -.035em; line-height: 1.1; }
+  .stories-heading p { margin: 0; color: #918ca3; font-size: .9rem; line-height: 1.6; }
+  .privacy-chip { display: inline-flex; align-items: center; flex: 0 0 auto; gap: 8px; padding: 9px 12px; border: 1px solid rgba(87,238,163,.16); border-radius: 999px; background: rgba(31,115,74,.08); color: #a7d8bd; font-size: .7rem; font-weight: 700; }
+  .privacy-chip svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+  .contribute-card { margin-bottom: 22px; padding: 20px; border: 1px solid rgba(174,105,234,.2); border-radius: 20px; background: linear-gradient(135deg, rgba(41,24,58,.78), rgba(17,15,25,.93)); box-shadow: 0 18px 50px rgba(0,0,0,.18); }
+  .locked-prompt, .share-prompt, .success-state { display: flex; align-items: center; gap: 15px; }
+  .locked-prompt > div:nth-child(2), .share-prompt > div { min-width: 0; flex: 1; }
+  .locked-prompt strong, .share-prompt strong, .success-state strong { color: #fff; font-family: 'Manrope', sans-serif; font-size: .94rem; }
+  .locked-prompt p, .share-prompt p, .success-state p { margin: 4px 0 0; color: #8f899d; font-size: .76rem; line-height: 1.5; }
+  .locked-prompt > a { flex: 0 0 auto; padding: 9px 13px; border: 1px solid rgba(194,120,255,.28); border-radius: 10px; color: #d4a6fa; font-size: .75rem; font-weight: 800; text-decoration: none; }
+  .prompt-icon, .success-state > span { display: grid; width: 38px; height: 38px; flex: 0 0 38px; place-items: center; border-radius: 12px; background: rgba(159,73,231,.14); color: #d28aff; }
+  .feedback-step { text-align: center; }
+  .feedback-step .step-label { margin-bottom: 13px; }
+  .outcome-buttons { display: flex; justify-content: center; gap: 9px; }
+  .outcome-buttons button { min-width: 130px; padding: 11px 15px; border: 1px solid rgba(255,255,255,.1); border-radius: 11px; background: rgba(255,255,255,.035); color: #dfd9e8; cursor: pointer; font: inherit; font-size: .78rem; font-weight: 700; }
+  .outcome-buttons button:hover, .outcome-buttons button:focus-visible { border-color: rgba(194,120,255,.6); background: rgba(139,55,201,.15); }
+  .outcome-buttons span { margin-right: 5px; color: #c57ef8; }
+  .feedback-note { margin: 11px 0 0; color: #777184; font-size: .66rem; }
+  .primary-button, .secondary-button, .text-button, .icon-button, .action-button, .helpful-button, .inline-form-head button { font: inherit; }
+  .primary-button, .secondary-button { border: 0; border-radius: 10px; cursor: pointer; font-size: .77rem; font-weight: 800; }
+  .primary-button { padding: 11px 15px; background: linear-gradient(110deg,#7c3aed,#cf3ca0); color: #fff; box-shadow: 0 8px 22px rgba(124,58,237,.2); }
+  .secondary-button { padding: 11px 17px; border: 1px solid rgba(183,108,255,.25); background: rgba(139,55,201,.09); color: #d3a5f6; }
+  button:disabled { cursor: wait; opacity: .56; }
+  .story-form { padding: 5px 3px 2px; }
+  .form-heading { display: flex; align-items: start; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
+  .form-heading h3 { margin: 5px 0 0; color: #fff; font-family: 'Manrope', sans-serif; font-size: 1.2rem; }
+  .icon-button, .inline-form-head button { display: grid; width: 32px; height: 32px; place-items: center; border: 0; border-radius: 8px; background: rgba(255,255,255,.05); color: #b4aec0; cursor: pointer; font-size: 1.2rem; }
+  .story-form fieldset { margin: 0 0 17px; padding: 0; border: 0; }
+  .story-form legend, .field > span { display: block; margin-bottom: 7px; color: #d8d2e2; font-size: .75rem; font-weight: 750; }
+  .choice-row { display: flex; gap: 8px; }
+  .choice-row label { position: relative; flex: 1; cursor: pointer; }
+  .choice-row input { position: absolute; opacity: 0; }
+  .choice-row span { display: grid; min-height: 42px; place-items: center; border: 1px solid rgba(255,255,255,.09); border-radius: 10px; background: rgba(255,255,255,.025); color: #9c96a8; font-size: .75rem; font-weight: 750; }
+  .choice-row input:checked + span { border-color: #a855f7; background: rgba(139,55,201,.15); color: #efe2fb; }
+  .choice-row input:focus-visible + span { outline: 2px solid #cf8cff; outline-offset: 2px; }
+  .field { display: block; margin-bottom: 15px; }
+  .field input, .field textarea, .field select { width: 100%; border: 1px solid rgba(255,255,255,.1); border-radius: 10px; outline: 0; background: rgba(7,7,12,.55); color: #f5f2fb; font: inherit; font-size: .8rem; line-height: 1.55; }
+  .field input, .field select { min-height: 42px; padding: 9px 11px; }
+  .field textarea { min-height: 92px; padding: 10px 11px; resize: vertical; }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color: #9d4bff; box-shadow: 0 0 0 3px rgba(157,75,255,.1); }
+  .field small, .rules-copy, .character-count { display: block; margin-top: 5px; color: #787285; font-size: .65rem; line-height: 1.55; }
+  .check-field { display: flex; align-items: start; gap: 9px; margin: 4px 0 14px; color: #aaa4b5; font-size: .71rem; line-height: 1.4; }
+  .check-field input { margin-top: 1px; accent-color: #a855f7; }
+  .rules-copy { margin: 13px 0; padding: 11px 12px; border-radius: 9px; background: rgba(255,255,255,.025); }
+  .rules-copy a { color: #bd92de; }
+  .form-actions { display: flex; align-items: center; gap: 10px; }
+  .text-button { padding: 9px 11px; border: 0; background: none; color: #918a9f; cursor: pointer; font-size: .74rem; }
+  .form-status { min-height: 1.2em; margin: 10px 0 0; color: #f1b3c2; font-size: .71rem; }
+  .turnstile-slot { min-height: 65px; margin: 4px 0 14px; }
+  .honeypot { position: absolute !important; left: -10000px !important; width: 1px !important; height: 1px !important; overflow: hidden !important; }
+  [hidden] { display: none !important; }
+  .success-state > span { background: rgba(44,151,96,.13); color: #75e7aa; }
+  .stories-list { display: grid; gap: 13px; }
+  .story-card { padding: 21px; border: 1px solid rgba(255,255,255,.075); border-radius: 17px; background: rgba(16,15,23,.86); }
+  .story-topline { display: flex; align-items: center; gap: 10px; }
+  .avatar { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border-radius: 11px; background: linear-gradient(145deg, rgba(145,67,204,.35), rgba(65,34,94,.32)); color: #e1b8ff; font: 800 .76rem 'Manrope', sans-serif; }
+  .avatar.small { width: 28px; height: 28px; flex-basis: 28px; border-radius: 9px; font-size: .68rem; }
+  .story-author { display: grid; min-width: 0; gap: 2px; flex: 1; }
+  .story-author strong { overflow: hidden; color: #e9e4ee; font-size: .78rem; text-overflow: ellipsis; white-space: nowrap; }
+  .story-author time { color: #716b7a; font-size: .63rem; }
+  .outcome-badge { padding: 5px 8px; border-radius: 999px; font-size: .61rem; font-weight: 800; }
+  .outcome-found { background: rgba(48,167,103,.11); color: #76dda6; }
+  .outcome-close { background: rgba(179,121,46,.11); color: #e2b368; }
+  .outcome-not_yet { background: rgba(116,104,134,.13); color: #aaa2b6; }
+  .subject-name { margin: 13px 0 0; color: #8c8597; font-size: .69rem; }
+  .subject-name strong { color: #c6a6dc; }
+  .story-body { margin: 13px 0 0; color: #bbb5c5; font-size: .79rem; line-height: 1.68; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .story-actions { display: flex; align-items: center; gap: 5px; margin-top: 14px; }
+  .helpful-button, .action-button { min-height: 31px; padding: 6px 9px; border: 0; border-radius: 8px; background: transparent; color: #858092; cursor: pointer; font-size: .67rem; font-weight: 700; }
+  .helpful-button { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,.03); }
+  .helpful-button svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-linejoin: round; stroke-width: 1.6; }
+  .helpful-button:hover, .action-button:hover, .helpful-button:focus-visible, .action-button:focus-visible { color: #d3a5f6; }
+  .helpful-button.active { background: rgba(139,55,201,.13); color: #d59eff; }
+  .replies { display: grid; gap: 9px; margin: 14px 0 0 27px; padding-left: 15px; border-left: 1px solid rgba(173,93,232,.2); }
+  .reply-card { padding: 15px; border: 1px solid rgba(255,255,255,.06); border-radius: 13px; background: rgba(255,255,255,.018); }
+  .inline-form { margin-top: 13px; padding: 16px; border: 1px solid rgba(170,92,225,.18); border-radius: 13px; background: #100e18; }
+  .inline-form-head { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 14px; color: #e9e3ef; font-size: .78rem; }
+  .inline-success { margin: 12px 0 0; padding: 11px 13px; border-radius: 9px; background: rgba(41,145,90,.1); color: #87dbae; font-size: .71rem; }
+  .danger-button { background: linear-gradient(110deg,#a92f50,#ce3b63); }
+  .empty-stories { padding: 26px; border: 1px dashed rgba(255,255,255,.09); border-radius: 15px; color: #777181; text-align: center; }
+  .empty-stories span { display: block; margin-bottom: 7px; color: #a866d8; }
+  .empty-stories p { margin: 0; font-size: .76rem; }
+  .load-more-wrap { margin-top: 16px; text-align: center; }
+  .load-more-wrap p { min-height: 1em; margin: 7px 0 0; color: #858091; font-size: .67rem; }
+  .sr-status { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+  .search-stories :is(button, a, input, textarea, select):focus-visible { outline: 2px solid #d097ff; outline-offset: 2px; }
+  @media (max-width: 680px) {
+    .search-stories { width: min(100% - 24px, 960px); margin-top: 52px; }
+    .stories-heading { display: block; }
+    .privacy-chip { margin-top: 14px; }
+    .contribute-card, .story-card { padding: 17px; border-radius: 15px; }
+    .locked-prompt, .share-prompt { align-items: flex-start; flex-wrap: wrap; }
+    .locked-prompt > a, .share-prompt > button { width: 100%; text-align: center; }
+    .outcome-buttons, .choice-row { display: grid; grid-template-columns: 1fr; }
+    .outcome-buttons button { width: 100%; }
+    .outcome-badge { margin-left: auto; }
+    .replies { margin-left: 7px; padding-left: 10px; }
+    .story-actions { flex-wrap: wrap; }
+    .form-actions .primary-button { flex: 1; }
+  }
+</style>

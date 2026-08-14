@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import UploadBox from '../components/UploadBox.astro';
+import SearchStories from '../components/SearchStories.astro';
 
 const canonical = 'https://findbyface.org/onlyfans-finder-by-face/';
 const title = 'Free OnlyFans Finder by Face or Photo | AI Search';
@@ -129,6 +130,8 @@ const structuredData = JSON.stringify([
       <UploadBox searchMode="onlyfans" />
     </div>
   </section>
+
+  <SearchStories finder="onlyfans" />
 
   <div class="content-shell">
     <section class="content-section" id="how-it-works">

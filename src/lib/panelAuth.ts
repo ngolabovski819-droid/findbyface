@@ -3,10 +3,10 @@
 // protects a real client's business data, so it's real server-side verification against
 // Supabase Auth on every request, backed by httpOnly cookies instead of localStorage.
 //
-// Accounts are ordinary Supabase Auth users (provisioned via scripts/provision_panel_user.mjs)
-// tagged with user_metadata: { panel_role: 'admin'|'guest', client_slugs: string[], name }. A
-// login only grants panel access if panel_role is present — a regular consumer account is
-// rejected even with a correct password (see toPanelSession()).
+// Accounts are ordinary Supabase Auth users (provisioned via scripts/provision_panel_user.mjs).
+// Authorization lives exclusively in server-controlled app_metadata; user_metadata is editable
+// by account owners and must never grant panel access. A login only succeeds when app_metadata
+// contains a valid panel_role.
 import type { AstroCookies } from 'astro';
 
 export type PanelRole = 'admin' | 'guest';
@@ -36,6 +36,7 @@ const BASE_COOKIE_OPTS = {
 
 interface SupabaseAuthUser {
   email?: string;
+  app_metadata?: Record<string, unknown>;
   user_metadata?: Record<string, unknown>;
 }
 
@@ -47,21 +48,22 @@ interface TokenPayload {
 }
 
 export function toPanelSession(user: SupabaseAuthUser | undefined | null): PanelSession | null {
-  const role = user?.user_metadata?.panel_role;
+  const access = user?.app_metadata ?? {};
+  const role = access.panel_role;
   if (role !== 'admin' && role !== 'guest') return null;
-  const meta = user?.user_metadata ?? {};
+  const profile = user?.user_metadata ?? {};
   // Prefer the new array field; fall back to the original singular client_slug so an account
   // provisioned before this change (emilylopz.guest1) keeps working without re-provisioning.
   let clientSlugs: string[] = [];
-  if (Array.isArray(meta.client_slugs)) {
-    clientSlugs = meta.client_slugs.filter((s): s is string => typeof s === 'string' && s.length > 0);
-  } else if (typeof meta.client_slug === 'string' && meta.client_slug) {
-    clientSlugs = [meta.client_slug];
+  if (Array.isArray(access.client_slugs)) {
+    clientSlugs = access.client_slugs.filter((s): s is string => typeof s === 'string' && s.length > 0);
+  } else if (typeof access.client_slug === 'string' && access.client_slug) {
+    clientSlugs = [access.client_slug];
   }
   return {
     role,
     clientSlugs,
-    name: (meta.name as string) || user?.email || 'there',
+    name: (profile.name as string) || user?.email || 'there',
     email: user?.email ?? '',
   };
 }

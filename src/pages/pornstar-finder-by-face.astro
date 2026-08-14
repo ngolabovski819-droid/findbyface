@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import VideoFaceSearch from '../components/VideoFaceSearch.astro';
+import SearchStories from '../components/SearchStories.astro';
 
 const canonical = 'https://findbyface.org/pornstar-finder-by-face/';
 const title = 'Pornstar Finder by Face or Photo | Free AI Search';
@@ -128,6 +129,8 @@ const structuredData = JSON.stringify([
   </Fragment>
 
   <VideoFaceSearch />
+
+  <SearchStories finder="pornstar" />
 
   <div class="content-shell">
     <section class="content-section how-section" id="how-it-works">

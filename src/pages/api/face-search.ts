@@ -1,10 +1,31 @@
 import type { APIRoute } from 'astro';
 import { applySponsorOverrides } from '../../lib/sponsorOverrides';
 import { applyFaceSearchPlacements } from '../../lib/creatorFetch';
+import { createSearchStoryProof } from '../../lib/searchStoryProof';
 
 type FaceResult = { username: string; matchPct?: number | null };
 async function finalizeResults(results: Record<string, unknown>[]) {
   return applySponsorOverrides(await applyFaceSearchPlacements(results as unknown as FaceResult[]));
+}
+
+async function success(payload: Record<string, unknown>, completedFaceSearch = true): Promise<Response> {
+  if (completedFaceSearch) {
+    try {
+      const proof = await createSearchStoryProof('onlyfans');
+      payload.searchProof = proof.token;
+    } catch (error) {
+      // Search remains available if community proof signing is not configured. The
+      // client simply keeps the Search Story composer locked for that search.
+      console.error('[finder-comments] could not sign OnlyFans search proof:', error instanceof Error ? error.message : String(error));
+    }
+  }
+  return new Response(JSON.stringify(payload), {
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
+    },
+  });
 }
 
 const SUPABASE_HEADERS = (key: string) => ({
@@ -36,12 +57,17 @@ export const POST: APIRoute = async ({ request }) => {
   let descriptor: number[] = [];
   try {
     const body = await request.json();
-    descriptor = body.descriptor ?? [];
+    descriptor = Array.isArray(body.descriptor) ? body.descriptor : [];
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid request body' }), { status: 400 });
   }
 
-  const hasRealDescriptor = descriptor.length === 128 && descriptor.some(v => v !== 0);
+  // Face-api descriptors are finite, normalized float vectors. Reject strings, infinities,
+  // extreme values, empty vectors, and trivial direct-API payloads before issuing a proof.
+  const hasRealDescriptor = descriptor.length === 128
+    && descriptor.every(v => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= 5)
+    && descriptor.some(v => Math.abs(v) > 1e-8)
+    && Math.sqrt(descriptor.reduce((sum, v) => sum + v * v, 0)) >= 0.1;
   let results: Record<string, unknown>[];
 
   if (hasRealDescriptor) {
@@ -68,9 +94,7 @@ export const POST: APIRoute = async ({ request }) => {
             favoritedCount: c.favoritedcount,
             matchPct:       Math.round(((c.similarity as number) ?? 0) * 100),
           }));
-          return new Response(JSON.stringify({ results: await finalizeResults(results), mode: 'vector' }), {
-            headers: { 'Content-Type': 'application/json' },
-          });
+          return success({ results: await finalizeResults(results), mode: 'vector' });
         }
       }
     } catch {
@@ -117,9 +141,7 @@ export const POST: APIRoute = async ({ request }) => {
           matchPct:       Math.round(Math.min(100, Math.max(0, (c._sim as number) * 100))),
         }));
 
-        return new Response(JSON.stringify({ results: await finalizeResults(results), mode: 'cosine' }), {
-          headers: { 'Content-Type': 'application/json' },
-        });
+        return success({ results: await finalizeResults(results), mode: 'cosine' });
       }
     }
   }
@@ -152,7 +174,7 @@ export const POST: APIRoute = async ({ request }) => {
     matchPct:       null, // no embeddings yet
   }));
 
-  return new Response(JSON.stringify({ results: await finalizeResults(results), mode: 'fallback' }), {
-    headers: { 'Content-Type': 'application/json' },
-  });
+  // Popular-profile fallback remains useful when embeddings are not yet available, but an
+  // invalid or empty descriptor is not a completed face search and must never unlock UGC.
+  return success({ results: await finalizeResults(results), mode: 'fallback' }, hasRealDescriptor);
 };

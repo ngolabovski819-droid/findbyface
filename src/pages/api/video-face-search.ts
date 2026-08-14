@@ -6,6 +6,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { extname, join } from 'node:path';
 import { verifyTurnstileToken } from '../../lib/turnstile';
+import { createSearchStoryProof } from '../../lib/searchStoryProof';
 
 export const prerender = false;
 
@@ -26,6 +27,7 @@ type SearchPayload = {
   ok: boolean;
   code?: string;
   error?: string;
+  searchProof?: string;
   [key: string]: unknown;
 };
 
@@ -131,6 +133,17 @@ function json(payload: SearchPayload, status = 200): Response {
   });
 }
 
+async function successfulSearchJson(payload: SearchPayload): Promise<Response> {
+  try {
+    const proof = await createSearchStoryProof('pornstar');
+    payload.searchProof = proof.token;
+  } catch (error) {
+    // The matcher must keep working if the optional community layer is not configured.
+    console.error('[finder-comments] could not sign Pornstar search proof:', error instanceof Error ? error.message : String(error));
+  }
+  return json(payload);
+}
+
 function selectPython(root: string): string {
   if (process.env.VIDEO_FACE_PYTHON) return process.env.VIDEO_FACE_PYTHON;
   const candidates = process.platform === 'win32'
@@ -232,7 +245,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const signingKey = import.meta.env.SUPABASE_KEY || process.env.SUPABASE_KEY;
   const today = utcDay();
 
-  if (!signedIn && signingKey) {
+  // Keep the production one-search guest limit, but allow repeat localhost
+  // searches while developing and testing flows that depend on a fresh result.
+  if (!signedIn && signingKey && !import.meta.env.DEV) {
     const existing = cookies.get(GUEST_SEARCH_COOKIE)?.value;
     if (existing === guestToken(today, signingKey)) {
       return json({
@@ -244,7 +259,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   const markGuestSearchUsed = (): void => {
-    if (signedIn || !signingKey) return;
+    if (signedIn || !signingKey || import.meta.env.DEV) return;
     const nextUtcDay = Date.parse(`${today}T00:00:00.000Z`) + 86_400_000;
     const maxAge = Math.max(60, Math.ceil((nextUtcDay - Date.now()) / 1000));
     cookies.set(GUEST_SEARCH_COOKIE, guestToken(today, signingKey), {
@@ -298,7 +313,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   if (process.env.VIDEO_FACE_USE_LOCAL !== '1') {
     try {
       const remote = await runRemoteMatcher(imageBytes, image.type);
-      if (remote.status === 200 && remote.payload.ok) markGuestSearchUsed();
+      if (remote.status === 200 && remote.payload.ok) {
+        markGuestSearchUsed();
+        return successfulSearchJson(remote.payload);
+      }
       return json(remote.payload, remote.status);
     } catch (error) {
       const message =
@@ -335,7 +353,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
     markGuestSearchUsed();
-    return json(payload);
+    return successfulSearchJson(payload);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown local search error.';
     console.error('video-face-search:', message);
