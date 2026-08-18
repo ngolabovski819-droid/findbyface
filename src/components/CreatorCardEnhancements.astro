@@ -1,6 +1,46 @@
+---
+import { localeOf } from '../i18n/routes';
+
+const lang = localeOf(Astro.url.pathname);
+const enClient = {
+  showImage: 'Show creator image {n}',
+  imageOf: 'Image {a} of {b}',
+  addWishlist: 'Add to wishlist',
+  removeWishlist: 'Remove from wishlist',
+  contentTags: 'Creator content tags',
+  ad: 'Ad',
+  adAria: 'Advertisement',
+  adTitle: 'Paid placement',
+  prevImage: 'Previous creator image',
+  nextImage: 'Next creator image',
+  verified: 'Verified',
+  verifiedCreator: 'Verified creator',
+  wishlistFullRemove: 'Wishlist full ({limit}/{limit}) — remove something to add another',
+  wishlistFullSignup: 'Wishlist full ({limit}/{limit}) — sign up free for space for {n}',
+};
+const esClient: typeof enClient = {
+  showImage: 'Mostrar imagen {n} de la creadora',
+  imageOf: 'Imagen {a} de {b}',
+  addWishlist: 'Agregar a favoritos',
+  removeWishlist: 'Quitar de favoritos',
+  contentTags: 'Etiquetas de contenido de la creadora',
+  ad: 'Anuncio',
+  adAria: 'Publicidad',
+  adTitle: 'Colocación pagada',
+  prevImage: 'Imagen anterior de la creadora',
+  nextImage: 'Siguiente imagen de la creadora',
+  verified: 'Verificada',
+  verifiedCreator: 'Creadora verificada',
+  wishlistFullRemove: 'Favoritos lleno ({limit}/{limit}) — quita algo para agregar otro',
+  wishlistFullSignup: 'Favoritos lleno ({limit}/{limit}) — regístrate gratis para espacio de {n}',
+};
+const CLIENT = lang === 'es' ? esClient : enClient;
+---
+
 <!-- Shared gradient def for every card's wishlist heart fill (referenced via
      fill="url(#fbfWishlistHeartGradient)"). One instance per page is enough — SVG resolves
      url(#id) references against the whole document, not per-<svg> scope. -->
+<script type="application/json" id="i18nCardEnhancements" set:html={JSON.stringify(CLIENT)} />
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
     <linearGradient id="fbfWishlistHeartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -14,6 +54,11 @@
   import { initCardClickThrough } from '../lib/cardClickThrough';
   import { currentAccountId } from '../lib/accountSearchHistory';
   import { WISHLIST_LIMIT_ACCOUNT, isInWishlist, readEntryFromCard, toggleWishlist } from '../lib/wishlist';
+
+  // Locale strings server-rendered into the JSON block above (see frontmatter CLIENT).
+  const T = JSON.parse(document.getElementById('i18nCardEnhancements')!.textContent!) as Record<string, string>;
+  const fmtT = (s: string, v: Record<string, string | number> = {}) =>
+    s.replace(/\{(\w+)\}/g, (_, k: string) => String(v[k] ??''));
 
   // Keep whole-card navigation active even when Astro hot-reloads this component
   // after the visual enhancement layer has already been initialized.
@@ -89,9 +134,9 @@
     );
     dots.innerHTML = Array.from({ length: size }, (_, offset) => {
       const index = start + offset;
-      return `<button type="button" class="card-carousel-dot${index === activeIndex ? ' active' : ''}" data-card-slide="${index}" aria-label="Show creator image ${index + 1}"></button>`;
+      return `<button type="button" class="card-carousel-dot${index === activeIndex ? ' active' : ''}" data-card-slide="${index}" aria-label="${fmtT(T.showImage, { n: index + 1 })}"></button>`;
     }).join('');
-    dots.setAttribute('aria-label', `Image ${activeIndex + 1} of ${total}`);
+    dots.setAttribute('aria-label', fmtT(T.imageOf, { a: activeIndex + 1, b: total }));
   }
 
   function setSlide(card: HTMLElement, requestedIndex: number): void {
@@ -123,24 +168,24 @@
 
     if (username && !wrap.querySelector('.card-wishlist')) {
       const selected = isInWishlist(username);
-      wrap.insertAdjacentHTML('beforeend', `<button type="button" class="card-wishlist${selected ? ' active' : ''}" data-wishlist-username="${username.replace(/"/g, '&quot;')}" aria-label="${selected ? 'Remove from wishlist' : 'Add to wishlist'}">${heartIconMarkup(selected)}</button>`);
+      wrap.insertAdjacentHTML('beforeend', `<button type="button" class="card-wishlist${selected ? ' active' : ''}" data-wishlist-username="${username.replace(/"/g, '&quot;')}" aria-label="${selected ? T.removeWishlist : T.addWishlist}">${heartIconMarkup(selected)}</button>`);
     }
 
     if (sponsored && tags.length > 0 && !wrap.querySelector('.card-content-tags')) {
       const extra = Number(card.dataset.cardExtraTags ?? 0);
       const pills = tags.map(tag => `<span class="card-content-tag">${tag.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`);
       if (extra > 0) pills.push(`<span class="card-content-tag card-content-tag-more">+${extra}</span>`);
-      wrap.insertAdjacentHTML('beforeend', `<div class="card-content-tags" aria-label="Creator content tags">${pills.join('')}</div>`);
+      wrap.insertAdjacentHTML('beforeend', `<div class="card-content-tags" aria-label="${T.contentTags}">${pills.join('')}</div>`);
     }
 
     if (sponsored && !wrap.querySelector('.card-ad-label')) {
-      wrap.insertAdjacentHTML('beforeend', '<span class="card-ad-label" aria-label="Advertisement" title="Paid placement">Ad</span>');
+      wrap.insertAdjacentHTML('beforeend', `<span class="card-ad-label" aria-label="${T.adAria}" title="${T.adTitle}">${T.ad}</span>`);
     }
 
     if (images.length > 1 && !wrap.querySelector('.card-carousel-arrow')) {
       wrap.insertAdjacentHTML('beforeend', `
-        <button type="button" class="card-carousel-arrow card-carousel-arrow-prev" data-card-direction="-1" aria-label="Previous creator image">‹</button>
-        <button type="button" class="card-carousel-arrow card-carousel-arrow-next" data-card-direction="1" aria-label="Next creator image">›</button>
+        <button type="button" class="card-carousel-arrow card-carousel-arrow-prev" data-card-direction="-1" aria-label="${T.prevImage}">‹</button>
+        <button type="button" class="card-carousel-arrow card-carousel-arrow-next" data-card-direction="1" aria-label="${T.nextImage}">›</button>
         <div class="card-carousel-dots"></div>
       `);
       card.dataset.cardSlide = '0';
@@ -151,7 +196,7 @@
       const name = card.querySelector<HTMLElement>('.creator-name');
       name?.querySelectorAll('.verified').forEach(node => node.remove());
       if (name && !name.querySelector('.card-name-verified')) {
-        name.insertAdjacentHTML('beforeend', '<span class="card-name-verified" aria-label="Verified creator" title="Verified">✓</span>');
+        name.insertAdjacentHTML('beforeend', `<span class="card-name-verified" aria-label="${T.verifiedCreator}" title="${T.verified}">✓</span>`);
       }
     }
   }
@@ -245,13 +290,13 @@
 
       if (result.blocked) {
         showWishlistToast(currentAccountId()
-          ? `Wishlist full (${result.limit}/${result.limit}) — remove something to add another`
-          : `Wishlist full (${result.limit}/${result.limit}) — sign up free for space for ${WISHLIST_LIMIT_ACCOUNT}`);
+          ? fmtT(T.wishlistFullRemove, { limit: result.limit })
+          : fmtT(T.wishlistFullSignup, { limit: result.limit, n: WISHLIST_LIMIT_ACCOUNT }));
         return;
       }
 
       control.classList.toggle('active', result.added);
-      control.setAttribute('aria-label', result.added ? 'Remove from wishlist' : 'Add to wishlist');
+      control.setAttribute('aria-label', result.added ? T.removeWishlist : T.addWishlist);
       if (result.added) burstHeart(control);
       notifyWishlistChanged();
     }, true);

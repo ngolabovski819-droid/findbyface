@@ -1,5 +1,7 @@
 ---
 import { getPublishedFinderComments } from '../lib/finderComments';
+import { localeOf, staticRoutes } from '../i18n/routes';
+import { absUrl } from '../lib/site';
 
 export interface Props {
   finder: 'onlyfans' | 'pornstar';
@@ -41,16 +43,278 @@ try {
 }
 
 const isOnlyFans = finder === 'onlyfans';
-const subjectLabel = isOnlyFans
-  ? 'Public OnlyFans username (optional)'
-  : 'Public performer stage name (optional)';
-const subjectHelp = isOnlyFans
-  ? 'Only share a username the creator publicly uses. Never reveal a real name, location, or hidden identity.'
-  : 'Use a public stage name only—never a private legal name or location.';
-const emptyCopy = isOnlyFans
-  ? 'Be the first to share a useful, privacy-conscious OnlyFans search experience.'
-  : 'Be the first to share what helped with a performer search.';
+const lang = localeOf(Astro.url.pathname);
+
+const enC = {
+  subjectLabel: isOnlyFans ? 'Public OnlyFans username (optional)' : 'Public performer stage name (optional)',
+  subjectHelp: isOnlyFans
+    ? 'Only share a username the creator publicly uses. Never reveal a real name, location, or hidden identity.'
+    : 'Use a public stage name only—never a private legal name or location.',
+  emptyCopy: isOnlyFans
+    ? 'Be the first to share a useful, privacy-conscious OnlyFans search experience.'
+    : 'Be the first to share what helped with a performer search.',
+  eyebrow: 'Community search stories',
+  heading: 'What helped other searchers',
+  headingSub: 'Real, moderated experiences. Your uploaded image, search results, and email are never attached to a public story.',
+  privacyAria: 'Privacy information',
+  privacyChip: 'Photos and results stay private',
+  lockedTitle: 'Complete a search to share your experience',
+  lockedSub: 'Everyone can read and mark stories helpful. Search first to write your own.',
+  startSearch: 'Start a search',
+  feedbackLabel: 'Did the finder help?',
+  feedbackAria: 'Your private search result',
+  outcomeFound: 'Found them',
+  outcomeClose: 'Close match',
+  outcomeNotYet: 'Not yet',
+  feedbackNote: 'This answer is private and is never attached to your photo or public story.',
+  shareTitle: 'Help the next searcher',
+  shareSub: 'Share what worked—or constructive feedback that can make the finder better.',
+  shareCta: 'Share your story',
+  formLabel: 'Your search story',
+  formTitle: 'What was your experience?',
+  closeForm: 'Close story form',
+  outcomeLegend: 'Search outcome',
+  nickname: 'Public nickname',
+  nicknamePlaceholder: 'e.g. PurpleFox82',
+  nicknameHelp: 'Use the suggested private nickname or choose your own. Your email is never public.',
+  experience: 'Your experience',
+  experiencePlaceholder: 'What kind of photo, crop, angle, or screenshot helped? What could work better?',
+  charCount: '/600 characters · minimum 60',
+  emailLabel: 'Email to verify your story',
+  emailHelp: 'We will send one private verification link. No password or public profile is required.',
+  humanVerification: 'Human verification',
+  notifyReplies: 'Email me when an approved reply is posted',
+  rulesHtml: 'First-hand and constructive experiences only. No links, harassment, real names, locations, hidden identities, or personal information. All stories are reviewed before publishing. By submitting, you agree to our <a href="/terms-of-use/">Terms</a> and <a href="/privacy-policy/">Privacy Policy</a>.',
+  submitStory: 'Submit for review',
+  cancel: 'Cancel',
+  successTitle: 'Story received',
+  successCopy: 'Your story is awaiting review. We’ll email you when it is approved.',
+  anonymous: 'Anonymous searcher',
+  publicUsername: 'Public username',
+  stageName: 'Stage name',
+  helpful: 'Helpful',
+  reply: 'Reply',
+  report: 'Report',
+  repliesAria: 'Replies',
+  loadMore: 'Load more stories',
+  replyFormTitle: 'Reply to this story',
+  closeReplyForm: 'Close reply form',
+  yourReply: 'Your reply',
+  replyCharCount: '/600 characters · minimum 20',
+  emailReplyLabel: 'Email to verify your reply',
+  replyRules: 'Be constructive. No personal information, identity claims, harassment, or links. Replies are reviewed before publishing.',
+  submitReply: 'Submit reply',
+  reportFormTitle: 'Report this comment',
+  closeReportForm: 'Close report form',
+  reason: 'Reason',
+  chooseReason: 'Choose a reason',
+  reasonPrivateIdentity: 'Reveals a private or hidden identity',
+  reasonPersonalInfo: 'Contains personal information',
+  reasonNonConsensual: 'Non-consensual or leaked content',
+  reasonHarassment: 'Harassment or abuse',
+  reasonSpam: 'Spam or misleading content',
+  reasonUnderage: 'Possible underage content',
+  reasonOther: 'Something else',
+  details: 'Details (optional)',
+  sendReport: 'Send report',
+};
+
+const esC: typeof enC = {
+  subjectLabel: isOnlyFans ? 'Nombre de usuario público de OnlyFans (opcional)' : 'Nombre artístico público (opcional)',
+  subjectHelp: isOnlyFans
+    ? 'Comparte solo un nombre de usuario que la creadora use públicamente. Nunca reveles un nombre real, ubicación ni identidad oculta.'
+    : 'Usa solo un nombre artístico público — nunca un nombre legal privado ni una ubicación.',
+  emptyCopy: isOnlyFans
+    ? 'Sé la primera persona en compartir una experiencia útil y respetuosa de la privacidad buscando en OnlyFans.'
+    : 'Sé la primera persona en compartir qué te ayudó en una búsqueda de actrices.',
+  eyebrow: 'Historias de búsqueda de la comunidad',
+  heading: 'Qué ayudó a otras personas',
+  headingSub: 'Experiencias reales y moderadas. Tu imagen subida, tus resultados y tu correo nunca se vinculan a una historia pública.',
+  privacyAria: 'Información de privacidad',
+  privacyChip: 'Las fotos y los resultados son privados',
+  lockedTitle: 'Completa una búsqueda para compartir tu experiencia',
+  lockedSub: 'Cualquiera puede leer y marcar historias como útiles. Busca primero para escribir la tuya.',
+  startSearch: 'Iniciar una búsqueda',
+  feedbackLabel: '¿Te ayudó el buscador?',
+  feedbackAria: 'Tu resultado de búsqueda privado',
+  outcomeFound: 'La encontré',
+  outcomeClose: 'Casi la encuentro',
+  outcomeNotYet: 'Todavía no',
+  feedbackNote: 'Esta respuesta es privada y nunca se vincula a tu foto ni a tu historia pública.',
+  shareTitle: 'Ayuda a la siguiente persona',
+  shareSub: 'Comparte qué funcionó — o comentarios constructivos que mejoren el buscador.',
+  shareCta: 'Comparte tu historia',
+  formLabel: 'Tu historia de búsqueda',
+  formTitle: '¿Cómo fue tu experiencia?',
+  closeForm: 'Cerrar formulario',
+  outcomeLegend: 'Resultado de la búsqueda',
+  nickname: 'Apodo público',
+  nicknamePlaceholder: 'p. ej. ZorraMorada82',
+  nicknameHelp: 'Usa el apodo privado sugerido o elige el tuyo. Tu correo nunca es público.',
+  experience: 'Tu experiencia',
+  experiencePlaceholder: '¿Qué tipo de foto, recorte, ángulo o captura te ayudó? ¿Qué podría funcionar mejor?',
+  charCount: '/600 caracteres · mínimo 60',
+  emailLabel: 'Correo para verificar tu historia',
+  emailHelp: 'Enviaremos un único enlace privado de verificación. No se requiere contraseña ni perfil público.',
+  humanVerification: 'Verificación humana',
+  notifyReplies: 'Avisarme por correo cuando se publique una respuesta aprobada',
+  rulesHtml: 'Solo experiencias de primera mano y constructivas. Sin enlaces, acoso, nombres reales, ubicaciones, identidades ocultas ni información personal. Todas las historias se revisan antes de publicarse. Al enviar, aceptas nuestros <a href="/es/terminos-de-uso/">Términos</a> y nuestra <a href="/es/politica-de-privacidad/">Política de Privacidad</a>.',
+  submitStory: 'Enviar para revisión',
+  cancel: 'Cancelar',
+  successTitle: 'Historia recibida',
+  successCopy: 'Tu historia está en revisión. Te avisaremos por correo cuando sea aprobada.',
+  anonymous: 'Persona anónima',
+  publicUsername: 'Usuario público',
+  stageName: 'Nombre artístico',
+  helpful: 'Útil',
+  reply: 'Responder',
+  report: 'Reportar',
+  repliesAria: 'Respuestas',
+  loadMore: 'Cargar más historias',
+  replyFormTitle: 'Responder a esta historia',
+  closeReplyForm: 'Cerrar formulario de respuesta',
+  yourReply: 'Tu respuesta',
+  replyCharCount: '/600 caracteres · mínimo 20',
+  emailReplyLabel: 'Correo para verificar tu respuesta',
+  replyRules: 'Sé constructivo. Sin información personal, afirmaciones de identidad, acoso ni enlaces. Las respuestas se revisan antes de publicarse.',
+  submitReply: 'Enviar respuesta',
+  reportFormTitle: 'Reportar este comentario',
+  closeReportForm: 'Cerrar formulario de reporte',
+  reason: 'Motivo',
+  chooseReason: 'Elige un motivo',
+  reasonPrivateIdentity: 'Revela una identidad privada u oculta',
+  reasonPersonalInfo: 'Contiene información personal',
+  reasonNonConsensual: 'Contenido no consentido o filtrado',
+  reasonHarassment: 'Acoso o abuso',
+  reasonSpam: 'Spam o contenido engañoso',
+  reasonUnderage: 'Posible contenido de menores',
+  reasonOther: 'Otra cosa',
+  details: 'Detalles (opcional)',
+  sendReport: 'Enviar reporte',
+};
+
+const C = lang === 'es' ? esC : enC;
+const dateLocale = lang === 'es' ? 'es' : 'en-US';
+
+// Client-script strings (see JSON block below).
+const enClient = {
+  outcomeFound: enC.outcomeFound,
+  outcomeClose: enC.outcomeClose,
+  outcomeNotYet: enC.outcomeNotYet,
+  anonymous: enC.anonymous,
+  publicUsername: enC.publicUsername,
+  stageName: enC.stageName,
+  helpful: enC.helpful,
+  feedbackSaveFailed: 'Feedback could not be saved.',
+  feedbackSaved: 'Thanks—your private feedback was saved. Sharing a public story is optional.',
+  feedbackSaveError: 'We could not save the private feedback, but sharing a public story is still optional.',
+  chooseOutcome: 'Choose your search outcome.',
+  writeBetween: 'Write between {min} and 600 characters.',
+  invalidEmail: 'Enter a valid email for the verification link.',
+  completeHuman: 'Complete the human verification before submitting.',
+  submitting: 'Submitting…',
+  sendingLink: 'Sending your verification link…',
+  submitFailed: 'We could not submit this right now. Please try again.',
+  replyAwaiting: 'Your reply is awaiting review.',
+  replyVerify: 'Check your inbox to verify your reply. It will then await review.',
+  storyAwaiting: 'Your story is awaiting review. We’ll email you when it is approved.',
+  storyVerify: 'Click the private verification link to submit your story for review.',
+  helpfulFailed: 'Could not update helpful vote.',
+  chooseReportReason: 'Choose a report reason.',
+  reportFailed: 'Could not send this report.',
+  reportThanks: 'Thanks. Our moderation team will review this comment.',
+  loadingMore: 'Loading more stories…',
+  loadMoreFailed: 'Could not load more stories.',
+  moreLoadedOne: '1 more story loaded.',
+  moreLoadedMany: '{n} more stories loaded.',
+  noMore: 'No more stories.',
+  emailVerified: 'Email verified',
+  verifyFailedTitle: 'Verification link did not work',
+  verifyFailedCopy: 'The link may have expired. Return here after another search and submit again for a new private verification link.',
+};
+
+const esClient: typeof enClient = {
+  outcomeFound: esC.outcomeFound,
+  outcomeClose: esC.outcomeClose,
+  outcomeNotYet: esC.outcomeNotYet,
+  anonymous: esC.anonymous,
+  publicUsername: esC.publicUsername,
+  stageName: esC.stageName,
+  helpful: esC.helpful,
+  feedbackSaveFailed: 'No se pudo guardar tu opinión.',
+  feedbackSaved: 'Gracias — tu opinión privada quedó guardada. Compartir una historia pública es opcional.',
+  feedbackSaveError: 'No pudimos guardar la opinión privada, pero compartir una historia pública sigue siendo opcional.',
+  chooseOutcome: 'Elige el resultado de tu búsqueda.',
+  writeBetween: 'Escribe entre {min} y 600 caracteres.',
+  invalidEmail: 'Ingresa un correo válido para el enlace de verificación.',
+  completeHuman: 'Completa la verificación humana antes de enviar.',
+  submitting: 'Enviando…',
+  sendingLink: 'Enviando tu enlace de verificación…',
+  submitFailed: 'No pudimos enviarlo en este momento. Inténtalo de nuevo.',
+  replyAwaiting: 'Tu respuesta está en revisión.',
+  replyVerify: 'Revisa tu correo para verificar tu respuesta. Después quedará en revisión.',
+  storyAwaiting: 'Tu historia está en revisión. Te avisaremos por correo cuando sea aprobada.',
+  storyVerify: 'Haz clic en el enlace privado de verificación para enviar tu historia a revisión.',
+  helpfulFailed: 'No se pudo actualizar el voto de útil.',
+  chooseReportReason: 'Elige un motivo de reporte.',
+  reportFailed: 'No se pudo enviar este reporte.',
+  reportThanks: 'Gracias. Nuestro equipo de moderación revisará este comentario.',
+  loadingMore: 'Cargando más historias…',
+  loadMoreFailed: 'No se pudieron cargar más historias.',
+  moreLoadedOne: 'Se cargó 1 historia más.',
+  moreLoadedMany: 'Se cargaron {n} historias más.',
+  noMore: 'No hay más historias.',
+  emailVerified: 'Correo verificado',
+  verifyFailedTitle: 'El enlace de verificación no funcionó',
+  verifyFailedCopy: 'Puede que el enlace haya expirado. Vuelve aquí tras otra búsqueda y envía de nuevo para recibir un nuevo enlace privado de verificación.',
+};
+
+const CLIENT = lang === 'es' ? esClient : enClient;
+
 const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
+const enPath = isOnlyFans ? '/onlyfans-finder-by-face/' : '/pornstar-finder-by-face/';
+const canonical = absUrl(lang === 'es' ? (staticRoutes[enPath] ?? enPath) : enPath);
+const applicationId = `${canonical}#web-application`;
+const storyFragmentId = (id: string) => `search-story-${id}`;
+const storyUrl = (id: string) => `${canonical}#${storyFragmentId(id)}`;
+// This is inserted with set:html because JSON-LD must remain machine-readable. Escape the
+// HTML-significant characters and JavaScript line separators as defense in depth, even though
+// the contribution validator already rejects angle brackets from public story text.
+const serializeJsonLd = (value: unknown) => JSON.stringify(value)
+  .replace(/</g, '\\u003c')
+  .replace(/>/g, '\\u003e')
+  .replace(/&/g, '\\u0026')
+  .replace(/\u2028/g, '\\u2028')
+  .replace(/\u2029/g, '\\u2029');
+const commentSchema = (story: Story, parentId: string | null = null): Record<string, unknown> => ({
+  '@type': 'Comment',
+  '@id': storyUrl(story.id),
+  url: storyUrl(story.id),
+  text: story.body,
+  dateCreated: story.createdAt,
+  author: {
+    '@type': 'Person',
+    name: story.alias || C.anonymous,
+  },
+  about: { '@id': applicationId },
+  parentItem: { '@id': parentId ? storyUrl(parentId) : applicationId },
+  interactionStatistic: {
+    '@type': 'InteractionCounter',
+    interactionType: { '@type': 'LikeAction' },
+    userInteractionCount: Math.max(0, Number(story.helpfulCount) || 0),
+  },
+  ...(Array.isArray(story.replies) && story.replies.length > 0
+    ? { comment: story.replies.map((reply) => commentSchema(reply, story.id)) }
+    : {}),
+});
+const commentStructuredData = initialStories.length > 0
+  ? serializeJsonLd({
+      '@context': 'https://schema.org',
+      '@type': 'WebApplication',
+      '@id': applicationId,
+      comment: initialStories.map((story) => commentSchema(story)),
+    })
+  : null;
 ---
 
 <section
@@ -61,15 +325,17 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
   data-turnstile-site-key={turnstileSiteKey}
   aria-labelledby={`search-stories-title-${finder}`}
 >
+  {commentStructuredData && <script type="application/ld+json" set:html={commentStructuredData} />}
+
   <div class="stories-heading">
     <div>
-      <span class="stories-eyebrow">Community search stories</span>
-      <h2 id={`search-stories-title-${finder}`}>What helped other searchers</h2>
-      <p>Real, moderated experiences. Your uploaded image, search results, and email are never attached to a public story.</p>
+      <span class="stories-eyebrow">{C.eyebrow}</span>
+      <h2 id={`search-stories-title-${finder}`}>{C.heading}</h2>
+      <p>{C.headingSub}</p>
     </div>
-    <div class="privacy-chip" aria-label="Privacy information">
+    <div class="privacy-chip" aria-label={C.privacyAria}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3m-9 0h8a2 2 0 0 1 2 2v7H6v-7a2 2 0 0 1 2-2Z" /></svg>
-      Photos and results stay private
+      {C.privacyChip}
     </div>
   </div>
 
@@ -77,78 +343,78 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
     <div class="locked-prompt" data-locked-prompt>
       <div class="prompt-icon" aria-hidden="true">✦</div>
       <div>
-        <strong>Complete a search to share your experience</strong>
-        <p>Everyone can read and mark stories helpful. Search first to write your own.</p>
+        <strong>{C.lockedTitle}</strong>
+        <p>{C.lockedSub}</p>
       </div>
-      <a href={isOnlyFans ? '#onlyfans-face-search' : '#video-search-heading'}>Start a search</a>
+      <a href={isOnlyFans ? '#onlyfans-face-search' : '#video-search-heading'}>{C.startSearch}</a>
     </div>
 
     <div class="feedback-step" data-feedback-step hidden>
-      <p class="step-label">Did the finder help?</p>
-      <div class="outcome-buttons" role="group" aria-label="Your private search result">
-        <button type="button" data-feedback="found"><span aria-hidden="true">✓</span> Found them</button>
-        <button type="button" data-feedback="close"><span aria-hidden="true">≈</span> Close match</button>
-        <button type="button" data-feedback="not_yet"><span aria-hidden="true">↗</span> Not yet</button>
+      <p class="step-label">{C.feedbackLabel}</p>
+      <div class="outcome-buttons" role="group" aria-label={C.feedbackAria}>
+        <button type="button" data-feedback="found"><span aria-hidden="true">✓</span> {C.outcomeFound}</button>
+        <button type="button" data-feedback="close"><span aria-hidden="true">≈</span> {C.outcomeClose}</button>
+        <button type="button" data-feedback="not_yet"><span aria-hidden="true">↗</span> {C.outcomeNotYet}</button>
       </div>
-      <p class="feedback-note">This answer is private and is never attached to your photo or public story.</p>
+      <p class="feedback-note">{C.feedbackNote}</p>
     </div>
 
     <div class="share-prompt" data-share-prompt hidden>
       <div>
-        <strong>Help the next searcher</strong>
-        <p>Share what worked—or constructive feedback that can make the finder better.</p>
+        <strong>{C.shareTitle}</strong>
+        <p>{C.shareSub}</p>
       </div>
-      <button type="button" class="primary-button" data-open-composer>Share your story</button>
+      <button type="button" class="primary-button" data-open-composer>{C.shareCta}</button>
     </div>
 
     <form class="story-form" data-story-form hidden novalidate>
       <div class="form-heading">
         <div>
-          <span class="step-label">Your search story</span>
-          <h3>What was your experience?</h3>
+          <span class="step-label">{C.formLabel}</span>
+          <h3>{C.formTitle}</h3>
         </div>
-        <button type="button" class="icon-button" data-close-form aria-label="Close story form">×</button>
+        <button type="button" class="icon-button" data-close-form aria-label={C.closeForm}>×</button>
       </div>
 
       <fieldset>
-        <legend>Search outcome <span aria-hidden="true">*</span></legend>
+        <legend>{C.outcomeLegend} <span aria-hidden="true">*</span></legend>
         <div class="choice-row">
-          <label><input type="radio" name="outcome" value="found" required /> <span>Found them</span></label>
-          <label><input type="radio" name="outcome" value="close" /> <span>Close match</span></label>
-          <label><input type="radio" name="outcome" value="not_yet" /> <span>Not yet</span></label>
+          <label><input type="radio" name="outcome" value="found" required /> <span>{C.outcomeFound}</span></label>
+          <label><input type="radio" name="outcome" value="close" /> <span>{C.outcomeClose}</span></label>
+          <label><input type="radio" name="outcome" value="not_yet" /> <span>{C.outcomeNotYet}</span></label>
         </div>
       </fieldset>
 
       <label class="field">
-        <span>{subjectLabel}</span>
+        <span>{C.subjectLabel}</span>
         <input name="subjectName" type="text" maxlength="64" autocomplete="off" />
-        <small>{subjectHelp}</small>
+        <small>{C.subjectHelp}</small>
       </label>
 
       <label class="field">
-        <span>Public nickname</span>
-        <input name="alias" type="text" minlength="3" maxlength="32" autocomplete="nickname" placeholder="e.g. PurpleFox82" />
-        <small>Use the suggested private nickname or choose your own. Your email is never public.</small>
+        <span>{C.nickname}</span>
+        <input name="alias" type="text" minlength="3" maxlength="32" autocomplete="nickname" placeholder={C.nicknamePlaceholder} />
+        <small>{C.nicknameHelp}</small>
       </label>
 
       <label class="field">
-        <span>Your experience <span aria-hidden="true">*</span></span>
-        <textarea name="body" minlength="60" maxlength="600" rows="5" required placeholder="What kind of photo, crop, angle, or screenshot helped? What could work better?"></textarea>
-        <small class="character-count"><span data-character-count>0</span>/600 characters · minimum 60</small>
+        <span>{C.experience} <span aria-hidden="true">*</span></span>
+        <textarea name="body" minlength="60" maxlength="600" rows="5" required placeholder={C.experiencePlaceholder}></textarea>
+        <small class="character-count"><span data-character-count>0</span>{C.charCount}</small>
       </label>
 
       <div class="email-field" data-email-field hidden>
         <label class="field">
-          <span>Email to verify your story <span aria-hidden="true">*</span></span>
+          <span>{C.emailLabel} <span aria-hidden="true">*</span></span>
           <input name="email" type="email" maxlength="254" autocomplete="email" />
-          <small>We will send one private verification link. No password or public profile is required.</small>
+          <small>{C.emailHelp}</small>
         </label>
-        {turnstileSiteKey && <div class="turnstile-slot" data-turnstile aria-label="Human verification"></div>}
+        {turnstileSiteKey && <div class="turnstile-slot" data-turnstile aria-label={C.humanVerification}></div>}
       </div>
 
       <label class="check-field">
         <input type="checkbox" name="notifyReplies" checked />
-        <span>Email me when an approved reply is posted</span>
+        <span>{C.notifyReplies}</span>
       </label>
 
       <label class="honeypot" aria-hidden="true">
@@ -156,56 +422,54 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
         <input name="company" type="text" tabindex="-1" autocomplete="off" />
       </label>
 
-      <p class="rules-copy">
-        First-hand and constructive experiences only. No links, harassment, real names, locations, hidden identities, or personal information. All stories are reviewed before publishing. By submitting, you agree to our <a href="/terms-of-use/">Terms</a> and <a href="/privacy-policy/">Privacy Policy</a>.
-      </p>
+      <p class="rules-copy" set:html={C.rulesHtml} />
       <div class="form-actions">
-        <button type="submit" class="primary-button" data-submit-story>Submit for review</button>
-        <button type="button" class="text-button" data-close-form>Cancel</button>
+        <button type="submit" class="primary-button" data-submit-story>{C.submitStory}</button>
+        <button type="button" class="text-button" data-close-form>{C.cancel}</button>
       </div>
       <p class="form-status" data-form-status role="status" aria-live="polite"></p>
     </form>
 
     <div class="success-state" data-success-state hidden tabindex="-1">
       <span aria-hidden="true">✓</span>
-      <div><strong data-success-title>Story received</strong><p data-success-copy>Your story is awaiting review. We’ll email you when it is approved.</p></div>
+      <div><strong data-success-title>{C.successTitle}</strong><p data-success-copy>{C.successCopy}</p></div>
     </div>
   </div>
 
   <div class="stories-list" data-stories-list>
     {initialStories.map((story) => (
-      <article class="story-card" data-story-id={story.id}>
+      <article id={storyFragmentId(story.id)} class="story-card" data-story-id={story.id}>
         <div class="story-topline">
           <div class="avatar" aria-hidden="true">{(story.alias || 'S').slice(0, 1).toUpperCase()}</div>
-          <div class="story-author"><strong>{story.alias || 'Anonymous searcher'}</strong><time datetime={story.createdAt}>{new Date(story.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</time></div>
-          {story.outcome && <span class:list={['outcome-badge', `outcome-${story.outcome}`]}>{story.outcome === 'found' ? 'Found them' : story.outcome === 'close' ? 'Close match' : 'Not yet'}</span>}
+          <div class="story-author"><strong>{story.alias || C.anonymous}</strong><time datetime={story.createdAt}>{new Date(story.createdAt).toLocaleDateString(dateLocale, { month: 'short', day: 'numeric', year: 'numeric' })}</time></div>
+          {story.outcome && <span class:list={['outcome-badge', `outcome-${story.outcome}`]}>{story.outcome === 'found' ? C.outcomeFound : story.outcome === 'close' ? C.outcomeClose : C.outcomeNotYet}</span>}
         </div>
-        {story.subjectName && <p class="subject-name">{isOnlyFans ? 'Public username' : 'Stage name'}: <strong>{story.subjectName}</strong></p>}
+        {story.subjectName && <p class="subject-name">{isOnlyFans ? C.publicUsername : C.stageName}: <strong>{story.subjectName}</strong></p>}
         <p class="story-body">{story.body}</p>
         <div class="story-actions">
           <button type="button" class:list={['helpful-button', { active: story.viewerHelpful }]} data-helpful aria-pressed={String(Boolean(story.viewerHelpful))}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10v10H4V10h3Zm3 10V9l3-6c1.7.4 2.3 2 1.8 4L14 10h5a2 2 0 0 1 2 2l-1.2 6a2.5 2.5 0 0 1-2.5 2H10Z" /></svg>
-            Helpful <span data-helpful-count>{Math.max(0, Number(story.helpfulCount) || 0)}</span>
+            {C.helpful} <span data-helpful-count>{Math.max(0, Number(story.helpfulCount) || 0)}</span>
           </button>
-          <button type="button" class="action-button" data-reply>Reply</button>
-          <button type="button" class="action-button" data-report>Report</button>
+          <button type="button" class="action-button" data-reply>{C.reply}</button>
+          <button type="button" class="action-button" data-report>{C.report}</button>
         </div>
         <div class="inline-slot" data-inline-slot></div>
         {Array.isArray(story.replies) && story.replies.length > 0 && (
-          <div class="replies" aria-label="Replies">
+          <div class="replies" aria-label={C.repliesAria}>
             {story.replies.map((reply) => (
-              <article class="reply-card" data-story-id={reply.id}>
+              <article id={storyFragmentId(reply.id)} class="reply-card" data-story-id={reply.id}>
                 <div class="story-topline">
                   <div class="avatar small" aria-hidden="true">{(reply.alias || 'S').slice(0, 1).toUpperCase()}</div>
-                  <div class="story-author"><strong>{reply.alias || 'Anonymous searcher'}</strong><time datetime={reply.createdAt}>{new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</time></div>
+                  <div class="story-author"><strong>{reply.alias || C.anonymous}</strong><time datetime={reply.createdAt}>{new Date(reply.createdAt).toLocaleDateString(dateLocale, { month: 'short', day: 'numeric', year: 'numeric' })}</time></div>
                 </div>
                 <p class="story-body">{reply.body}</p>
                 <div class="story-actions">
                   <button type="button" class:list={['helpful-button', { active: reply.viewerHelpful }]} data-helpful aria-pressed={String(Boolean(reply.viewerHelpful))}>
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10v10H4V10h3Zm3 10V9l3-6c1.7.4 2.3 2 1.8 4L14 10h5a2 2 0 0 1 2 2l-1.2 6a2.5 2.5 0 0 1-2.5 2H10Z" /></svg>
-                    Helpful <span data-helpful-count>{Math.max(0, Number(reply.helpfulCount) || 0)}</span>
+                    {C.helpful} <span data-helpful-count>{Math.max(0, Number(reply.helpfulCount) || 0)}</span>
                   </button>
-                  <button type="button" class="action-button" data-report>Report</button>
+                  <button type="button" class="action-button" data-report>{C.report}</button>
                 </div>
                 <div class="inline-slot" data-inline-slot></div>
               </article>
@@ -216,41 +480,42 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
     ))}
   </div>
   <p class="sr-status" data-action-status role="status" aria-live="polite"></p>
+  <script type="application/json" data-i18n-stories set:html={JSON.stringify(CLIENT)} />
 
   <div class="empty-stories" data-empty-stories hidden={initialStories.length > 0}>
     <span aria-hidden="true">✦</span>
-    <p>{emptyCopy}</p>
+    <p>{C.emptyCopy}</p>
   </div>
 
   <div class="load-more-wrap" data-load-more-wrap hidden={!nextCursor}>
-    <button type="button" class="secondary-button" data-load-more>Load more stories</button>
+    <button type="button" class="secondary-button" data-load-more>{C.loadMore}</button>
     <p data-list-status role="status" aria-live="polite"></p>
   </div>
 
   <template data-reply-template>
     <form class="inline-form reply-form" novalidate>
-      <div class="inline-form-head"><strong>Reply to this story</strong><button type="button" data-inline-close aria-label="Close reply form">×</button></div>
-      <label class="field"><span>Public nickname</span><input name="alias" type="text" minlength="3" maxlength="32" autocomplete="nickname" placeholder="e.g. PurpleFox82" /></label>
-      <label class="field"><span>Your reply <span aria-hidden="true">*</span></span><textarea name="body" minlength="20" maxlength="600" rows="4" required></textarea><small><span data-character-count>0</span>/600 characters · minimum 20</small></label>
+      <div class="inline-form-head"><strong>{C.replyFormTitle}</strong><button type="button" data-inline-close aria-label={C.closeReplyForm}>×</button></div>
+      <label class="field"><span>{C.nickname}</span><input name="alias" type="text" minlength="3" maxlength="32" autocomplete="nickname" placeholder={C.nicknamePlaceholder} /></label>
+      <label class="field"><span>{C.yourReply} <span aria-hidden="true">*</span></span><textarea name="body" minlength="20" maxlength="600" rows="4" required></textarea><small><span data-character-count>0</span>{C.replyCharCount}</small></label>
       <div data-inline-email hidden>
-        <label class="field"><span>Email to verify your reply <span aria-hidden="true">*</span></span><input name="email" type="email" maxlength="254" autocomplete="email" /></label>
-        {turnstileSiteKey && <div class="turnstile-slot" data-turnstile aria-label="Human verification"></div>}
+        <label class="field"><span>{C.emailReplyLabel} <span aria-hidden="true">*</span></span><input name="email" type="email" maxlength="254" autocomplete="email" /></label>
+        {turnstileSiteKey && <div class="turnstile-slot" data-turnstile aria-label={C.humanVerification}></div>}
       </div>
-      <label class="check-field"><input type="checkbox" name="notifyReplies" checked /><span>Email me when an approved reply is posted</span></label>
+      <label class="check-field"><input type="checkbox" name="notifyReplies" checked /><span>{C.notifyReplies}</span></label>
       <label class="honeypot" aria-hidden="true">Company<input name="company" type="text" tabindex="-1" autocomplete="off" /></label>
-      <p class="rules-copy">Be constructive. No personal information, identity claims, harassment, or links. Replies are reviewed before publishing.</p>
-      <div class="form-actions"><button type="submit" class="primary-button">Submit reply</button><button type="button" class="text-button" data-inline-close>Cancel</button></div>
+      <p class="rules-copy">{C.replyRules}</p>
+      <div class="form-actions"><button type="submit" class="primary-button">{C.submitReply}</button><button type="button" class="text-button" data-inline-close>{C.cancel}</button></div>
       <p class="form-status" data-inline-status role="status" aria-live="polite"></p>
     </form>
   </template>
 
   <template data-report-template>
     <form class="inline-form report-form" novalidate>
-      <div class="inline-form-head"><strong>Report this comment</strong><button type="button" data-inline-close aria-label="Close report form">×</button></div>
-      <label class="field"><span>Reason <span aria-hidden="true">*</span></span><select name="reason" required><option value="">Choose a reason</option><option value="private_identity">Reveals a private or hidden identity</option><option value="personal_information">Contains personal information</option><option value="non_consensual">Non-consensual or leaked content</option><option value="harassment">Harassment or abuse</option><option value="spam">Spam or misleading content</option><option value="underage">Possible underage content</option><option value="other">Something else</option></select></label>
-      <label class="field"><span>Details (optional)</span><textarea name="detail" maxlength="500" rows="3"></textarea></label>
+      <div class="inline-form-head"><strong>{C.reportFormTitle}</strong><button type="button" data-inline-close aria-label={C.closeReportForm}>×</button></div>
+      <label class="field"><span>{C.reason} <span aria-hidden="true">*</span></span><select name="reason" required><option value="">{C.chooseReason}</option><option value="private_identity">{C.reasonPrivateIdentity}</option><option value="personal_information">{C.reasonPersonalInfo}</option><option value="non_consensual">{C.reasonNonConsensual}</option><option value="harassment">{C.reasonHarassment}</option><option value="spam">{C.reasonSpam}</option><option value="underage">{C.reasonUnderage}</option><option value="other">{C.reasonOther}</option></select></label>
+      <label class="field"><span>{C.details}</span><textarea name="detail" maxlength="500" rows="3"></textarea></label>
       <label class="honeypot" aria-hidden="true">Company<input name="company" type="text" tabindex="-1" autocomplete="off" /></label>
-      <div class="form-actions"><button type="submit" class="primary-button danger-button">Send report</button><button type="button" class="text-button" data-inline-close>Cancel</button></div>
+      <div class="form-actions"><button type="submit" class="primary-button danger-button">{C.sendReport}</button><button type="button" class="text-button" data-inline-close>{C.cancel}</button></div>
       <p class="form-status" data-inline-status role="status" aria-live="polite"></p>
     </form>
   </template>
@@ -259,6 +524,12 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
 <script>
   type Finder = 'onlyfans' | 'pornstar';
   type Outcome = 'found' | 'close' | 'not_yet';
+
+  // Locale strings server-rendered into the JSON block inside the section (see frontmatter CLIENT).
+  const T = JSON.parse(document.querySelector('[data-i18n-stories]')!.textContent!) as Record<string, string>;
+  const fmtT = (s: string, v: Record<string, string | number> = {}) =>
+    s.replace(/\{(\w+)\}/g, (_, k: string) => String(v[k] ?? ''));
+  const dateLocale = document.documentElement.lang === 'es' ? 'es' : 'en-US';
   type ClientStory = {
     id: string;
     finder: Finder;
@@ -286,7 +557,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
     gtag?: (command: 'event', eventName: string, parameters: Record<string, string>) => void;
   };
 
-  const OUTCOME_LABELS: Record<Outcome, string> = { found: 'Found them', close: 'Close match', not_yet: 'Not yet' };
+  const OUTCOME_LABELS: Record<Outcome, string> = { found: T.outcomeFound, close: T.outcomeClose, not_yet: T.outcomeNotYet };
 
   document.querySelectorAll<HTMLElement>('[data-search-stories]').forEach((root) => {
     if (root.dataset.initialized === 'true') return;
@@ -355,7 +626,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
       if (!slot) return;
       withTurnstile((api) => {
         if (turnstileWidgets.has(form) || !form.isConnected) return;
-        const widgetId = api.render(slot, { sitekey: turnstileSiteKey, theme: 'dark' });
+        const widgetId = api.render(slot, { sitekey: turnstileSiteKey, theme: 'dark', language: document.documentElement.lang || 'en' });
         turnstileWidgets.set(form, widgetId);
       });
     }
@@ -448,19 +719,19 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ finder, outcome, proof: searchProof }),
         });
-        if (!response.ok) throw new Error('Feedback could not be saved.');
+        if (!response.ok) throw new Error(T.feedbackSaveFailed);
         feedbackOutcome = outcome;
         feedbackStep.hidden = true;
         sharePrompt.hidden = false;
         button.setAttribute('aria-pressed', 'true');
         track('story_feedback_submit', { status: 'success' });
-        actionStatus.textContent = 'Thanks—your private feedback was saved. Sharing a public story is optional.';
+        actionStatus.textContent = T.feedbackSaved;
       } catch {
         feedbackOutcome = outcome;
         feedbackStep.hidden = true;
         sharePrompt.hidden = false;
         track('story_feedback_submit', { status: 'error' });
-        actionStatus.textContent = 'We could not save the private feedback, but sharing a public story is still optional.';
+        actionStatus.textContent = T.feedbackSaveError;
       } finally {
         root.querySelectorAll<HTMLButtonElement>('[data-feedback]').forEach((item) => { item.disabled = false; });
       }
@@ -486,19 +757,19 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
       const body = String(data.get('body') || '').trim();
       const minimum = parentId ? 20 : 60;
       if (!parentId && !data.get('outcome')) {
-        status.textContent = 'Choose your search outcome.';
+        status.textContent = T.chooseOutcome;
         form.querySelector<HTMLInputElement>('input[name="outcome"]')?.focus();
         return;
       }
       if (body.length < minimum || body.length > 600) {
-        status.textContent = `Write between ${minimum} and 600 characters.`;
+        status.textContent = fmtT(T.writeBetween, { min: minimum });
         (form.elements.namedItem('body') as HTMLTextAreaElement).focus();
         return;
       }
       const token = currentToken();
       const email = String(data.get('email') || '').trim();
       if (!token && !/^\S+@\S+\.\S+$/.test(email)) {
-        status.textContent = 'Enter a valid email for the verification link.';
+        status.textContent = T.invalidEmail;
         (form.elements.namedItem('email') as HTMLInputElement)?.focus();
         return;
       }
@@ -508,13 +779,13 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
         payload.turnstileToken = turnstileToken(form);
         payload.returnTo = `${window.location.pathname}#search-stories-title-${finder}`;
         if (turnstileSiteKey && !payload.turnstileToken) {
-          status.textContent = 'Complete the human verification before submitting.';
+          status.textContent = T.completeHuman;
           return;
         }
       }
       const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
       submit.disabled = true;
-      status.textContent = token ? 'Submitting…' : 'Sending your verification link…';
+      status.textContent = token ? T.submitting : T.sendingLink;
       try {
         const response = await fetch(token ? '/api/finder-comments' : '/api/finder-comments/verify', {
           method: 'POST',
@@ -522,7 +793,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
           body: JSON.stringify(payload),
         });
         const result = await parseResponse(response);
-        if (!response.ok) throw new Error(errorMessage(result, 'We could not submit this right now. Please try again.'));
+        if (!response.ok) throw new Error(errorMessage(result, T.submitFailed));
         if (!token) track('story_verification_requested', { action: parentId ? 'reply' : 'story', status: 'success' });
         track(parentId ? 'story_reply_submit' : 'story_submit', { action: token ? 'submitted' : 'verification_pending', status: 'success' });
         if (!token) {
@@ -535,7 +806,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
           const container = form.parentElement;
           if (container) {
             container.replaceChildren();
-            const message = element('p', 'inline-success', token ? 'Your reply is awaiting review.' : 'Check your inbox to verify your reply. It will then await review.');
+            const message = element('p', 'inline-success', token ? T.replyAwaiting : T.replyVerify);
             container.append(message);
           }
         } else {
@@ -544,8 +815,8 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
           successState.hidden = false;
           root.querySelector<HTMLElement>('[data-success-title]')!.textContent = token ? 'Story received' : 'Check your inbox';
           root.querySelector<HTMLElement>('[data-success-copy]')!.textContent = token
-            ? 'Your story is awaiting review. We’ll email you when it is approved.'
-            : 'Click the private verification link to submit your story for review.';
+            ? T.storyAwaiting
+            : T.storyVerify;
           successState.focus();
         }
       } catch (error) {
@@ -561,7 +832,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
     function avatarText(alias: string): string { return (alias.trim().charAt(0) || 'S').toUpperCase(); }
     function formatDate(value: string): string {
       const date = new Date(value);
-      return Number.isNaN(date.valueOf()) ? '' : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      return Number.isNaN(date.valueOf()) ? '' : date.toLocaleDateString(dateLocale, { month: 'short', day: 'numeric', year: 'numeric' });
     }
     function element<K extends keyof HTMLElementTagNameMap>(name: K, className?: string, text?: string): HTMLElementTagNameMap[K] {
       const node = document.createElement(name);
@@ -573,12 +844,13 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
 
     function buildStory(story: ClientStory, isReply = false): HTMLElement {
       const article = element('article', isReply ? 'reply-card' : 'story-card');
+      article.id = `search-story-${story.id}`;
       article.dataset.storyId = String(story.id);
       const top = element('div', 'story-topline');
       const avatar = element('div', isReply ? 'avatar small' : 'avatar', avatarText(story.alias || ''));
       avatar.setAttribute('aria-hidden', 'true');
       const author = element('div', 'story-author');
-      author.append(element('strong', '', story.alias || 'Anonymous searcher'));
+      author.append(element('strong', '', story.alias || T.anonymous));
       const time = element('time', '', formatDate(story.createdAt));
       time.dateTime = story.createdAt;
       author.append(time);
@@ -589,7 +861,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
       article.append(top);
       if (!isReply && story.subjectName) {
         const subject = element('p', 'subject-name');
-        subject.append(`${finder === 'onlyfans' ? 'Public username' : 'Stage name'}: `, element('strong', '', story.subjectName));
+        subject.append(`${finder === 'onlyfans' ? T.publicUsername : T.stageName}: `, element('strong', '', story.subjectName));
         article.append(subject);
       }
       article.append(element('p', 'story-body', story.body));
@@ -598,7 +870,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
       helpful.type = 'button';
       helpful.dataset.helpful = '';
       helpful.setAttribute('aria-pressed', String(Boolean(story.viewerHelpful)));
-      helpful.append('Helpful ', element('span', '', String(Math.max(0, Number(story.helpfulCount) || 0))));
+      helpful.append(`${T.helpful} `, element('span', '', String(Math.max(0, Number(story.helpfulCount) || 0))));
       helpful.querySelector('span')!.dataset.helpfulCount = '';
       actions.append(helpful);
       if (!isReply) {
@@ -646,7 +918,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
       try {
         const response = await fetch('/api/finder-comments/helpful', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ commentId }) });
         const result = await parseResponse(response);
-        if (!response.ok) throw new Error(errorMessage(result, 'Could not update helpful vote.'));
+        if (!response.ok) throw new Error(errorMessage(result, T.helpfulFailed));
         const active = typeof result.helpful === 'boolean' ? result.helpful : !button.classList.contains('active');
         button.classList.toggle('active', active);
         button.setAttribute('aria-pressed', String(active));
@@ -696,13 +968,13 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
           const data = new FormData(form);
           const reason = String(data.get('reason') || '');
           const status = form.querySelector<HTMLElement>('[data-inline-status]')!;
-          if (!reason) { status.textContent = 'Choose a report reason.'; return; }
+          if (!reason) { status.textContent = T.chooseReportReason; return; }
           const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]')!; submit.disabled = true; status.textContent = 'Sending report…';
           try {
             const response = await fetch('/api/finder-comments/report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ commentId: card.dataset.storyId, reason, details: String(data.get('detail') || '').trim() || undefined, website: String(data.get('company') || '') }) });
             const result = await parseResponse(response);
-            if (!response.ok) throw new Error(errorMessage(result, 'Could not send this report.'));
-            const slot = form.parentElement!; slot.replaceChildren(element('p', 'inline-success', 'Thanks. Our moderation team will review this comment.'));
+            if (!response.ok) throw new Error(errorMessage(result, T.reportFailed));
+            const slot = form.parentElement!; slot.replaceChildren(element('p', 'inline-success', T.reportThanks));
             track('story_report_submit', { status: 'success' });
           } catch (error) {
             status.textContent = error instanceof Error ? error.message : 'Could not send this report.';
@@ -720,18 +992,18 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
     loadMoreButton?.addEventListener('click', async () => {
       const cursor = root.dataset.nextCursor;
       if (!cursor) return;
-      loadMoreButton.disabled = true; listStatus.textContent = 'Loading more stories…';
+      loadMoreButton.disabled = true; listStatus.textContent = T.loadingMore;
       try {
         const response = await fetch(`/api/finder-comments?finder=${encodeURIComponent(finder)}&cursor=${encodeURIComponent(cursor)}`);
         const result = await parseResponse(response);
-        if (!response.ok) throw new Error(errorMessage(result, 'Could not load more stories.'));
+        if (!response.ok) throw new Error(errorMessage(result, T.loadMoreFailed));
         const comments = Array.isArray(result.comments) ? result.comments as ClientStory[] : [];
         comments.forEach((story) => list.append(buildStory(story)));
         empty.hidden = list.childElementCount > 0;
         root.dataset.nextCursor = typeof result.nextCursor === 'string' ? result.nextCursor : '';
         loadMoreWrap.hidden = !root.dataset.nextCursor;
-        listStatus.textContent = comments.length ? `${comments.length} more ${comments.length === 1 ? 'story' : 'stories'} loaded.` : 'No more stories.';
-      } catch (error) { listStatus.textContent = error instanceof Error ? error.message : 'Could not load more stories.'; }
+        listStatus.textContent = comments.length ? (comments.length === 1 ? T.moreLoadedOne : fmtT(T.moreLoadedMany, { n: comments.length })) : T.noMore;
+      } catch (error) { listStatus.textContent = error instanceof Error ? error.message : T.loadMoreFailed; }
       finally { loadMoreButton.disabled = false; }
     });
 
@@ -755,15 +1027,15 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
       const verificationFailed = verificationState === 'failed' || verificationState === 'expired' || params.get('comment_error') === 'verification';
       if (verified && (!marker?.createdAt || Date.now() - marker.createdAt < 86_400_000)) {
         lockedPrompt.hidden = true; feedbackStep.hidden = true; sharePrompt.hidden = true; storyForm.hidden = true; successState.hidden = false;
-        root.querySelector<HTMLElement>('[data-success-title]')!.textContent = 'Email verified';
-        root.querySelector<HTMLElement>('[data-success-copy]')!.textContent = 'Your story is awaiting review. We’ll email you when it is approved.';
+        root.querySelector<HTMLElement>('[data-success-title]')!.textContent = T.emailVerified;
+        root.querySelector<HTMLElement>('[data-success-copy]')!.textContent = T.storyAwaiting;
         sessionStorage.removeItem(draftKey);
         root.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } else if (verificationFailed) {
         if (marker?.pending) lockedPrompt.hidden = true;
         feedbackStep.hidden = true; sharePrompt.hidden = Boolean(marker?.pending); storyForm.hidden = true; successState.hidden = false;
-        root.querySelector<HTMLElement>('[data-success-title]')!.textContent = 'Verification link did not work';
-        root.querySelector<HTMLElement>('[data-success-copy]')!.textContent = 'The link may have expired. Return here after another search and submit again for a new private verification link.';
+        root.querySelector<HTMLElement>('[data-success-title]')!.textContent = T.verifyFailedTitle;
+        root.querySelector<HTMLElement>('[data-success-copy]')!.textContent = T.verifyFailedCopy;
         root.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     } catch { /* ignore invalid callback marker */ }
@@ -828,7 +1100,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
   [hidden] { display: none !important; }
   .success-state > span { background: rgba(44,151,96,.13); color: #75e7aa; }
   .stories-list { display: grid; gap: 13px; }
-  .story-card { padding: 21px; border: 1px solid rgba(255,255,255,.075); border-radius: 17px; background: rgba(16,15,23,.86); }
+  .story-card { padding: 21px; border: 1px solid rgba(255,255,255,.075); border-radius: 17px; background: rgba(16,15,23,.86); scroll-margin-top: 90px; }
   .story-topline { display: flex; align-items: center; gap: 10px; }
   .avatar { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border-radius: 11px; background: linear-gradient(145deg, rgba(145,67,204,.35), rgba(65,34,94,.32)); color: #e1b8ff; font: 800 .76rem 'Manrope', sans-serif; }
   .avatar.small { width: 28px; height: 28px; flex-basis: 28px; border-radius: 9px; font-size: .68rem; }
@@ -849,7 +1121,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
   .helpful-button:hover, .action-button:hover, .helpful-button:focus-visible, .action-button:focus-visible { color: #d3a5f6; }
   .helpful-button.active { background: rgba(139,55,201,.13); color: #d59eff; }
   .replies { display: grid; gap: 9px; margin: 14px 0 0 27px; padding-left: 15px; border-left: 1px solid rgba(173,93,232,.2); }
-  .reply-card { padding: 15px; border: 1px solid rgba(255,255,255,.06); border-radius: 13px; background: rgba(255,255,255,.018); }
+  .reply-card { padding: 15px; border: 1px solid rgba(255,255,255,.06); border-radius: 13px; background: rgba(255,255,255,.018); scroll-margin-top: 90px; }
   .inline-form { margin-top: 13px; padding: 16px; border: 1px solid rgba(170,92,225,.18); border-radius: 13px; background: #100e18; }
   .inline-form-head { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 14px; color: #e9e3ef; font-size: .78rem; }
   .inline-success { margin: 12px 0 0; padding: 11px 13px; border-radius: 9px; background: rgba(41,145,90,.1); color: #87dbae; font-size: .71rem; }

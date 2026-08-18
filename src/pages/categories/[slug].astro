@@ -30,6 +30,8 @@ const seo = categorySeo(slug, category.label, total);
 const pageTitle = seo.title;
 const pageDesc  = seo.description;
 const canonical = `https://findbyface.org/categories/${slug}/`;
+// i18n-twin: src/pages/es/categorias/[slug].astro — mirror copy/structure changes
+const alternate = `/es/categorias/${category.slugEs ?? category.slug}/`;
 
 const faqJsonLd = {
   '@type': 'FAQPage',
@@ -88,7 +90,7 @@ const jsonLd = JSON.stringify({
 });
 ---
 
-<Base title={pageTitle} description={pageDesc} canonical={canonical}>
+<Base title={pageTitle} description={pageDesc} canonical={canonical} alternate={alternate}>
   <Fragment slot="head">
     <script type="application/ld+json" set:html={jsonLd} />
   </Fragment>

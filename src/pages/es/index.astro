@@ -1,0 +1,1064 @@
+---
+{/* i18n-twin: src/pages/index.astro — mirror copy/structure changes. Styles are copied
+   verbatim from the English twin; visible FAQ renders from the same `faqs` array that
+   feeds the JSON-LD (unlike the EN page, which hand-duplicates it — keep in sync). */}
+import Base from '../../layouts/Base.astro';
+import UploadBox from '../../components/UploadBox.astro';
+import { HOME_SEO_ES } from '../../config/seo-meta';
+import { absUrl } from '../../lib/site';
+
+Astro.response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
+
+const faqs = [
+  {
+    name: '¿FindByFace es realmente gratis?',
+    answer: 'Sí. Puedes iniciar una búsqueda facial de contenido adulto gratis. Algunas herramientas pueden aplicar límites de uso justo o de cuenta, que se muestran antes de afectar una búsqueda.',
+  },
+  {
+    name: '¿Qué puedo buscar con FindByFace?',
+    answer: 'FindByFace actualmente busca perfiles de creadoras de OnlyFans y apariciones en videos para adultos indexados. La búsqueda de modelos de cam está planeada pero aún no está disponible.',
+  },
+  {
+    name: '¿Qué foto funciona mejor?',
+    answer: 'Usa una imagen nítida y bien iluminada con un solo rostro adulto sin obstrucciones. Los ángulos frontales y de tres cuartos suaves suelen producir las clasificaciones más útiles.',
+  },
+  {
+    name: '¿Mi foto se almacena o se comparte?',
+    answer: 'La imagen de búsqueda subida se procesa para generar resultados y no se agrega al índice facial buscable. Consulta la política de privacidad para los detalles sobre procesamiento y registros del servicio.',
+  },
+  {
+    name: '¿Una coincidencia facial prueba la identidad de alguien?',
+    answer: 'No. Los resultados son coincidencias visuales clasificadas, no prueba de identidad. Personas parecidas, la calidad de la imagen, la pose y la cobertura del índice pueden afectar la clasificación.',
+  },
+  {
+    name: '¿FindByFace es un buscador de imagen inversa?',
+    answer: 'No exactamente. La búsqueda de imagen inversa tradicional busca copias de la misma imagen. FindByFace compara rasgos faciales, lo que puede mostrar perfiles o apariciones relacionadas desde imágenes y fotogramas de video diferentes.',
+  },
+];
+
+const structuredData = JSON.stringify([
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'FindByFace Buscador Facial de Contenido Adulto',
+    url: absUrl('/es/'),
+    inLanguage: 'es',
+    description: HOME_SEO_ES.description,
+    applicationCategory: 'SearchApplication',
+    operatingSystem: 'Any',
+    isAccessibleForFree: true,
+    audience: { '@type': 'PeopleAudience', requiredMinAge: 18 },
+    featureList: [
+      'Búsqueda facial con IA por foto o captura',
+      'Coincidencia de perfiles de creadoras de OnlyFans',
+      'Coincidencia de apariciones en videos para adultos',
+      'Resultados clasificados por similitud visual',
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    inLanguage: 'es',
+    mainEntity: faqs.map((item) => ({
+      '@type': 'Question',
+      name: item.name,
+      acceptedAnswer: { '@type': 'Answer', text: item.answer },
+    })),
+  },
+]);
+---
+
+<Base title={HOME_SEO_ES.title} description={HOME_SEO_ES.description}>
+  <Fragment slot="head">
+    <meta name="rating" content="adult" />
+    <script type="application/ld+json" set:html={structuredData} />
+  </Fragment>
+  <div class="hero">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      Búsqueda facial adulta con IA · gratis para empezar
+    </div>
+    <h1>Encuentra Creadoras Adultas por Foto</h1>
+    <p class="hero-sub">Sube una foto nítida de un rostro y deja que nuestra IA busque creadoras de OnlyFans, actrices porno o modelos de cam y encuentre las coincidencias visuales más cercanas.</p>
+    <ul class="hero-trust">
+      <li><span class="trust-ico">⚡</span> Una foto, varias herramientas de búsqueda</li>
+      <li><span class="trust-ico">🔒</span> Gratis y 100% privado</li>
+      <li><span class="trust-ico">✓</span> Sin registro para empezar</li>
+    </ul>
+  </div>
+
+  <UploadBox />
+
+  <section class="home-section sources-section" aria-labelledby="search-sources-title">
+    <div class="section-head">
+      <span class="eyebrow">Elige tus fuentes</span>
+      <h2 class="section-title-lg" id="search-sources-title">Una búsqueda facial, índices especializados</h2>
+      <p class="section-lead">Elige OnlyFans, Actrices o ambos antes de subir tu foto — cada fuente es un índice especializado detrás de escena.</p>
+    </div>
+    <div class="source-grid">
+      <a class="source-card featured" href="/es/buscador-de-onlyfans-por-cara/">
+        <span class="source-status live">En vivo</span>
+        <span class="source-icon" aria-hidden="true">♡</span>
+        <h3>Buscador facial de OnlyFans</h3>
+        <p>Sube un rostro y descubre perfiles de creadoras visualmente similares, clasificados con detalles del perfil y enlaces directos a la fuente.</p>
+        <span class="source-link">Abrir la herramienta de creadoras <b>→</b></span>
+      </a>
+      <a class="source-card" href="/es/buscador-de-actrices-porno-por-cara/">
+        <span class="source-status beta">Beta</span>
+        <span class="source-icon" aria-hidden="true">▶</span>
+        <h3>Buscador de actrices por cara</h3>
+        <p>Busca en un índice creciente de videos para adultos y encuentra apariciones coincidentes desde una foto o captura de video.</p>
+        <span class="source-link">Abrir la herramienta de videos <b>→</b></span>
+      </a>
+      <article class="source-card disabled" aria-disabled="true">
+        <span class="source-status soon">Muy pronto</span>
+        <span class="source-icon" aria-hidden="true">◉</span>
+        <h3>Buscador de modelos de cam</h3>
+        <p>Busca perfiles de modelos de cam por cara cuando el próximo índice de FindByFace esté listo.</p>
+        <span class="source-link">En desarrollo</span>
+      </article>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="home-section how-section" id="how-it-works">
+    <div class="section-head">
+      <span class="eyebrow">Mejor foto, mejores coincidencias</span>
+      <h2 class="section-title-lg">Cómo Funciona y Consejos para Mejores Resultados</h2>
+      <p class="section-lead">Una foto nítida es todo lo que necesitas. Sigue estos tres pasos para obtener los resultados más fuertes de cada índice de FindByFace.</p>
+    </div>
+    <div class="steps-grid">
+      <article class="step-card">
+        <div class="step-visual upload-visual" aria-hidden="true">
+          <span class="visual-grid"></span>
+          <span class="photo-card photo-card-back"></span>
+          <span class="photo-card photo-card-main">
+            <span class="portrait-head"></span><span class="portrait-neck"></span><span class="portrait-body"></span>
+            <i class="crop-corner crop-tl"></i><i class="crop-corner crop-tr"></i><i class="crop-corner crop-bl"></i><i class="crop-corner crop-br"></i>
+            <b class="face-confirm"><span>✓</span> Rostro detectado</b>
+          </span>
+          <span class="upload-flight">
+            <svg viewBox="0 0 24 24"><path d="M12 16V5m0 0L7.5 9.5M12 5l4.5 4.5M5 16.5V19h14v-2.5" /></svg>
+          </span>
+          <span class="file-ready"><i>JPG</i><span><b>foto-rostro.jpg</b><small>Lista para analizar</small></span><em>100%</em></span>
+        </div>
+        <span class="step-num">01</span>
+        <h3>Sube una Foto del Rostro</h3>
+        <p>Elige, arrastra o pega una imagen frontal nítida con un solo rostro adulto visible. Los archivos JPG, PNG y WEBP funcionan mejor sin filtros fuertes.</p>
+      </article>
+      <article class="step-card">
+        <div class="step-visual scan-visual" aria-hidden="true">
+          <span class="visual-grid"></span>
+          <span class="hud-corner hud-tl"></span><span class="hud-corner hud-tr"></span><span class="hud-corner hud-bl"></span><span class="hud-corner hud-br"></span>
+          <svg class="biometric-face" viewBox="0 0 130 150" fill="none">
+            <path class="face-outline" d="M65 13C40 13 26 31 25 58c-1 31 9 64 40 77 31-13 41-46 40-77-1-27-15-45-40-45Z" />
+            <path class="face-mesh" d="M36 56 51 49l14 8 14-8 15 7M41 77l24 13 24-13M48 112l17-7 17 7M65 57v48M51 49l-3 31 17 10 17-10-3-31" />
+            <g class="landmark-dots"><circle cx="38" cy="57" r="2"/><circle cx="51" cy="53" r="2"/><circle cx="65" cy="59" r="2"/><circle cx="79" cy="53" r="2"/><circle cx="92" cy="57" r="2"/><circle cx="48" cy="80" r="2"/><circle cx="65" cy="90" r="2"/><circle cx="82" cy="80" r="2"/><circle cx="55" cy="111" r="2"/><circle cx="65" cy="107" r="2"/><circle cx="75" cy="111" r="2"/></g>
+          </svg>
+          <span class="scan-beam"></span>
+          <span class="scan-data data-left"><i>68</i><small>puntos</small></span>
+          <span class="scan-data data-right"><i>128D</i><small>vector facial</small></span>
+          <span class="scan-status"><i></i> Comparando índices en vivo</span>
+        </div>
+        <span class="step-num">02</span>
+        <h3>La IA Analiza y Busca</h3>
+        <p>Nuestra canalización de reconocimiento facial mapea los rasgos y busca en perfiles de OnlyFans y apariciones en videos indexados al mismo tiempo.</p>
+      </article>
+      <article class="step-card">
+        <div class="step-visual results-visual" aria-hidden="true">
+          <span class="visual-grid"></span>
+          <span class="results-window">
+            <span class="results-window-head"><b>Coincidencias más cercanas</b><small><i></i> Clasificado en 1.8s</small></span>
+            <span class="result-row result-one"><em>01</em><i class="result-avatar"></i><span><b>97% match</b><small>Creadora de OnlyFans</small><u><i></i></u></span><strong>→</strong></span>
+            <span class="result-row result-two"><em>02</em><i class="result-avatar"></i><span><b>94% match</b><small>Aparición en video</small><u><i></i></u></span><strong>→</strong></span>
+            <span class="result-row result-three"><em>03</em><i class="result-avatar"></i><span><b>91% match</b><small>Creadora de OnlyFans</small><u><i></i></u></span><strong>→</strong></span>
+          </span>
+          <span class="result-source-pills"><b>♡ Creadoras</b><b>▶ Videos</b></span>
+        </div>
+        <span class="step-num">03</span>
+        <h3>Resultados al Instante</h3>
+        <p>Cambia entre resultados de Actrices y OnlyFans, compara la similitud visual clasificada y abre el perfil o la fuente del video original.</p>
+      </article>
+    </div>
+    <div class="pro-tip">
+      <span class="pro-tip-icon" aria-hidden="true">✦</span>
+      <p><strong>Consejo pro:</strong> Las fotos naturales y sin editar, con el rostro mirando a la cámara, dan las coincidencias más fuertes. Recorta las fotos grupales a un solo rostro.</p>
+    </div>
+    <div class="section-cta">
+      <button type="button" class="hero-cta" id="howCtaBtn">
+        <span class="cta-icon">📸</span>
+        Pruébalo gratis ahora
+      </button>
+    </div>
+  </section>
+
+  <!-- Why Use FindByFace -->
+  <section class="home-section why-section">
+    <div class="section-head">
+      <span class="eyebrow">Hecho para búsquedas reales</span>
+      <h2 class="section-title-lg">Qué puede ayudarte a descubrir un buscador facial adulto</h2>
+      <p class="section-lead">Búsquedas distintas necesitan evidencia distinta. FindByFace mantiene el descubrimiento de creadoras y la recuperación de videos claros y separados.</p>
+    </div>
+    <div class="why-grid">
+      <article class="why-card">
+        <span class="why-emoji">✨</span>
+        <h3>Descubre creadoras parecidas</h3>
+        <p>Empieza con un rostro que coincida con tu gusto y explora creadoras de OnlyFans con rasgos visualmente similares.</p>
+      </article>
+      <article class="why-card">
+        <span class="why-emoji">🎬</span>
+        <h3>Identifica la fuente de un video adulto</h3>
+        <p>Usa una captura nítida de la actriz para recuperar apariciones coincidentes de la videoteca indexada en crecimiento.</p>
+      </article>
+      <article class="why-card">
+        <span class="why-emoji">🧭</span>
+        <h3>Busca sin nombre de usuario</h3>
+        <p>Cuando falta un nombre, usuario o título, un rostro puede ser un punto de partida visual útil para descubrir.</p>
+      </article>
+      <article class="why-card">
+        <span class="why-emoji">🔎</span>
+        <h3>Encuentra el mismo rostro en distintos fotogramas</h3>
+        <p>Los rasgos faciales pueden seguir siendo buscables aunque el fotograma haya sido recortado, comprimido o cubierto con texto.</p>
+      </article>
+      <article class="why-card">
+        <span class="why-emoji">🛡️</span>
+        <h3>Revisa tu propia presencia pública</h3>
+        <p>Las creadoras pueden buscar su propio rostro para revisar apariciones indexadas y usar el proceso de retirada cuando sea necesario.</p>
+      </article>
+      <article class="why-card">
+        <span class="why-emoji">🎯</span>
+        <h3>Acota el descubrimiento visual</h3>
+        <p>Usa la similitud clasificada para reducir la navegación interminable y confirma cada coincidencia útil en su fuente enlazada.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- Email signup -->
+  <section class="home-section signup-section" aria-labelledby="signup-section-title">
+    <div class="signup-card">
+      <div class="signup-glow signup-glow-one" aria-hidden="true"></div>
+      <div class="signup-glow signup-glow-two" aria-hidden="true"></div>
+      <div class="signup-copy">
+        <span class="signup-kicker"><i></i> Cuenta gratis de FindByFace</span>
+        <h2 id="signup-section-title">Regístrate con tu Correo para Búsquedas Diarias Ilimitadas e Historial</h2>
+        <p>Crea tu cuenta privada en segundos, busca en todos los índices faciales sin el límite de invitado y vuelve a tus coincidencias recientes cuando las necesites.</p>
+        <ul class="signup-benefits">
+          <li><span>∞</span><div><strong>Búsquedas diarias ilimitadas</strong><small>Sigue buscando perfiles de OnlyFans y videos indexados.</small></div></li>
+          <li><span>↺</span><div><strong>Historial de búsqueda por fecha</strong><small>Revisa búsquedas recientes y sus coincidencias más cercanas.</small></div></li>
+          <li><span>✉</span><div><strong>Registro con correo</strong><small>No se requiere cuenta social ni método de pago.</small></div></li>
+        </ul>
+        <a class="signup-email-cta" href="/es/signup/?next=/es/">
+          <span class="signup-email-icon" aria-hidden="true">✉</span>
+          Regístrate gratis con tu correo
+          <b aria-hidden="true">→</b>
+        </a>
+        <p class="signup-login">¿Ya tienes una cuenta? <a href="/es/login/?next=/es/">Inicia sesión</a></p>
+      </div>
+      <div class="history-preview" aria-label="Ejemplo de historial de búsqueda">
+        <div class="history-preview-head">
+          <div><span class="history-logo">⌁</span><strong>Historial de búsqueda</strong></div>
+          <span class="history-saved">Guardado en privado</span>
+        </div>
+        <div class="history-date"><span>Hoy</span><i></i></div>
+        <div class="history-row featured">
+          <span class="history-thumb history-thumb-one"></span>
+          <div><strong>Búsqueda por foto en todas las fuentes</strong><small>OnlyFans + Actrices</small></div>
+          <time>2:14 AM</time>
+        </div>
+        <div class="history-row">
+          <span class="history-thumb history-thumb-two"></span>
+          <div><strong>Búsqueda facial de creadoras</strong><small>18 coincidencias visuales</small></div>
+          <time>1:42 AM</time>
+        </div>
+        <div class="history-date"><span>Ayer</span><i></i></div>
+        <div class="history-row">
+          <span class="history-thumb history-thumb-three"></span>
+          <div><strong>Búsqueda de apariciones en video</strong><small>7 videos indexados</small></div>
+          <time>11:08 PM</time>
+        </div>
+        <div class="history-preview-foot"><span>🔒</span> Solo tú puedes ver tu historial de búsqueda</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SEO: face search vs traditional reverse image search -->
+  <section class="home-section comparison-section">
+    <div class="section-head">
+      <span class="eyebrow">Busca el rostro, no solo el archivo</span>
+      <h2 class="section-title-lg">Buscador facial adulto vs. búsqueda de imagen inversa</h2>
+      <p class="section-lead">Ambos pueden empezar con una foto, pero están diseñados para encontrar tipos de coincidencias diferentes.</p>
+    </div>
+    <div class="comparison-grid">
+      <article class="comparison-card">
+        <span class="comparison-kicker">Búsqueda de imagen tradicional</span>
+        <h3>Busca la misma imagen</h3>
+        <ul>
+          <li>Ideal para imágenes duplicadas o casi duplicadas</li>
+          <li>Depende de que el mismo fotograma aparezca en otro lugar de la web</li>
+          <li>Puede perder el rastro tras recortes, superposiciones o ediciones</li>
+        </ul>
+      </article>
+      <article class="comparison-card accent">
+        <span class="comparison-kicker">Búsqueda con IA de FindByFace</span>
+        <h3>Busca rasgos faciales similares</h3>
+        <ul>
+          <li>Compara rostros entre distintas fotos de perfil y fotogramas</li>
+          <li>Clasifica resultados de índices especializados en contenido adulto</li>
+          <li>Enlaza a las fuentes para que revises la evidencia tú mismo</li>
+        </ul>
+      </article>
+    </div>
+    <p class="comparison-note">La similitud puede producir falsos positivos. Los resultados de FindByFace nunca deben tratarse como confirmación de identidad.</p>
+  </section>
+
+  <!-- 100% Free banner -->
+  <section class="home-section free-section">
+    <div class="free-card">
+      <span class="free-badge">100% GRATIS</span>
+      <h2>Empieza tu búsqueda facial adulta gratis</h2>
+      <p>Prueba el buscador facial de creadoras de OnlyFans sin pagar por búsqueda, o abre la beta del Buscador de Actrices para buscar apariciones en videos indexados. Los límites de cuenta y de uso justo siempre se muestran antes de afectar tu búsqueda.</p>
+      <div class="section-cta">
+        <button type="button" class="hero-cta light" id="freeCtaBtn">
+          <span class="cta-icon">📸</span>
+          Empieza tu búsqueda gratis
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust and responsible search -->
+  <section class="home-section trust-section">
+    <div class="section-head">
+      <span class="eyebrow">Resultados útiles requieren límites honestos</span>
+      <h2 class="section-title-lg">Hecho para una búsqueda visual responsable</h2>
+      <p class="section-lead">Procesamiento claro, evidencia a nivel de fuente e incertidumbre visible hacen los resultados de búsqueda facial más útiles.</p>
+    </div>
+    <div class="trust-grid">
+      <article class="trust-card"><span>01</span><h3>Las fotos de búsqueda no entran al índice</h3><p>Tu imagen subida se procesa para la comparación; no se agrega al catálogo buscable de creadoras o videos.</p></article>
+      <article class="trust-card"><span>02</span><h3>Las fuentes permanecen vinculadas</h3><p>Las coincidencias útiles llevan a perfiles de creadoras o fuentes de video indexadas para que revises el contexto tú mismo.</p></article>
+      <article class="trust-card"><span>03</span><h3>Similitud no es identidad</h3><p>Las clasificaciones muestran cercanía visual, no certeza. La calidad de la imagen, la pose y la cobertura del índice pueden cambiar los resultados.</p></article>
+    </div>
+  </section>
+
+  <section class="home-section battle-promo-section" aria-labelledby="creator-battle-promo-title">
+    <a class="battle-promo" href="/es/batalla/">
+      <span class="battle-promo-copy">
+        <span class="eyebrow">Nuevo juego de ranking</span>
+        <h2 id="creator-battle-promo-title">Batalla de Creadoras</h2>
+        <strong>Elige tu favorita. Mueve el ranking.</strong>
+        <p>Vota en enfrentamientos uno a uno de creadoras de OnlyFans, revela el cambio de puntos en vivo y juega tres rondas Diarias o sigue en Ilimitado.</p>
+        <span class="battle-promo-cta">Jugar Batalla de Creadoras <b>→</b></span>
+      </span>
+      <img src="/creator-battle-share-card.png" width="1200" height="630" loading="lazy" alt="Batalla de Creadoras mostrando a dos creadoras en un enfrentamiento de puntos" />
+    </a>
+  </section>
+
+  <!-- FAQ for SEO -->
+  <section class="home-section faq-section">
+    <div class="section-head">
+      <h2 class="section-title-lg">Preguntas frecuentes</h2>
+    </div>
+    <div class="faq-list">
+      {faqs.map((item) => (
+        <details class="faq-item">
+          <summary>{item.name}</summary>
+          <p>{item.answer}</p>
+        </details>
+      ))}
+    </div>
+    <div class="section-cta">
+      <button type="button" class="hero-cta" id="faqCtaBtn">
+        <span class="cta-icon">📸</span>
+        Sube una foto y encuentra parecidas
+      </button>
+    </div>
+  </section>
+</Base>
+
+<script>
+  // CTA buttons scroll to the upload box and nudge the file picker open.
+  function focusUpload() {
+    const box = document.getElementById('uploadBox');
+    if (!box) return;
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    box.classList.add('cta-pulse');
+    setTimeout(() => box.classList.remove('cta-pulse'), 1400);
+  }
+  ['heroCtaBtn', 'howCtaBtn', 'freeCtaBtn', 'faqCtaBtn'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', focusUpload);
+  });
+</script>
+
+<style>
+  .hero {
+    text-align: center;
+    padding: 70px 20px 28px;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(124,58,237,0.15);
+    border: 1px solid rgba(124,58,237,0.3);
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: 13px;
+    color: var(--accent-light);
+    margin-bottom: 18px;
+  }
+
+  .badge-dot {
+    width: 6px; height: 6px;
+    background: var(--accent-light);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .hero h1 {
+    font-size: clamp(2rem, 4.5vw, 3rem);
+    line-height: 1.12;
+    margin-bottom: 14px;
+  }
+
+  .h1-white {
+    color: #ffffff;
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    color: var(--text-muted);
+    font-size: 0.98rem;
+    line-height: 1.6;
+    max-width: 580px;
+    margin: 0 auto;
+  }
+
+  /* Fancy trust badges */
+  .hero-trust {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px 0 0;
+    padding: 0;
+  }
+  .hero-trust li {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text);
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.12), rgba(236,72,153,0.10));
+    border: 1px solid var(--border);
+    backdrop-filter: blur(6px);
+  }
+  .hero-trust .trust-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px; height: 18px;
+    font-size: 0.72rem;
+    border-radius: 6px;
+    background: rgba(124,58,237,0.16);
+    color: var(--accent-light);
+  }
+
+  .discover-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 18px;
+    padding: 8px 18px;
+    border-radius: 999px;
+    background: rgba(124,58,237,0.1);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 0.92rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  .discover-chip:hover {
+    border-color: var(--accent);
+    background: rgba(124,58,237,0.18);
+    transform: translateY(-1px);
+  }
+  .chip-spark { font-size: 0.95rem; }
+  .chip-arrow {
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
+  }
+
+  .browse-section,
+  .creators-section {
+    max-width: 1200px;
+    margin: 64px auto 0;
+    padding: 0 20px;
+  }
+
+  .browse-head {
+    text-align: center;
+    max-width: 620px;
+    margin: 0 auto 28px;
+  }
+
+  .browse-head .section-title {
+    margin: 8px 0 10px;
+  }
+
+  .browse-sub {
+    color: var(--text-muted);
+    font-size: 0.98rem;
+    line-height: 1.6;
+  }
+
+  .section-title {
+    font-size: 1.4rem;
+    margin-bottom: 24px;
+  }
+
+  .creators-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  @media (max-width: 900px) { .creators-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 600px) { .creators-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } }
+
+  .load-more-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 40px;
+  }
+
+  .load-more-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 44px;
+    border-radius: 999px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.2s;
+  }
+
+  .load-more-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Card styles for JS load-more */
+  .creator-card { background: var(--surface); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border); transition: transform 0.2s, box-shadow 0.2s; }
+  .creator-card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px var(--accent-glow); }
+  .card-img-wrap { aspect-ratio: 3/4; overflow: hidden; background: var(--surface-raised); }
+  .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card-body { padding: 12px 14px; }
+  .creator-name { font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .username { color: var(--text-muted); font-size: 12px; margin-bottom: 6px; }
+  .price { font-weight: 700; font-size: 15px; margin-bottom: 10px; color: var(--text-muted); }
+  .price-free { color: var(--success); }
+  .view-btn { display: block; text-align: center; background: var(--accent); color: #fff; border-radius: 8px; padding: 8px; font-size: 13px; font-weight: 600; transition: background 0.2s; }
+  .view-btn:hover { background: var(--accent-light); }
+
+  /* ── Hero CTA ─────────────────────────────────────────── */
+  .hero-cta-row {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 14px; margin-top: 30px;
+  }
+  .hero-cta {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    color: #fff; border: none; cursor: pointer;
+    font-family: 'Manrope', sans-serif; font-weight: 800;
+    font-size: 1.05rem; padding: 16px 34px; border-radius: 999px;
+    box-shadow: 0 10px 30px rgba(124,58,237,0.4);
+    transition: transform 0.15s, box-shadow 0.2s;
+  }
+  .hero-cta:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 14px 40px rgba(236,72,153,0.45); }
+  .hero-cta:active { transform: translateY(0) scale(0.99); }
+  .hero-cta.light { box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+  .cta-icon { font-size: 1.1rem; }
+  .hero-trust { margin-top: 18px; font-size: 0.82rem; color: var(--text-muted); }
+
+  /* Pulse the upload box when a CTA is clicked */
+  :global(.upload-box.cta-pulse) {
+    animation: cta-pulse 1.4s ease-out;
+  }
+  @keyframes cta-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(124,58,237,0.5); }
+    70%  { box-shadow: 0 0 0 18px rgba(124,58,237,0); }
+    100% { box-shadow: 0 0 0 0 rgba(124,58,237,0); }
+  }
+
+  /* ── Shared section scaffolding ───────────────────────── */
+  .home-section { max-width: 1100px; margin: 88px auto 0; padding: 0 20px; }
+  .section-head { text-align: center; max-width: 680px; margin: 0 auto 40px; }
+  .eyebrow {
+    display: inline-block; font-size: 0.78rem; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent-light); margin-bottom: 12px;
+  }
+  .section-title-lg { font-size: clamp(1.6rem, 3.5vw, 2.3rem); line-height: 1.15; margin-bottom: 14px; }
+  .section-lead { color: var(--text-muted); font-size: 1rem; line-height: 1.6; }
+  .section-cta { display: flex; justify-content: center; margin-top: 40px; }
+
+  /* ── How it works ─────────────────────────────────────── */
+  .steps-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+  }
+  .step-card {
+    position: relative; overflow: hidden; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 24px;
+    padding: 0 24px 28px; text-align: left;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  }
+  .step-card:hover { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 12px 36px var(--accent-glow); }
+  .step-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; margin: -19px 0 20px;
+    border: 1px solid rgba(168,85,247,0.55); border-radius: 12px;
+    background: #171323; color: var(--accent-light);
+    font-family: 'Manrope', sans-serif; font-size: 0.76rem; font-weight: 800;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.32);
+  }
+  .step-card h3 { font-size: 1.14rem; margin-bottom: 10px; }
+  .step-card p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.68; }
+  .step-visual {
+    position: relative; isolation: isolate; height: 220px; margin: 0 -24px 0; overflow: hidden;
+    border-bottom: 1px solid var(--border);
+    background:
+      radial-gradient(circle at 50% 43%, rgba(137,61,236,0.22), transparent 42%),
+      linear-gradient(155deg, #171322 0%, #0d0d15 64%, #11101a 100%);
+  }
+  .step-visual::after {
+    content: ''; position: absolute; inset: auto 12% -42px; z-index: -1; height: 82px;
+    border-radius: 50%; background: rgba(131,55,211,0.18); filter: blur(30px);
+  }
+  .visual-grid {
+    position: absolute; inset: 0; opacity: .22; pointer-events: none;
+    background-image: linear-gradient(rgba(177,105,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(177,105,255,.07) 1px,transparent 1px);
+    background-size: 24px 24px; mask-image: linear-gradient(to bottom,transparent 3%,#000 38%,transparent 98%);
+  }
+  .upload-visual::before {
+    content: ''; position: absolute; width: 150px; height: 150px; left: calc(50% - 75px); top: 26px;
+    border: 1px solid rgba(168,85,247,.11); border-radius: 50%; box-shadow: 0 0 0 18px rgba(168,85,247,.035),0 0 0 40px rgba(168,85,247,.02);
+  }
+  .photo-card {
+    position: absolute; overflow: hidden; border-radius: 18px;
+  }
+  .photo-card-back {
+    left: calc(50% - 66px); top: 34px; width: 106px; height: 132px;
+    border: 1px solid rgba(168,85,247,.22); background: #1b1428; transform: rotate(-8deg) translateX(-14px); opacity: .72;
+  }
+  .photo-card-main {
+    left: calc(50% - 53px); top: 24px; width: 106px; height: 140px;
+    border: 1px solid rgba(204,121,255,.58); background: linear-gradient(155deg,#32204b,#20132d 58%,#32112d);
+    box-shadow: 0 18px 42px rgba(0,0,0,.48),0 0 28px rgba(134,52,220,.2); animation: upload-card-float 5s ease-in-out infinite;
+  }
+  .portrait-head {
+    position: absolute; left: 50%; top: 19px; transform: translateX(-50%);
+    width: 43px; height: 52px; border-radius: 48% 48% 44% 44%;
+    background: linear-gradient(145deg,#e0c5ff,#e6a6db); box-shadow: inset -8px -5px 12px rgba(152,85,191,.16);
+  }
+  .portrait-head::before {
+    content: ''; position: absolute; left: -3px; top: -5px; width: 47px; height: 24px; border-radius: 60% 60% 34% 24%;
+    background: linear-gradient(130deg,#43215e,#71255e); transform: rotate(-4deg);
+  }
+  .portrait-neck {
+    position: absolute; left: 50%; top: 64px; width: 19px; height: 21px; transform: translateX(-50%); background:#d7a5dc;
+  }
+  .portrait-body {
+    position: absolute; left: 50%; bottom: -24px; transform: translateX(-50%);
+    width: 106px; height: 82px; border-radius: 52% 52% 0 0;
+    background: linear-gradient(125deg,#7435ed,#dd328e 72%); box-shadow: inset 16px 10px 24px rgba(255,255,255,.08);
+  }
+  .crop-corner { position:absolute;width:13px;height:13px;border-color:#fff;border-style:solid;filter:drop-shadow(0 0 5px #b55cff) }
+  .crop-tl{left:8px;top:8px;border-width:2px 0 0 2px;border-radius:3px 0 0}.crop-tr{right:8px;top:8px;border-width:2px 2px 0 0;border-radius:0 3px 0 0}.crop-bl{left:8px;bottom:8px;border-width:0 0 2px 2px;border-radius:0 0 0 3px}.crop-br{right:8px;bottom:8px;border-width:0 2px 2px 0;border-radius:0 0 3px}
+  .face-confirm {
+    position:absolute;left:50%;bottom:7px;transform:translateX(-50%);display:flex;align-items:center;gap:4px;white-space:nowrap;
+    padding:4px 7px;border:1px solid rgba(74,222,128,.25);border-radius:999px;background:rgba(8,12,14,.82);color:#b8f5cf;font-size:.48rem;letter-spacing:.01em;
+  }
+  .face-confirm span{display:grid;place-items:center;width:11px;height:11px;border-radius:50%;background:#24b86a;color:#06130c;font-size:.42rem}
+  .upload-flight {
+    position:absolute;left:calc(50% + 43px);top:27px;display:grid;place-items:center;width:43px;height:43px;border:1px solid rgba(205,139,255,.55);border-radius:14px;
+    background:linear-gradient(145deg,#9b48f3,#7030dc);box-shadow:0 10px 28px rgba(124,58,237,.48);animation:upload-flight 3.2s ease-in-out infinite;
+  }
+  .upload-flight svg{width:22px;height:22px;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .file-ready {
+    position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;width:196px;padding:8px 10px;
+    border:1px solid rgba(255,255,255,.09);border-radius:11px;background:rgba(12,11,18,.9);box-shadow:0 12px 25px rgba(0,0,0,.35);backdrop-filter:blur(10px);
+  }
+  .file-ready>i{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:rgba(168,85,247,.17);color:#d7b4ff;font-style:normal;font-size:.48rem;font-weight:900}.file-ready>span{display:grid}.file-ready b{color:#ede9f2;font-size:.55rem}.file-ready small{color:#797486;font-size:.46rem}.file-ready em{color:#76e8a8;font-size:.5rem;font-style:normal;font-weight:800}
+  @keyframes upload-card-float{50%{transform:translateY(-3px)}}@keyframes upload-flight{50%{transform:translateY(-5px);box-shadow:0 16px 34px rgba(124,58,237,.58)}}
+  .scan-visual{background:radial-gradient(circle at 50% 48%,rgba(112,39,182,.27),transparent 39%),linear-gradient(155deg,#15111f,#0c0c13)}
+  .biometric-face {
+    position:absolute;left:50%;top:13px;width:140px;height:164px;transform:translateX(-50%);overflow:visible;
+    filter:drop-shadow(0 0 11px rgba(177,82,247,.42));
+  }
+  .face-outline{stroke:#a85af2;stroke-width:1.7;stroke-linecap:round;opacity:.85;stroke-dasharray:5 3;animation:outline-flow 8s linear infinite}.face-mesh{stroke:#8f69e8;stroke-width:.7;opacity:.35}.landmark-dots circle{fill:#fff;stroke:#c564ff;stroke-width:1;filter:drop-shadow(0 0 3px #b54aff);animation:landmark-pulse 2.2s ease-in-out infinite}.landmark-dots circle:nth-child(2n){animation-delay:.5s}.landmark-dots circle:nth-child(3n){animation-delay:1s}
+  @keyframes outline-flow{to{stroke-dashoffset:-80}}@keyframes landmark-pulse{50%{opacity:.42;r:1.45px}}
+  .hud-corner{position:absolute;width:27px;height:27px;border-color:rgba(169,89,233,.4);border-style:solid}.hud-tl{left:24px;top:20px;border-width:1px 0 0 1px}.hud-tr{right:24px;top:20px;border-width:1px 1px 0 0}.hud-bl{left:24px;bottom:20px;border-width:0 0 1px 1px}.hud-br{right:24px;bottom:20px;border-width:0 1px 1px 0}
+  .scan-beam {
+    position:absolute;z-index:3;left:11%;right:11%;top:42%;height:1px;background:linear-gradient(90deg,transparent,#974af0 20%,#fff 49%,#ef3d9c 80%,transparent);
+    box-shadow:0 0 7px #a64bf4,0 0 18px rgba(236,72,153,.45);animation:scan-sweep 3.2s ease-in-out infinite;
+  }
+  @keyframes scan-sweep{0%,100%{top:28%;opacity:.65}50%{top:68%;opacity:1}}
+  .scan-data{position:absolute;display:grid;gap:1px;padding:6px 8px;border:1px solid rgba(168,85,247,.17);border-radius:8px;background:rgba(12,10,18,.72);backdrop-filter:blur(8px)}.scan-data i{color:#dcb7ff;font-size:.58rem;font-weight:900;font-style:normal}.scan-data small{color:#716b7d;font-size:.42rem;text-transform:uppercase;letter-spacing:.06em}.data-left{left:27px;top:70px}.data-right{right:25px;top:54px}
+  .scan-status{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);display:flex;align-items:center;gap:6px;white-space:nowrap;padding:5px 9px;border-radius:999px;background:rgba(10,9,15,.82);color:#aaa4b7;font-size:.49rem}.scan-status i{width:5px;height:5px;border-radius:50%;background:#56e99b;box-shadow:0 0 8px #56e99b;animation:status-pulse 1.3s ease-in-out infinite}@keyframes status-pulse{50%{opacity:.3}}
+  .results-visual{display:grid;place-items:center;background:radial-gradient(circle at 50% 55%,rgba(189,47,178,.16),transparent 45%),linear-gradient(155deg,#15111f,#0c0c13)}
+  .results-window {
+    position:relative;z-index:1;display:grid;width:238px;margin-top:-13px;padding:9px;border:1px solid rgba(171,93,229,.28);border-radius:15px;
+    background:rgba(14,12,21,.88);box-shadow:0 18px 42px rgba(0,0,0,.44),0 0 30px rgba(124,58,237,.12);backdrop-filter:blur(12px);
+  }
+  .results-window-head{display:flex;justify-content:space-between;align-items:center;padding:2px 2px 8px}.results-window-head>b{color:#eeeaf4;font-size:.58rem}.results-window-head>small{display:flex;align-items:center;gap:4px;color:#777181;font-size:.42rem}.results-window-head>small i{width:4px;height:4px;border-radius:50%;background:#55e69a;box-shadow:0 0 6px #55e69a}
+  .result-row{display:grid;grid-template-columns:15px 31px 1fr 15px;align-items:center;gap:7px;padding:6px 5px;border-top:1px solid rgba(255,255,255,.055);border-radius:8px;transition:background .2s}.result-row.result-one{background:linear-gradient(90deg,rgba(124,58,237,.15),rgba(236,72,153,.07));border:1px solid rgba(168,85,247,.17)}.result-row>em{color:#81798e;font-size:.43rem;font-style:normal;font-weight:800}.result-avatar{position:relative;width:31px;height:31px;overflow:hidden;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:linear-gradient(145deg,#5b2d79,#bb3f8d)}.result-avatar::before{content:'';position:absolute;left:50%;top:5px;transform:translateX(-50%);width:12px;height:14px;border-radius:48%;background:#ebc7f3}.result-avatar::after{content:'';position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);width:28px;height:19px;border-radius:50% 50% 0 0;background:#8f43d9}.result-two .result-avatar{filter:hue-rotate(35deg);opacity:.91}.result-three .result-avatar{filter:hue-rotate(300deg);opacity:.82}.result-row>span{display:grid;min-width:0}.result-row>span>b{color:#ede9f2;font-size:.52rem}.result-row>span>small{color:#777181;font-size:.42rem}.result-row>span>u{position:relative;width:100%;height:2px;margin-top:4px;border-radius:2px;background:#292331;text-decoration:none;overflow:hidden}.result-row>span>u i{display:block;width:97%;height:100%;background:linear-gradient(90deg,#8b42ee,#ef479e)}.result-two>span>u i{width:94%}.result-three>span>u i{width:91%}.result-row>strong{color:#b86cff;font-size:.62rem}
+  .result-source-pills{position:absolute;z-index:2;left:50%;bottom:12px;transform:translateX(-50%);display:flex;gap:5px}.result-source-pills b{padding:4px 7px;border:1px solid rgba(168,85,247,.18);border-radius:999px;background:#151020;color:#a99eb7;font-size:.43rem;white-space:nowrap}.result-source-pills b:first-child{color:#d8b4fe;background:#221333}
+  @media (prefers-reduced-motion: reduce) {
+    .photo-card-main,.upload-flight,.face-outline,.landmark-dots circle,.scan-beam,.scan-status i{animation:none!important}
+  }
+  .pro-tip {
+    display: flex; align-items: center; gap: 14px; margin-top: 20px; padding: 18px 22px;
+    border: 1px solid rgba(168,85,247,0.3); border-radius: 16px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.13), rgba(236,72,153,0.07));
+  }
+  .pro-tip-icon { display: grid; place-items: center; flex: 0 0 38px; width: 38px; height: 38px; border-radius: 12px; background: linear-gradient(135deg, #7c3aed, #ec4899); color: #fff; }
+  .pro-tip p { color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; }
+  .pro-tip strong { color: #fff; }
+
+  /* ── Search sources ─────────────────────────────────────────────── */
+  .source-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+  .source-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 290px;
+    padding: 28px 24px 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    overflow: hidden;
+    transition: transform 0.22s, border-color 0.22s, box-shadow 0.22s;
+  }
+  a.source-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--accent);
+    box-shadow: 0 16px 42px var(--accent-glow);
+  }
+  .source-card.featured {
+    background: linear-gradient(145deg, rgba(124,58,237,0.19), rgba(236,72,153,0.09) 55%, var(--surface));
+    border-color: rgba(168,85,247,0.45);
+  }
+  .source-card.disabled { opacity: 0.72; }
+  .source-status {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .source-status.live { color: #86efac; background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.25); }
+  .source-status.beta { color: #d8b4fe; background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.25); }
+  .source-status.soon { color: var(--text-muted); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
+  .source-icon {
+    display: grid;
+    place-items: center;
+    width: 54px;
+    height: 54px;
+    margin-bottom: 24px;
+    border-radius: 16px;
+    color: #fff;
+    font-size: 1.35rem;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    box-shadow: 0 10px 26px rgba(124,58,237,0.3);
+  }
+  .source-card h3 { font-size: 1.18rem; margin-bottom: 10px; }
+  .source-card p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.65; margin-bottom: 22px; }
+  .source-link { margin-top: auto; color: var(--accent-light); font-size: 0.86rem; font-weight: 800; }
+  .source-card.disabled .source-link { color: var(--text-muted); }
+
+  /* ── Creator Battle promo ─────────────────────────────────────── */
+  .battle-promo-section { margin-top: 30px; }
+  .battle-promo { position: relative; display: grid; min-height: 320px; padding: 34px; overflow: hidden; grid-template-columns: .82fr 1.18fr; align-items: center; gap: 34px; border: 1px solid rgba(126,151,255,.3); border-radius: 24px; background: radial-gradient(circle at 20% 20%,rgba(88,108,229,.18),transparent 42%),linear-gradient(145deg,#151724,#0d0e16); box-shadow: 0 22px 60px rgba(0,0,0,.22); transition: transform .22s,border-color .22s,box-shadow .22s; }
+  .battle-promo:hover { transform: translateY(-4px); border-color: rgba(145,166,255,.58); box-shadow: 0 28px 72px rgba(45,56,128,.26); }
+  .battle-promo-copy { position: relative; z-index: 1; display: grid; justify-items: start; }
+  .battle-promo h2 { margin: 5px 0 0; background: linear-gradient(110deg,#86a6ff,#dc81ee 62%,#ff7dad); background-clip: text; color: transparent; font-size: clamp(2rem,4vw,3rem); letter-spacing: -.06em; }
+  .battle-promo-copy > strong { color: #e9ebf5; font-size: .93rem; }
+  .battle-promo p { margin: 10px 0 20px; color: #9296aa; font-size: .78rem; line-height: 1.65; }
+  .battle-promo-cta { display: inline-flex; min-height: 39px; padding: 0 15px; align-items: center; gap: 8px; border: 1px solid rgba(126,151,255,.3); border-radius: 999px; background: rgba(82,108,207,.16); color: #c2d0ff; font-size: .7rem; font-weight: 850; }
+  .battle-promo img { position: relative; z-index: 1; display: block; width: 100%; height: auto; border: 1px solid rgba(255,255,255,.1); border-radius: 17px; box-shadow: 0 18px 45px rgba(0,0,0,.34); }
+
+  /* ── Why use ──────────────────────────────────────────── */
+  .why-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+  }
+  .why-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 26px 22px;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  }
+  .why-card:hover { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 12px 36px var(--accent-glow); }
+  .why-emoji { font-size: 1.8rem; display: block; margin-bottom: 14px; }
+  .why-card h3 { font-size: 1.08rem; margin-bottom: 8px; }
+  .why-card p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; }
+
+  /* ── Email signup ───────────────────────────────────────────────── */
+  .signup-card {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    grid-template-columns: minmax(0, 1.03fr) minmax(360px, 0.97fr);
+    gap: clamp(34px, 6vw, 72px);
+    align-items: center;
+    overflow: hidden;
+    padding: clamp(32px, 5vw, 60px);
+    border: 1px solid rgba(168,85,247,0.38);
+    border-radius: 28px;
+    background:
+      linear-gradient(135deg, rgba(124,58,237,0.17), rgba(236,72,153,0.07) 45%, rgba(18,18,26,0.98)),
+      var(--surface);
+    box-shadow: 0 26px 80px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .signup-glow { position: absolute; z-index: -1; width: 300px; height: 300px; border-radius: 50%; filter: blur(90px); opacity: 0.18; pointer-events: none; }
+  .signup-glow-one { left: -120px; top: -120px; background: #7c3aed; }
+  .signup-glow-two { right: -100px; bottom: -160px; background: #ec4899; }
+  .signup-kicker {
+    display: inline-flex; align-items: center; gap: 8px; margin-bottom: 17px;
+    color: #d8b4fe; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase;
+  }
+  .signup-kicker i { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 5px rgba(74,222,128,0.1); }
+  .signup-copy h2 { max-width: 630px; margin-bottom: 16px; font-size: clamp(1.65rem, 3vw, 2.45rem); line-height: 1.13; letter-spacing: -0.035em; }
+  .signup-copy > p { max-width: 610px; color: var(--text-muted); font-size: 0.96rem; line-height: 1.72; }
+  .signup-benefits { display: grid; gap: 13px; margin: 26px 0; list-style: none; }
+  .signup-benefits li { display: flex; align-items: center; gap: 13px; }
+  .signup-benefits li > span {
+    display: grid; place-items: center; flex: 0 0 38px; width: 38px; height: 38px;
+    border: 1px solid rgba(168,85,247,0.28); border-radius: 12px;
+    background: rgba(124,58,237,0.13); color: #d8b4fe; font-size: 1rem; font-weight: 800;
+  }
+  .signup-benefits li div { display: grid; gap: 1px; }
+  .signup-benefits strong { color: #fff; font-size: 0.88rem; }
+  .signup-benefits small { color: var(--text-muted); font-size: 0.76rem; line-height: 1.4; }
+  .signup-email-cta {
+    display: inline-flex; align-items: center; justify-content: center; gap: 11px;
+    min-height: 52px; padding: 0 22px; border-radius: 999px;
+    background: linear-gradient(115deg, #7c3aed, #ec4899); color: #fff;
+    font-weight: 800; box-shadow: 0 12px 32px rgba(124,58,237,0.38);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .signup-email-cta:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(236,72,153,0.35); }
+  .signup-email-cta b { font-size: 1.1rem; transition: transform 0.2s; }
+  .signup-email-cta:hover b { transform: translateX(3px); }
+  .signup-email-icon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.14); }
+  .signup-login { margin-top: 13px; color: var(--text-muted); font-size: 0.78rem !important; }
+  .signup-login a { color: #d8b4fe; font-weight: 700; }
+  .history-preview {
+    position: relative; padding: 20px; border: 1px solid rgba(255,255,255,0.1); border-radius: 22px;
+    background: rgba(10,10,15,0.76); box-shadow: 0 24px 60px rgba(0,0,0,0.38); backdrop-filter: blur(18px);
+    transform: rotate(1.2deg);
+  }
+  .history-preview::before {
+    content: ''; position: absolute; inset: -1px; z-index: -1; border-radius: inherit;
+    background: linear-gradient(145deg, rgba(168,85,247,0.55), transparent 42%, rgba(236,72,153,0.3));
+    opacity: 0.45;
+  }
+  .history-preview-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+  .history-preview-head > div { display: flex; align-items: center; gap: 9px; }
+  .history-preview-head strong { font-size: 0.92rem; }
+  .history-logo { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(135deg, #7c3aed, #ec4899); color: #fff; font-weight: 800; }
+  .history-saved { padding: 5px 8px; border-radius: 999px; background: rgba(34,197,94,0.1); color: #86efac; font-size: 0.58rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+  .history-date { display: flex; align-items: center; gap: 10px; margin: 13px 0 8px; color: var(--text-muted); font-size: 0.63rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; }
+  .history-date i { flex: 1; height: 1px; background: rgba(255,255,255,0.07); }
+  .history-row { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 10px; border-radius: 13px; }
+  .history-row.featured { border: 1px solid rgba(168,85,247,0.18); background: rgba(124,58,237,0.1); }
+  .history-row > div { display: grid; min-width: 0; }
+  .history-row strong { overflow: hidden; color: #f4f4f7; font-size: 0.76rem; white-space: nowrap; text-overflow: ellipsis; }
+  .history-row small { color: var(--text-muted); font-size: 0.65rem; }
+  .history-row time { color: var(--text-muted); font-size: 0.62rem; }
+  .history-thumb { position: relative; width: 42px; height: 42px; overflow: hidden; border-radius: 11px; background: linear-gradient(145deg, rgba(168,85,247,0.45), rgba(236,72,153,0.28)); }
+  .history-thumb::before { content: ''; position: absolute; left: 50%; top: 7px; transform: translateX(-50%); width: 16px; height: 18px; border-radius: 50%; background: #e9d5ff; }
+  .history-thumb::after { content: ''; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); width: 36px; height: 25px; border-radius: 50% 50% 0 0; background: #8b5cf6; }
+  .history-thumb-two { filter: hue-rotate(35deg); } .history-thumb-three { filter: hue-rotate(285deg); }
+  .history-preview-foot { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.07); color: var(--text-muted); font-size: 0.64rem; }
+
+  /* ── Comparison ─────────────────────────────────────────────────── */
+  .comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .comparison-card {
+    padding: 32px 30px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+  }
+  .comparison-card.accent {
+    border-color: rgba(168,85,247,0.48);
+    background: linear-gradient(145deg, rgba(124,58,237,0.2), rgba(236,72,153,0.09), var(--surface));
+  }
+  .comparison-kicker {
+    color: var(--accent-light);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .comparison-card h3 { margin: 9px 0 18px; font-size: 1.25rem; }
+  .comparison-card ul { list-style: none; display: grid; gap: 12px; }
+  .comparison-card li {
+    position: relative;
+    padding-left: 24px;
+    color: var(--text-muted);
+    font-size: 0.91rem;
+    line-height: 1.55;
+  }
+  .comparison-card li::before { content: '✓'; position: absolute; left: 0; color: var(--accent-light); font-weight: 800; }
+  .comparison-note {
+    max-width: 760px;
+    margin: 20px auto 0;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    line-height: 1.55;
+    text-align: center;
+  }
+
+  /* ── Free banner ──────────────────────────────────────── */
+  .free-card {
+    text-align: center; border-radius: var(--radius-lg);
+    padding: 48px 32px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.18), rgba(236,72,153,0.14));
+    border: 1px solid rgba(124,58,237,0.35);
+  }
+  .free-badge {
+    display: inline-block; background: var(--success); color: #04210f;
+    font-weight: 800; font-size: 0.78rem; letter-spacing: 0.06em;
+    padding: 5px 14px; border-radius: 999px; margin-bottom: 18px;
+  }
+  .free-card h2 { font-size: clamp(1.5rem, 3vw, 2.1rem); margin-bottom: 16px; }
+  .free-card > p { color: var(--text); opacity: 0.85; max-width: 720px; margin: 0 auto; line-height: 1.7; font-size: 0.98rem; }
+
+  /* ── Testimonials ─────────────────────────────────────── */
+  .testimonials-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .testimonial {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 26px 24px; margin: 0;
+  }
+  .stars { color: #fbbf24; letter-spacing: 2px; margin-bottom: 14px; font-size: 0.95rem; }
+  .testimonial blockquote { margin: 0 0 16px; font-size: 0.96rem; line-height: 1.65; color: var(--text); }
+  .testimonial figcaption { font-size: 0.85rem; font-weight: 700; }
+  .testimonial figcaption span { color: var(--text-muted); font-weight: 400; }
+
+  .trust-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .trust-card {
+    position: relative;
+    padding: 28px 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+  }
+  .trust-card > span {
+    display: inline-block;
+    margin-bottom: 18px;
+    color: var(--accent-light);
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+  }
+  .trust-card h3 { font-size: 1.05rem; margin-bottom: 9px; }
+  .trust-card p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.62; }
+
+  /* ── Reddit ───────────────────────────────────────────── */
+  .reddit-card {
+    display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 30px 32px;
+  }
+  .reddit-emoji {
+    font-size: 2.4rem; flex-shrink: 0;
+    width: 64px; height: 64px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,69,0,0.12);
+  }
+  .reddit-copy { flex: 1; min-width: 240px; }
+  .reddit-copy h2 { font-size: 1.4rem; margin-bottom: 8px; }
+  .reddit-copy p { color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; }
+  .reddit-btn {
+    background: #ff4500; color: #fff; font-weight: 700; font-size: 0.95rem;
+    padding: 14px 26px; border-radius: 999px; white-space: nowrap;
+    transition: transform 0.15s, background 0.2s;
+  }
+  .reddit-btn:hover { background: #ff5a1f; transform: translateY(-2px); }
+
+  /* ── FAQ ──────────────────────────────────────────────── */
+  .faq-list { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+  .faq-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 4px 20px;
+  }
+  .faq-item summary {
+    cursor: pointer; padding: 16px 0; font-family: 'Manrope', sans-serif;
+    font-weight: 700; font-size: 1rem; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item summary::after { content: '+'; color: var(--accent-light); font-size: 1.4rem; font-weight: 400; transition: transform 0.2s; }
+  .faq-item[open] summary::after { transform: rotate(45deg); }
+  .faq-item p { color: var(--text-muted); font-size: 0.93rem; line-height: 1.65; padding: 0 0 18px; }
+
+  /* ── Responsive ───────────────────────────────────────── */
+  @media (max-width: 880px) {
+    .steps-grid, .why-grid, .testimonials-grid, .trust-grid { grid-template-columns: 1fr 1fr; }
+    .source-grid { grid-template-columns: 1fr; }
+    .source-card { min-height: 0; }
+    .battle-promo { grid-template-columns: 1fr; }
+    .signup-card { grid-template-columns: 1fr; }
+    .history-preview { width: min(100%, 560px); justify-self: center; transform: none; }
+  }
+  @media (max-width: 600px) {
+    .home-section { margin-top: 64px; }
+    .battle-promo-section { margin-top: 24px; }
+    .battle-promo { min-height: 0; padding: 25px 21px; gap: 23px; }
+    .steps-grid, .why-grid, .testimonials-grid, .trust-grid, .comparison-grid { grid-template-columns: 1fr; }
+    .hero { width: 100%; padding-left: 18px; padding-right: 18px; overflow: hidden; }
+    .hero-badge { max-width: 100%; white-space: normal; text-align: center; }
+    .hero h1 { font-size: 1.78rem; }
+    .hero h1 span { overflow-wrap: anywhere; }
+    .hero-trust { width: 100%; flex-direction: column; align-items: center; }
+    .hero-trust li { max-width: 100%; text-align: left; }
+    .hero-cta { width: 100%; justify-content: center; }
+    .signup-card { padding: 28px 20px; border-radius: 22px; }
+    .signup-email-cta { width: 100%; }
+    .history-preview { padding: 15px; }
+    .history-saved { display: none; }
+    .history-row { grid-template-columns: 38px minmax(0, 1fr); }
+    .history-row time { display: none; }
+    .history-thumb { width: 38px; height: 38px; }
+    .reddit-card { flex-direction: column; text-align: center; }
+    .reddit-btn { width: 100%; text-align: center; }
+  }
+</style>

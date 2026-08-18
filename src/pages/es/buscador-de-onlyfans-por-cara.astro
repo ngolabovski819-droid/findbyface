@@ -1,0 +1,272 @@
+---
+{/* i18n-twin: src/pages/onlyfans-finder-by-face.astro — mirror copy/structure changes */}
+import Base from '../../layouts/Base.astro';
+import UploadBox from '../../components/UploadBox.astro';
+import SearchStories from '../../components/SearchStories.astro';
+import { absUrl } from '../../lib/site';
+
+const canonical = absUrl('/es/buscador-de-onlyfans-por-cara/');
+const title = 'Buscador de OnlyFans por Cara o Foto Gratis | IA';
+const description =
+  'Usa nuestro buscador de OnlyFans gratis para buscar por cara, imagen, foto o captura. Obtén coincidencias de perfiles de creadoras clasificadas y enlaces directos en segundos.';
+
+const faqs = [
+  {
+    question: '¿Cómo busca por cara el buscador de OnlyFans?',
+    answer: 'El navegador detecta un rostro, convierte sus rasgos en un descriptor numérico de 128 dimensiones y envía ese descriptor — no la foto original — a nuestra API de búsqueda. La similitud vectorial clasifica entonces los perfiles de creadoras más cercanos del índice actual.',
+  },
+  {
+    question: '¿Puedo encontrar a una creadora de OnlyFans desde una captura de pantalla?',
+    answer: 'Sí. Sube una captura guardada o pégala con Ctrl+V o Command+V. Un recorte nítido con un solo rostro adulto claramente visible suele producir la clasificación más útil.',
+  },
+  {
+    question: '¿Es lo mismo que la búsqueda de imagen inversa?',
+    answer: 'No. La búsqueda de imagen inversa normalmente busca copias del mismo archivo. Esta herramienta compara rasgos faciales, así que puede mostrar perfiles de creadoras visualmente similares aunque la foto de perfil indexada sea una imagen diferente.',
+  },
+  {
+    question: '¿Qué tan precisos son los resultados de la búsqueda facial de OnlyFans?',
+    answer: 'La calidad depende de la foto subida, la pose, la iluminación, los filtros y la cobertura del índice. La similitud es una señal de clasificación, no prueba de identidad, así que revisa el perfil y otra información pública antes de sacar conclusiones.',
+  },
+  {
+    question: '¿Se almacena mi imagen subida?',
+    answer: 'La detección facial y la creación del descriptor ocurren en tu navegador. La solicitud de búsqueda envía el descriptor numérico a la API de coincidencias; la foto de consulta original no se agrega al índice público de creadoras.',
+  },
+  {
+    question: '¿Por qué mi foto devolvió coincidencias débiles o ninguna?',
+    answer: 'El rostro puede ser pequeño, borroso, estar cubierto, muy filtrado o no estar en el índice actual. Prueba con una imagen frontal más nítida, recorta a un solo rostro y elimina subtítulos, bordes u otro ruido visual.',
+  },
+  {
+    question: '¿Qué tan desarrollado está el buscador facial de OnlyFans?',
+    answer: 'Es una herramienta establecida y totalmente disponible, con resultados de creadoras clasificados, historial de cuenta, enlaces a perfiles y un índice de creadoras mantenido activamente.',
+  },
+  {
+    question: '¿El buscador facial de OnlyFans es gratis?',
+    answer: 'Puedes empezar a buscar gratis. Una cuenta gratuita desbloquea búsquedas diarias ilimitadas y mantiene tu historial de búsquedas recientes disponible en tu panel.',
+  },
+  {
+    question: '¿Puedo buscar en OnlyFans por nombre en su lugar?',
+    answer: 'Sí. Usa el directorio de Búsqueda OnlyFans cuando conozcas un nombre o usuario. Esta página está diseñada para cuando tienes una foto pero no sabes qué perfil de creadora buscar.',
+  },
+  {
+    question: '¿Puedo usarlo como buscador de modelos o cuentas de OnlyFans?',
+    answer: 'Sí. Cuando tienes una foto clara en lugar de un nombre de usuario, la búsqueda facial puede ayudarte a acotar cuentas de modelos y creadoras visualmente similares. Abre y revisa cada perfil enlazado, porque la similitud por sí sola no confirma la identidad.',
+  },
+  {
+    question: '¿Puedo encontrar OnlyFans por imagen, foto o fotografía?',
+    answer: 'Sí. Las subidas de imágenes, fotos y capturas siguen el mismo proceso de búsqueda facial. La calidad del archivo importa más que su origen: usa un solo rostro adulto nítido y sin obstrucciones con luz natural siempre que sea posible.',
+  },
+  {
+    question: '¿Es un buscador de parecidas de OnlyFans?',
+    answer: 'Puede usarse para explorar parecidos visuales, porque los resultados se clasifican por similitud facial. Las personas que se parecen no son necesariamente la misma, así que trata cada resultado como una pista de descubrimiento, no como una afirmación de identidad.',
+  },
+];
+
+const structuredData = JSON.stringify([
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    '@id': `${canonical}#web-application`,
+    name: 'findbyface Buscador de OnlyFans por Cara y Foto con IA',
+    alternateName: [
+      'Buscador de OnlyFans Gratis',
+      'Buscador Facial de OnlyFans',
+      'Buscador de OnlyFans por Imagen',
+      'Buscador de Modelos de OnlyFans',
+      'Buscador de Perfiles de OnlyFans',
+    ],
+    url: canonical,
+    inLanguage: 'es',
+    description,
+    applicationCategory: 'SearchApplication',
+    operatingSystem: 'Any',
+    browserRequirements: 'Requiere JavaScript y soporte de subida de imágenes',
+    isAccessibleForFree: true,
+    audience: { '@type': 'PeopleAudience', requiredMinAge: 18 },
+    featureList: [
+      'Búsqueda de creadoras con IA por cara, foto, imagen o captura',
+      'Coincidencias de perfiles de creadoras clasificadas',
+      'Enlaces directos a perfiles',
+      'Procesamiento de la foto de consulta en el navegador',
+      'Historial de búsqueda para usuarios con sesión iniciada',
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    inLanguage: 'es',
+    mainEntity: faqs.map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: { '@type': 'Answer', text: item.answer },
+    })),
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Inicio', item: 'https://findbyface.org/es/' },
+      { '@type': 'ListItem', position: 2, name: 'Buscador de OnlyFans por Cara', item: canonical },
+    ],
+  },
+]);
+---
+
+<Base title={title} description={description} canonical={canonical}>
+  <Fragment slot="head">
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+    <meta name="rating" content="adult" />
+    <script type="application/ld+json" set:html={structuredData} />
+  </Fragment>
+
+  <section class="finder-hero" id="onlyfans-face-search">
+    <div class="hero-glow" aria-hidden="true"></div>
+    <div class="hero-copy">
+      <span class="hero-kicker"><i></i> Descubrimiento de creadoras con IA</span>
+      <h1>Encuentra Creadoras de OnlyFans<br /><span>por Cara o Foto</span></h1>
+      <p>
+        Sube una foto nítida para buscar en OnlyFans por cara. Nuestra búsqueda por imagen
+        con IA clasifica las coincidencias más cercanas de perfiles de creadoras.
+      </p>
+      <div class="hero-proof">
+        <span>✓ Gratis para empezar</span><span>✓ Procesamiento 100% privado</span><span>✓ Índice de creadoras en vivo</span>
+      </div>
+    </div>
+    <div class="tool-frame">
+      <UploadBox searchMode="onlyfans" />
+    </div>
+  </section>
+
+  <SearchStories finder="onlyfans" />
+
+  <div class="content-shell">
+    <section class="content-section" id="how-it-works">
+      <div class="section-heading">
+        <span class="eyebrow">De una foto a perfiles de creadoras</span>
+        <h2>Cómo funciona el buscador facial de OnlyFans con IA</h2>
+        <p>Este buscador de OnlyFans gratis convierte una imagen, foto o captura nítida en un conjunto clasificado de perfiles de creadoras relevantes.</p>
+      </div>
+      <div class="steps-grid">
+        <article class="step-card">
+          <span class="step-number">01</span>
+          <div class="step-icon">↑</div>
+          <h3>Sube un rostro nítido</h3>
+          <p>Elige un retrato o pega una captura con un solo rostro adulto visible. Un recorte cercano y nítido funciona mejor.</p>
+        </article>
+        <article class="step-card featured">
+          <span class="step-number">02</span>
+          <div class="step-icon">◇</div>
+          <h3>La IA mapea los rasgos faciales</h3>
+          <p>Los modelos de detección facial y puntos de referencia crean un descriptor numérico compacto directamente en tu navegador.</p>
+        </article>
+        <article class="step-card">
+          <span class="step-number">03</span>
+          <div class="step-icon">⌕</div>
+          <h3>Explora perfiles clasificados</h3>
+          <p>La búsqueda vectorial clasifica los perfiles más cercanos para que compares fotos, puntuaciones de similitud y enlaces directos.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="content-section technology-section" id="technology">
+      <div class="technology-copy">
+        <span class="eyebrow">Hecho para descubrir perfiles desde un rostro</span>
+        <h2>La tecnología detrás de la búsqueda</h2>
+        <p>Este motor de búsqueda de OnlyFans basado en rostros usa reconocimiento facial en el navegador para crear un descriptor de consulta respetuoso con la privacidad, y luego la recuperación vectorial clasifica los perfiles de creadoras por similitud visual.</p>
+        <div class="search-path-links">
+          <a class="text-link" href="#onlyfans-face-search">Prueba una búsqueda por imagen en OnlyFans <span>↑</span></a>
+          <a class="text-link secondary" href="/es/buscador-de-onlyfans/">Busca en OnlyFans por nombre en su lugar <span>→</span></a>
+        </div>
+      </div>
+      <div class="technology-stack">
+        <article class="tech-layer"><b>01</b><div><span>Detectar</span><h3>Detección facial SSD MobileNet</h3><p>El modelo aísla un rostro claro antes de que empiece cualquier búsqueda.</p></div><code>face</code></article>
+        <article class="tech-layer"><b>02</b><div><span>Codificar</span><h3>68 puntos · descriptor 128D</h3><p>Los puntos faciales y los rasgos de reconocimiento se convierten en un vector numérico compacto.</p></div><code>float[128]</code></article>
+        <article class="tech-layer"><b>03</b><div><span>Recuperar</span><h3>Postgres · similitud pgvector</h3><p>La similitud coseno clasifica los vectores de creadoras cercanos y devuelve datos útiles del perfil.</p></div><code>cosine</code></article>
+      </div>
+    </section>
+
+    <section class="content-section comparison-section">
+      <div class="section-heading">
+        <span class="eyebrow">Busca el rostro, no el archivo</span>
+        <h2>Búsqueda por imagen en OnlyFans vs. búsqueda de imagen inversa</h2>
+        <p>Una búsqueda de imagen inversa de OnlyFans busca la misma imagen. FindByFace busca rasgos faciales cuando una creadora usa una foto de perfil diferente a la imagen que ya tienes.</p>
+      </div>
+      <div class="comparison-grid">
+        <article class="comparison-card muted-card">
+          <span>Búsqueda de imagen inversa tradicional</span><h3>Busca la misma imagen</h3>
+          <ul><li>Prioriza archivos duplicados o casi duplicados</li><li>Depende de que la imagen exacta esté publicada en otro lugar</li><li>Suele fallar tras recortes, superposiciones o compresión</li></ul>
+        </article>
+        <article class="comparison-card accent-card">
+          <span>Búsqueda de creadoras de findbyface</span><h3>Busca rasgos faciales similares</h3>
+          <ul><li>Compara la estructura facial entre fotos diferentes</li><li>Clasifica perfiles de creadoras relevantes por similitud</li><li>Ofrece contexto del perfil para revisión manual</li></ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="content-section photo-section">
+      <div class="photo-guide">
+        <div class="section-heading align-left">
+          <span class="eyebrow">Mejor foto, mejor clasificación</span>
+          <h2>Cómo encontrar OnlyFans por foto o imagen</h2>
+          <p>Una búsqueda por foto en OnlyFans puede empezar con un retrato, una captura de redes sociales o un fotograma de video recortado. Dale al modelo un solo rostro sin obstrucciones con suficiente detalle para comparar.</p>
+        </div>
+        <div class="guide-columns">
+          <div class="guide-column good"><strong>✓ Funciona mejor</strong><ul><li>Un solo rostro adulto en la imagen</li><li>Ángulo frontal o de tres cuartos suave</li><li>Ojos nítidos y contorno facial visible</li><li>Luz natural y uniforme</li><li>Un recorte cercano sin elementos de interfaz</li></ul></div>
+          <div class="guide-column avoid"><strong>× Intenta evitar</strong><ul><li>Fotos grupales y rostros de fondo</li><li>Desenfoque de movimiento o rostros diminutos</li><li>Máscaras y obstrucción fuerte</li><li>Ángulos de perfil extremos</li><li>Filtros que remodelan los rasgos faciales</li></ul></div>
+        </div>
+      </div>
+      <aside class="interpretation-card">
+        <span class="eyebrow">Lee los resultados con responsabilidad</span>
+        <h3>Una coincidencia visual es una pista — no prueba de identidad</h3>
+        <p>Las puntuaciones de similitud clasifican rostros cercanos en el índice actual de creadoras. Personas diferentes pueden compartir proporciones faciales, y un resultado nunca prueba que una persona privada tenga un perfil adulto.</p>
+        <div class="score-key"><div><strong>Porcentaje de match</strong><span>Una señal de similitud relativa</span></div><div><strong>Foto de perfil</strong><span>Contexto visual para comparar</span></div><div><strong>Enlace de la creadora</strong><span>El perfil público a revisar</span></div></div>
+      </aside>
+    </section>
+
+    <section class="content-section live-section">
+      <div class="live-orbit" aria-hidden="true"><span></span><span></span><span></span><div>LIVE</div></div>
+      <div class="live-copy">
+        <span class="eyebrow">Establecido y mantenido activamente</span>
+        <h2>Un buscador de modelos y perfiles de OnlyFans muy desarrollado</h2>
+        <p>Usa la herramienta como buscador de cuentas de OnlyFans cuando tengas una imagen pero no un usuario. La búsqueda de creadoras en vivo incluye un gran directorio de perfiles, coincidencias faciales clasificadas, enlaces directos, historial por cuenta y una experiencia de resultados madura.</p>
+        <div class="status-grid"><div><span>Disponible ahora</span><strong>Búsqueda de rostro a perfil</strong></div><div><span>Incluido</span><strong>Coincidencias clasificadas + enlaces directos</strong></div><div><span>Para miembros</span><strong>Búsquedas ilimitadas + historial</strong></div></div>
+      </div>
+    </section>
+
+    <section class="content-section trust-section">
+      <div class="section-heading"><span class="eyebrow">Privado, limitado, responsable</span><h2>Qué pasa con tu foto</h2><p>Tu imagen se necesita para crear el descriptor de búsqueda — no para volverse parte de la base de datos de creadoras.</p></div>
+      <div class="trust-grid">
+        <article><span>01</span><h3>Análisis en el navegador</h3><p>La detección facial y la creación del descriptor corren en tu navegador después de cargar los modelos de reconocimiento.</p></article>
+        <article><span>02</span><h3>Consulta de búsqueda numérica</h3><p>La API de coincidencias recibe un descriptor facial numérico para compararlo con los vectores de creadoras indexados.</p></article>
+        <article><span>03</span><h3>La foto de consulta no se indexa</h3><p>Tu foto subida no se agrega a los resultados de creadoras ni queda disponible para búsquedas de otros usuarios.</p></article>
+      </div>
+      <p class="responsible-note">Solo adultos. Sube imágenes que te pertenezcan o que tengas permiso de usar. No uses los resultados para acosar, exponer, rastrear, amenazar o tomar decisiones sobre una persona privada. Revisa nuestra <a href="/es/politica-de-privacidad/">Política de Privacidad</a>, los <a href="/es/terminos-de-uso/">Términos</a> y el <a href="/es/dmca/">proceso DMCA</a>.</p>
+    </section>
+
+    <section class="content-section faq-section">
+      <div class="section-heading align-left"><span class="eyebrow">Preguntas sobre el buscador de OnlyFans</span><h2>Preguntas frecuentes</h2><p>Respuestas claras sobre búsqueda por cara, imagen, foto y perfil, resultados de similitud, privacidad y descubrimiento de creadoras.</p></div>
+      <div class="faq-list">{faqs.map((item, index) => <details open={index === 0}><summary><span>{item.question}</span><i></i></summary><p>{item.answer}</p></details>)}</div>
+    </section>
+
+    <section class="final-cta">
+      <span class="eyebrow">Una foto nítida es suficiente</span><h2>Prueba el buscador de OnlyFans por imagen gratis</h2><p>Sube un retrato, imagen o captura nítida para buscar en el índice de creadoras en vivo y explorar perfiles visualmente similares.</p>
+      <a href="#onlyfans-face-search">Inicia una búsqueda facial de OnlyFans gratis <span>↑</span></a>
+      <small>¿Buscas apariciones en video en su lugar? <a href="/es/buscador-de-actrices-porno-por-cara/">Prueba el Buscador de Actrices.</a></small>
+    </section>
+  </div>
+</Base>
+
+<style>
+  :global(html){scroll-behavior:smooth} :global(body){overflow-x:clip;background:radial-gradient(circle at 50% 3%,rgba(118,38,204,.23),transparent 38rem),radial-gradient(circle at 4% 50%,rgba(236,72,153,.05),transparent 28rem),#09090e}
+  .finder-hero{position:relative;width:min(1180px,calc(100% - 40px));margin:0 auto;padding:100px 0 20px;text-align:center}.hero-glow{position:absolute;inset:40px 12% auto;height:360px;background:radial-gradient(ellipse,rgba(154,63,255,.16),transparent 67%);filter:blur(20px);pointer-events:none}.hero-copy{position:relative;max-width:880px;margin:0 auto 42px}.hero-kicker,.eyebrow{display:inline-flex;align-items:center;gap:9px;color:#b76cff;font-size:.76rem;font-weight:800;letter-spacing:.13em;text-transform:uppercase}.hero-kicker i{width:7px;height:7px;border-radius:50%;background:#57eea3;box-shadow:0 0 14px #57eea3}.hero-copy h1{font-family:'Manrope',sans-serif;font-size:clamp(2.7rem,6vw,5.4rem);font-weight:800;letter-spacing:-.055em;line-height:.98;margin:22px 0;color:#fff}.hero-copy h1 span{background:linear-gradient(100deg,#9d4bff,#ef48a9);-webkit-background-clip:text;background-clip:text;color:transparent}.hero-copy>p{max-width:750px;margin:0 auto;color:#aaa5c1;font-size:clamp(1rem,1.6vw,1.22rem);line-height:1.75}.hero-proof{display:flex;justify-content:center;gap:22px;flex-wrap:wrap;margin-top:24px;color:#d6d1e5;font-size:.82rem;font-weight:700}.tool-frame{position:relative;width:min(900px,100%);margin:0 auto;padding:22px;border:1px solid rgba(155,81,224,.22);border-radius:30px;background:rgba(13,12,21,.64);box-shadow:0 35px 90px rgba(0,0,0,.35)}
+  .content-shell{width:min(1180px,calc(100% - 40px));margin:0 auto}.content-section{margin-top:118px;scroll-margin-top:90px}.section-heading{text-align:center;max-width:760px;margin:0 auto 42px}.section-heading.align-left{text-align:left;margin:0 0 34px}.section-heading h2,.technology-copy h2,.live-copy h2,.final-cta h2{font-family:'Manrope',sans-serif;color:#fff;font-size:clamp(2rem,4vw,3.35rem);letter-spacing:-.045em;line-height:1.08;margin:15px 0}.section-heading p,.technology-copy p,.live-copy>p,.final-cta p{color:#9490a8;line-height:1.75;font-size:1rem}
+  .steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.step-card{position:relative;min-height:290px;padding:32px;border:1px solid #292338;border-radius:24px;background:linear-gradient(150deg,#12111a,#0d0c13)}.step-card.featured{border-color:#7436a6;background:linear-gradient(150deg,rgba(104,39,153,.22),#0d0c13)}.step-number{position:absolute;right:24px;top:22px;color:#554f62;font:800 2.2rem/1 'Manrope'}.step-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:15px;background:#2c1646;color:#ce75ff;font-size:1.5rem}.step-card h3,.comparison-card h3,.guide-column strong,.interpretation-card h3,.trust-grid h3{font-family:'Manrope';color:#fff;margin:25px 0 12px;font-size:1.15rem}.step-card p,.comparison-card li,.guide-column li,.interpretation-card p,.trust-grid p{color:#8e899f;line-height:1.65;font-size:.92rem}
+  .technology-section{display:grid;grid-template-columns:.8fr 1.2fr;gap:70px;align-items:center;padding:58px;border:1px solid #292238;border-radius:28px;background:#0e0d15}.search-path-links{display:flex;flex-direction:column;align-items:flex-start;gap:10px;margin-top:19px}.text-link{display:inline-flex;gap:9px;color:#c278ff;font-weight:800;text-decoration:none}.text-link.secondary{color:#8f899e;font-size:.84rem}.text-link:hover{color:#dcacff}.technology-stack{display:grid;gap:12px}.tech-layer{display:grid;grid-template-columns:42px 1fr auto;gap:18px;align-items:center;padding:22px;border:1px solid #2b2638;border-radius:18px;background:#12101a}.tech-layer>b{color:#9d4bff}.tech-layer span{color:#77718b;font-size:.68rem;text-transform:uppercase;letter-spacing:.12em}.tech-layer h3{color:#fff;margin:5px 0;font-family:'Manrope';font-size:1rem}.tech-layer p{color:#888398;margin:0;font-size:.8rem;line-height:1.5}.tech-layer code{color:#d58bff;background:#251534;padding:7px 9px;border-radius:8px;font-size:.72rem}
+  .comparison-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.comparison-card{padding:38px;border-radius:24px;border:1px solid #292338;background:#0e0d15}.comparison-card.accent-card{border-color:#7537a5;background:linear-gradient(145deg,rgba(117,49,170,.2),#0e0d15)}.comparison-card>span{color:#b16bdb;font-size:.74rem;text-transform:uppercase;font-weight:800;letter-spacing:.1em}.comparison-card ul,.guide-column ul{padding-left:19px;margin:20px 0 0}.comparison-card li,.guide-column li{margin:10px 0}
+  .photo-section{display:grid;grid-template-columns:1.2fr .8fr;gap:22px}.photo-guide,.interpretation-card{padding:44px;border:1px solid #292338;border-radius:26px;background:#0e0d15}.guide-columns{display:grid;grid-template-columns:1fr 1fr;gap:15px}.guide-column{padding:24px;border:1px solid #292338;border-radius:18px}.guide-column strong{display:block;margin:0}.good strong{color:#6df0a5}.avoid strong{color:#ff7da7}.interpretation-card{background:linear-gradient(160deg,rgba(101,37,147,.2),#0e0d15)}.interpretation-card h3{font-size:1.55rem}.score-key{display:grid;gap:12px;margin-top:28px}.score-key div{padding:14px;border-left:2px solid #963fec;background:rgba(255,255,255,.025)}.score-key strong,.score-key span{display:block}.score-key strong{color:#fff;font-size:.83rem}.score-key span{color:#817b91;font-size:.75rem;margin-top:4px}
+  .live-section{display:grid;grid-template-columns:240px 1fr;gap:60px;align-items:center;padding:54px;border:1px solid #67308e;border-radius:28px;background:radial-gradient(circle at 10% 50%,rgba(165,56,235,.18),transparent 28%),#0e0d15}.live-orbit{position:relative;width:190px;height:190px;display:grid;place-items:center;margin:auto}.live-orbit>span{position:absolute;inset:0;border:1px solid rgba(183,83,250,.35);border-radius:50%}.live-orbit>span:nth-child(2){inset:20px;animation:pulse 2.4s infinite}.live-orbit>span:nth-child(3){inset:42px;background:rgba(134,43,191,.12)}.live-orbit>div{z-index:1;color:#71f2ad;font:800 1.35rem 'Manrope';letter-spacing:.15em}.status-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:30px}.status-grid div{padding:16px;border:1px solid #32263c;border-radius:13px;background:rgba(255,255,255,.025)}.status-grid span,.status-grid strong{display:block}.status-grid span{color:#a85ed8;text-transform:uppercase;font-size:.62rem;font-weight:800;letter-spacing:.1em}.status-grid strong{color:#e7e3ec;font-size:.78rem;margin-top:7px}@keyframes pulse{50%{transform:scale(.92);opacity:.5}}
+  .trust-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.trust-grid article{padding:30px;border-top:1px solid #7c36aa;background:#0e0d15;border-radius:0 0 18px 18px}.trust-grid article>span{color:#b151ea;font-weight:800}.trust-grid h3{margin:17px 0 9px}.responsible-note{margin:22px 0 0;padding:20px;border:1px solid #2b2635;border-radius:14px;color:#827d90;font-size:.8rem;line-height:1.65}.responsible-note a,.final-cta small a{color:#bf72ec}
+  .faq-section{display:grid;grid-template-columns:.75fr 1.25fr;gap:65px}.faq-list{display:grid;gap:10px}.faq-list details{border:1px solid #292338;border-radius:14px;background:#0e0d15;overflow:hidden}.faq-list summary{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:21px;color:#e7e3ec;font-weight:700;cursor:pointer;list-style:none}.faq-list summary i{width:12px;height:12px;border-right:2px solid #a34de0;border-bottom:2px solid #a34de0;transform:rotate(45deg)}.faq-list details[open] summary i{transform:rotate(225deg)}.faq-list details p{margin:0;padding:0 21px 22px;color:#8c879c;line-height:1.65;font-size:.9rem}
+  .final-cta{text-align:center;margin:118px 0 80px;padding:70px 25px;border:1px solid #65308e;border-radius:30px;background:radial-gradient(circle at 50% 120%,rgba(174,52,237,.22),transparent 55%),#0e0d15}.final-cta>a{display:inline-flex;gap:10px;margin-top:22px;padding:14px 23px;border-radius:999px;background:linear-gradient(110deg,#8d39ed,#e340a5);color:white;text-decoration:none;font-weight:800}.final-cta small{display:block;color:#777184;margin-top:20px}
+  @media(max-width:900px){.technology-section,.photo-section,.faq-section{grid-template-columns:1fr}.technology-section{gap:38px;padding:36px}.live-section{grid-template-columns:1fr;text-align:center}.steps-grid,.trust-grid{grid-template-columns:1fr}.status-grid{grid-template-columns:1fr}.faq-section{gap:20px}.finder-hero{padding-top:70px}}
+  @media(max-width:620px){.finder-hero,.content-shell{width:min(calc(100% - 24px),1180px)}.finder-hero{padding-top:55px}.hero-copy h1{font-size:2.55rem}.hero-proof{gap:10px;flex-direction:column}.tool-frame{padding:8px;border-radius:22px}.content-section{margin-top:80px}.comparison-grid,.guide-columns{grid-template-columns:1fr}.photo-guide,.interpretation-card,.live-section{padding:27px 22px}.technology-section{padding:27px 20px}.tech-layer{grid-template-columns:32px 1fr}.tech-layer code{display:none}.final-cta{margin-top:80px;padding:50px 20px}}
+</style>

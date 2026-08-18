@@ -1,4 +1,7 @@
 ---
+import { localeOf } from '../../i18n/routes';
+import { t } from '../../i18n/ui';
+
 interface Heading {
   depth: number;
   slug: string;
@@ -11,6 +14,7 @@ interface Props {
 
 const { headings } = Astro.props;
 const items = headings.filter((h) => h.depth === 2 || h.depth === 3);
+const lang = localeOf(Astro.url.pathname);
 ---
 
 {items.length > 0 && (
@@ -18,11 +22,11 @@ const items = headings.filter((h) => h.depth === 2 || h.depth === 3);
     <summary>
       <span class="toc-label">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-        Table of contents
+        {t(lang, 'blog.toc')}
       </span>
       <svg class="toc-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
     </summary>
-    <nav aria-label="Table of contents">
+    <nav aria-label={t(lang, 'blog.toc')}>
       <ol>
         {items.map((h) => (
           <li class={h.depth === 3 ? 'toc-sub' : ''}>

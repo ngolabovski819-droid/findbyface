@@ -405,8 +405,8 @@ const creators = await fetchCreatorsByTerms(category.terms, 50);
 ---
 
 ## Blog (Astro Content Collections)
-- Define collection in `src/content/config.ts`
-- Frontmatter shape: `title`, `date`, `slug`, `description`, `image` (optional)
+- Collections defined in `src/content.config.ts` (glob loader; `blog` → `content/blog/`, `blogEs` → `content/blog-es/`)
+- Frontmatter shape: `title`, `date`, `description`, plus optional `updated`, `author`, `image`, `summary`, `disclaimer`, `references`; Spanish posts add `translationOf` (the English post id)
 - `/blog/index.astro` — card grid of all posts, sorted by date desc
 - `/blog/[slug].astro` — full post with `<article>` prose styling
 
@@ -453,6 +453,46 @@ export function buildSrcset(url: string): { src: string; srcset: string; sizes: 
 - JSON-LD on category pages: BreadcrumbList + ItemList
 - robots.txt: allow all, disallow `/api/`
 - Trailing slash on all canonical URLs
+
+---
+
+## Spanish i18n (/es/)
+
+The public site is fully mirrored in neutral/LatAm Spanish under `/es/` with **translated slugs**
+(e.g. `/es/buscador-de-onlyfans-por-cara/`). English stays unprefixed at root.
+
+**Single sources of truth:**
+- `src/i18n/routes.ts` — `staticRoutes` maps every EN path → ES path. Consumed by Base.astro
+  (hreflang), Nav (links, active-state via `routeKey()`, language switcher), the footer,
+  `sitemap.xml.ts`, and `scripts/check-i18n-routes.mjs`. **Adding a page = add its pair here.**
+- `src/i18n/ui.ts` — typed dictionary + `t()` for cross-cutting chrome (nav, footer, cards,
+  blog chrome). Big self-contained components (UploadBox, SearchStories, VideoFaceSearch,
+  AuthPage) keep colocated `enCopy`/`esCopy` dicts in their own frontmatter instead.
+- `src/config/categories.ts` — `labelEs` + optional `slugEs` per category. `terms` and the
+  `category:` search-scope key stay **English always** (they feed the creator-text index).
+- `src/config/seo-meta.ts` — `categorySeo(slug, label, total, locale)` hashes on the EN slug
+  in both locales; Spanish template sets (`CAT_TITLES_ES` etc.) must fit the same 60/165 caps.
+
+**Page patterns (pick the matching one):**
+1. Copy-heavy marketing/legal pages → parallel file under `src/pages/es/` with fully rewritten
+   Spanish copy + Spanish JSON-LD. Both twins carry a first-line `i18n-twin: <other path>`
+   comment; every copy/structure change must be mirrored (enforced by `npm run check:i18n`).
+2. Logic-heavy pages (search, battle, dashboard, settings, wishlist) → shared component in
+   `src/components/pages/` with locale dicts; both routes are ~5-line wrappers.
+3. Shared components derive locale with `localeOf(Astro.url.pathname)` — never a prop chain.
+   Client scripts get strings via an inline `<script type="application/json">` block rendered
+   from the frontmatter dict, parsed once at the top of the module script. Client-side locale
+   checks use `document.documentElement.lang`.
+
+**SEO wiring (all automatic via Base.astro):** `<html lang>`, self-canonical, en/es/x-default
+hreflang cluster (x-default → English), `og:locale` `es_LA` (Facebook's LatAm code — not ISO,
+don't "fix" it). hreflang is suppressed on noindex pages and on pages with no translation
+(`alternate={null}`). Dynamic pages (blog posts, categories) pass `alternate` explicitly;
+Spanish blog posts pair via `translationOf` frontmatter (collection `blogEs`, files in
+`content/blog-es/` — the filename IS the Spanish slug).
+
+**Checks:** `npm run check:i18n` (route pairs, twin comments, slugEs, blog pairing) and
+`npm run check:seo` (EN + ES meta lengths/uniqueness) must both pass before deploying.
 
 ---
 

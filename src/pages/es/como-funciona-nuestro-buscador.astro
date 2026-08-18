@@ -1,0 +1,119 @@
+---
+{/* i18n-twin: src/pages/how-our-search-engine-works.astro — mirror copy/structure changes */}
+import Base from '../../layouts/Base.astro';
+import { absUrl } from '../../lib/site';
+
+const updated = new Date().toLocaleDateString('es', { year: 'numeric', month: 'long', day: 'numeric' });
+
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  inLanguage: 'es',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: '¿Una persona decide el orden en que aparecen las creadoras?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'No. Las listas clasificadas de findbyface se ordenan por FindRank, nuestro sistema de puntuación basado en interacción, no por un editor. Las colocaciones patrocinadas son la única excepción, y siempre están etiquetadas.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: '¿Pueden las creadoras pagar para cambiar su puntuación de FindRank?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'No. El patrocinio compra una colocación específica y divulgada (como una página de categoría o resultados de búsqueda), nunca un cambio en la puntuación subyacente. Las tarjetas patrocinadas siempre están marcadas como "Patrocinado" o "Anuncio".',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: '¿Con qué frecuencia se actualiza el ranking?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'A diario. Extraemos datos frescos de interacción y precios cada 24 horas y recalculamos FindRank, con el estado de verificación actualizado semanalmente.',
+      },
+    },
+  ],
+};
+const jsonLd = JSON.stringify(faqJsonLd);
+---
+
+<Base
+  title="Cómo Funciona Nuestro Buscador | findbyface"
+  description="Cómo findbyface clasifica creadoras de OnlyFans con FindRank, cómo funciona nuestra búsqueda facial con IA y cómo se divulgan las colocaciones patrocinadas."
+  canonical={absUrl('/es/como-funciona-nuestro-buscador/')}
+>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={jsonLd} />
+  </Fragment>
+
+  <article class="prose-page">
+    <div class="page-head">
+      <h1>Cómo Funciona Nuestro <span class="gradient-text">Buscador</span></h1>
+      <p>Una mirada honesta y en lenguaje claro a cómo findbyface clasifica y encuentra creadoras.</p>
+      <p class="page-updated">Última actualización: {updated}</p>
+    </div>
+
+    <div class="prose">
+      <h2>Dos sistemas de búsqueda distintos</h2>
+      <p>
+        findbyface en realidad usa dos sistemas separados, y vale la pena ser claros sobre cuál estás
+        usando. Explorar por categoría o escribir un nombre en la barra de búsqueda usa
+        <strong>FindRank</strong>, nuestro ranking basado en interacción. Subir una foto en la
+        <a href="/es/buscador-de-onlyfans-por-cara/">herramienta de búsqueda facial</a> usa una
+        canalización de comparación visual con IA completamente diferente. Ninguno de los dos involucra a
+        una persona eligiendo resultados manualmente.
+      </p>
+
+      <h2>Cómo funciona FindRank</h2>
+      <p>
+        FindRank ordena a las creadoras por señales reales de interacción extraídas en vivo de OnlyFans —
+        principalmente el número de favoritos y métricas de suscriptores. Es una señal directa de
+        popularidad, no un juicio subjetivo de "calidad": más interacción real sube un perfil, nada más lo
+        hace. Volvemos a extraer estos datos y recalculamos el ranking a diario, de modo que las creadoras
+        recién populares aparecen en un día en lugar de quedar detrás de una lista desactualizada. Las
+        insignias de verificación se actualizan en un ciclo semanal.
+      </p>
+      <p>
+        No hay <strong>revisión humana</strong> del orden del ranking. Nadie en findbyface sube o baja
+        manualmente un perfil por su aspecto o por quién lo administra. Las únicas ediciones manuales que
+        hacemos son eliminaciones — por ejemplo, atender una solicitud válida de
+        <a href="/es/dmca/">DMCA</a> o la propia solicitud de retirada de una creadora — nunca adiciones
+        ni reordenamientos.
+      </p>
+
+      <h2>Cómo funciona la búsqueda por coincidencia facial</h2>
+      <p>
+        Nuestra <a href="/es/buscador-de-onlyfans-por-cara/">búsqueda por foto</a> es una canalización de
+        IA aparte, sin relación con FindRank. Cuando subes una foto, un modelo de reconocimiento facial
+        detecta el rostro y lo convierte en un descriptor numérico — una huella matemática de la geometría
+        facial. Comparamos ese descriptor con los perfiles de creadoras usando búsqueda de similitud
+        vectorial y devolvemos las coincidencias visuales más cercanas, ordenadas por puntuación de
+        similitud. Funciona solo con la apariencia: sin nombres, sin búsquedas inversas, y las
+        coincidencias son para descubrir, no para confirmar identidad. Lee más en nuestra página
+        <a href="/es/sobre-nosotros/">Sobre nosotros</a>.
+      </p>
+
+      <h2>Colocaciones patrocinadas, totalmente divulgadas</h2>
+      <p>
+        findbyface es gratis, y parte de cómo se financia son las colocaciones pagadas: una creadora puede
+        pagar por aparecer en un lugar específico, como la parte superior de una página de categoría o de
+        los resultados de búsqueda. Somos directos sobre lo que eso compra y lo que no:
+      </p>
+      <ul>
+        <li><strong>Nunca</strong> cambia la puntuación de FindRank ni la puntuación de similitud facial de una creadora.</li>
+        <li><strong>Nunca</strong> oculta, difumina ni degrada resultados orgánicos (no pagados) para hacer espacio.</li>
+        <li>Cada tarjeta patrocinada está etiquetada — verás una marca visible de "Patrocinado" o "Anuncio", nunca una colocación disfrazada de resultado orgánico.</li>
+      </ul>
+
+      <h2>Por qué existe esta página</h2>
+      <p>
+        Construimos findbyface para ser una forma rápida y honesta de explorar y buscar creadoras de
+        OnlyFans, y preferimos explicar exactamente cómo se construyó la lista que estás viendo antes que
+        dejarlo como un misterio. Si algo aquí no coincide con lo que ves en el sitio, o tienes preguntas
+        que no hemos cubierto, <a href="/es/contacto/">escríbenos</a> — responderemos directamente.
+      </p>
+    </div>
+  </article>
+</Base>

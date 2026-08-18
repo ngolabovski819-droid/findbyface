@@ -1,0 +1,208 @@
+---
+// Shared page body for /wishlist/ (EN) and /es/wishlist/ (ES) — the thin route
+// wrappers in src/pages render this component; locale comes from the pathname.
+import Base from '../../layouts/Base.astro';
+import WishlistWidget from '../WishlistWidget.astro';
+import { localeOf } from '../../i18n/routes';
+import { absUrl } from '../../lib/site';
+
+const lang = localeOf(Astro.url.pathname);
+const langPrefix = lang === 'es' ? '/es' : '';
+
+const enC = {
+  title: 'Your Wishlist | findbyface',
+  description: "Creators you've saved on findbyface — tap the heart on any card to add them here.",
+  h1: 'Your Wishlist',
+  sub: "Every creator you've hearted, all in one place.",
+  emptyTitle: 'Nothing saved yet',
+  emptySub: 'Tap the heart on any creator card while browsing to add them to your wishlist.',
+  startBrowsing: 'Start browsing',
+  browseHref: '/onlyfans-search/',
+  viewProfile: 'View Profile',
+  viewProfileFallback: 'View profile',
+};
+const esC: typeof enC = {
+  title: 'Tus Favoritos | findbyface',
+  description: 'Creadoras que guardaste en findbyface — toca el corazón en cualquier tarjeta para agregarlas aquí.',
+  h1: 'Tus Favoritos',
+  sub: 'Todas las creadoras que marcaste con un corazón, en un solo lugar.',
+  emptyTitle: 'Todavía no hay nada guardado',
+  emptySub: 'Toca el corazón en cualquier tarjeta de creadora mientras exploras para agregarla a tus favoritos.',
+  startBrowsing: 'Empieza a explorar',
+  browseHref: '/es/buscador-de-onlyfans/',
+  viewProfile: 'Ver perfil',
+  viewProfileFallback: 'Ver perfil',
+};
+const C = lang === 'es' ? esC : enC;
+---
+
+<Base
+  title={C.title}
+  description={C.description}
+  canonical={absUrl(`${langPrefix}/wishlist/`)}
+>
+  <section class="wishlist-page">
+    <header class="wishlist-header">
+      <h1>{C.h1}</h1>
+      <p>{C.sub}</p>
+    </header>
+
+    <div class="wishlist-widget-slot">
+      <WishlistWidget />
+    </div>
+
+    <div class="wishlist-grid" id="wishlistGrid"></div>
+
+    <div class="wishlist-empty" id="wishlistEmpty" hidden>
+      <span class="empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 21s-6.6-4.06-9.33-7.86C.86 10.64 1.1 7.28 3.6 5.34c2.2-1.7 5.02-1.24 6.7.86L12 8.1l1.7-1.9c1.68-2.1 4.5-2.56 6.7-.86 2.5 1.94 2.74 5.3 0.93 7.8C18.6 16.94 12 21 12 21Z"/></svg>
+      </span>
+      <h2>{C.emptyTitle}</h2>
+      <p>{C.emptySub}</p>
+      <a href={C.browseHref} class="primary-button">{C.startBrowsing} <span>→</span></a>
+    </div>
+  </section>
+</Base>
+
+<script type="application/json" id="i18nWishlistPage" set:html={JSON.stringify({ viewProfile: C.viewProfile, viewProfileFallback: C.viewProfileFallback })} />
+
+<script>
+  import { getWishlist, type WishlistEntry } from '../../lib/wishlist';
+  import { creatorCardDataAttributes } from '../../lib/creatorCardUi';
+
+  const T = JSON.parse(document.getElementById('i18nWishlistPage')!.textContent!) as Record<string, string>;
+  const grid = document.getElementById('wishlistGrid')!;
+  const empty = document.getElementById('wishlistEmpty')!;
+
+  function escapeHtml(value: unknown): string {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[character]!));
+  }
+
+  function proxyImg(url: string, w: number, h: number): string {
+    if (!url) return '/no-image.png';
+    if (url.startsWith('/')) return url;
+    if (!/^https?:\/\//i.test(url)) return '/no-image.png';
+    return `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//i, ''))}&w=${w}&h=${h}&fit=cover&output=webp`;
+  }
+
+  function safeProfileHref(value: string, username: string): string {
+    const fallback = `https://onlyfans.com/${encodeURIComponent(username)}`;
+    if (!value) return fallback;
+    if (value.startsWith('/') && !value.startsWith('//')) return value;
+    try {
+      const url = new URL(value);
+      if (url.protocol === 'https:' || url.protocol === 'http:') return url.toString();
+    } catch { /* fall through */ }
+    return fallback;
+  }
+
+  function renderCard(entry: WishlistEntry): string {
+    const profileUrl = safeProfileHref(entry.profileUrl, entry.username);
+    const isFree = entry.price.trim().toUpperCase() === 'FREE';
+    const safeName = escapeHtml(entry.name || entry.username);
+    const safeUsername = escapeHtml(entry.username);
+    const safeUrl = escapeHtml(profileUrl);
+    const cardData = creatorCardDataAttributes({ username: entry.username, avatar: entry.avatar });
+    return `<div class="creator-card" data-href="${safeUrl}" ${cardData}>
+      <div class="card-img-wrap">
+        <img src="${escapeHtml(proxyImg(entry.avatar, 320, 427))}" alt="${safeName}" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+          onerror="this.onerror=null;this.removeAttribute('srcset');this.src='/no-image.png';">
+      </div>
+      <div class="card-body">
+        <p class="creator-name">${safeName}</p>
+        <p class="username">@${safeUsername}</p>
+        <p class="price ${isFree ? 'price-free' : ''}">${escapeHtml(entry.price || T.viewProfileFallback)}</p>
+        <a href="${safeUrl}" class="view-btn" target="_blank" rel="noopener nofollow">${T.viewProfile}</a>
+      </div>
+    </div>`;
+  }
+
+  function render(): void {
+    const items = [...getWishlist()].sort((a, b) => b.addedAt - a.addedAt);
+    empty.hidden = items.length > 0;
+    grid.hidden = items.length === 0;
+    grid.innerHTML = items.map(renderCard).join('');
+  }
+
+  // Removing from this page happens the same way as everywhere else — the heart button
+  // CreatorCardEnhancements.astro injects onto each card — but a removal here should also
+  // drop the card out of the grid immediately, not just flip the heart.
+  window.addEventListener('fbf:wishlist-changed', render);
+  render();
+</script>
+
+<style>
+  .wishlist-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 80px 20px 60px;
+  }
+  .wishlist-header { text-align: center; margin-bottom: 28px; }
+  .wishlist-header h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); margin-bottom: 8px; }
+  .wishlist-header p { color: var(--text-muted); }
+
+  .wishlist-widget-slot { display: flex; justify-content: center; margin-bottom: 40px; }
+
+  .wishlist-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+  }
+  .wishlist-grid[hidden] { display: none; }
+
+  .wishlist-empty {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    max-width: 420px;
+    margin: 30px auto 0;
+    padding: 50px 20px;
+    text-align: center;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-lg);
+  }
+  .wishlist-empty[hidden] { display: none; }
+  .empty-icon {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    margin-bottom: 8px;
+    border-radius: 16px;
+    background: linear-gradient(145deg, rgba(124,58,237,.2), rgba(236,72,153,.14));
+  }
+  .empty-icon svg { width: 24px; height: 24px; fill: url(#fbfWishlistHeartGradient); }
+  .wishlist-empty h2 { font-size: 1.15rem; }
+  .wishlist-empty p { color: var(--text-muted); font-size: 13.5px; margin-bottom: 14px; }
+  .primary-button {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 22px; border-radius: 999px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-pink));
+    color: #fff; font-size: 13.5px; font-weight: 700; text-decoration: none;
+  }
+
+  @media (max-width: 1000px) { .wishlist-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 640px) { .wishlist-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; } }
+</style>
+
+<style is:global>
+  #wishlistGrid .creator-card {
+    background: var(--surface); border-radius: var(--radius-lg);
+    overflow: hidden; border: 1px solid var(--border);
+    transition: transform .2s, box-shadow .2s;
+    display: flex; flex-direction: column; width: 100%; min-width: 0;
+  }
+  #wishlistGrid .creator-card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px var(--accent-glow); }
+  #wishlistGrid .creator-card[data-href] { cursor: pointer; }
+  #wishlistGrid .card-img-wrap { aspect-ratio: 3/4; overflow: hidden; position: relative; background: var(--surface-raised); }
+  #wishlistGrid .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #wishlistGrid .card-body { padding: 12px 14px; display: flex; flex-direction: column; flex: 1; }
+  #wishlistGrid .creator-name { font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+  #wishlistGrid .username { color: var(--text-muted); font-size: 12px; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #wishlistGrid .price { font-weight: 700; font-size: 15px; margin-bottom: 10px; color: var(--text-muted); }
+  #wishlistGrid .price-free { color: var(--success); }
+  #wishlistGrid .view-btn { display: block; text-align: center; background: var(--accent); color: #fff; border-radius: 8px; padding: 8px; font-size: 13px; font-weight: 600; transition: background .2s; text-decoration: none; margin-top: auto; }
+  #wishlistGrid .view-btn:hover { background: var(--accent-light); }
+</style>

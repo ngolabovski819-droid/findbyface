@@ -1,0 +1,80 @@
+---
+{/* i18n-twin: src/pages/dmca.astro — mirror copy/structure changes */}
+import Base from '../../layouts/Base.astro';
+import { absUrl } from '../../lib/site';
+
+const updated = '7 de junio de 2026';
+---
+
+<Base
+  title="DMCA y Retirada de Contenido | findbyface"
+  description="Cómo enviar un aviso de retirada DMCA o solicitar la eliminación de contenido de findbyface."
+  canonical={absUrl('/es/dmca/')}
+>
+  <article class="prose-page">
+    <div class="page-head">
+      <h1>DMCA y <span class="gradient-text">Retirada de Contenido</span></h1>
+      <p class="page-updated">Última actualización: {updated}</p>
+    </div>
+
+    <div class="prose">
+      <p>
+        findbyface respeta la propiedad intelectual y los derechos de privacidad de los demás. Si crees
+        que algún contenido mostrado o enlazado en findbyface.org infringe tus derechos de autor, o si
+        deseas solicitar la eliminación de tu imagen, sigue el proceso a continuación.
+      </p>
+
+      <h2>1. Cómo funciona findbyface</h2>
+      <p>
+        findbyface muestra perfiles públicos de creadoras según su similitud visual. No alojamos los
+        medios originales de las creadoras; las miniaturas y los enlaces pueden hacer referencia a
+        plataformas de terceros como OnlyFans. La retirada de contenido en esas plataformas la gestionan
+        las propias plataformas. Todos los derechos reservados. findbyface.org no es propiedad de ni está
+        afiliado a onlyfans.com, marca registrada de Fenix International Limited.
+      </p>
+
+      <h2>2. Enviar un aviso de retirada DMCA</h2>
+      <p>
+        Si eres titular de derechos de autor o un agente autorizado, envía un aviso por escrito que
+        incluya todo lo siguiente:
+      </p>
+      <ul>
+        <li>Una firma física o electrónica del titular de los derechos o del agente autorizado.</li>
+        <li>La identificación de la obra protegida que se alega infringida.</li>
+        <li>La URL o URLs exactas de findbyface.org donde se encuentra el material.</li>
+        <li>Tu información de contacto (nombre, dirección, correo, teléfono).</li>
+        <li>Una declaración de que crees de buena fe que el uso no está autorizado por el titular de los derechos, su agente o la ley.</li>
+        <li>Una declaración, bajo pena de perjurio, de que la información de tu aviso es exacta y de que eres el titular o estás autorizado a actuar en su nombre.</li>
+      </ul>
+
+      <h2>3. Eliminación de imágenes personales</h2>
+      <p>
+        Si eres la persona que aparece en una imagen y quieres que se elimine, no necesitas presentar un
+        aviso DMCA formal. Envíanos la URL o URLs específicas y una breve declaración confirmando que la
+        imagen es tuya, y actuaremos con prontitud sobre las solicitudes verificadas.
+      </p>
+
+      <h2>4. Dónde enviar tu solicitud</h2>
+      <p>
+        Envía avisos y solicitudes de retirada a través de nuestra <a href="/es/contacto/">página de contacto</a>.
+        Incluye "DMCA" o "Solicitud de retirada" en tu mensaje para que podamos priorizarlo.
+      </p>
+
+      <h2>5. Contraaviso</h2>
+      <p>
+        Si el contenido que publicaste fue retirado y crees que fue un error, puedes enviar un
+        contraaviso con tu información de contacto, la identificación del material retirado y una
+        declaración bajo pena de perjurio de que la retirada fue resultado de un error o de una
+        identificación equivocada.
+      </p>
+
+      <h2>6. Infractores reincidentes</h2>
+      <p>
+        Podemos, en las circunstancias apropiadas, restringir o terminar el acceso a las partes que
+        infrinjan repetidamente los derechos de los demás.
+      </p>
+
+      <p><em>La versión en inglés de este documento prevalece en caso de discrepancia.</em></p>
+    </div>
+  </article>
+</Base>

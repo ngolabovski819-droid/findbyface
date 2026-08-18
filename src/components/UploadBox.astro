@@ -1,51 +1,297 @@
 ---
 import { getRouletteAvatars } from '../lib/rouletteAvatars';
+import { localeOf } from '../i18n/routes';
 
 interface Props {
   searchMode?: 'all' | 'onlyfans';
 }
 
 const { searchMode = 'all' } = Astro.props;
+const lang = localeOf(Astro.url.pathname);
 
 const rouletteSrcs = await getRouletteAvatars(
   import.meta.env.SUPABASE_URL?.replace(/\/+$/, ''),
   import.meta.env.SUPABASE_KEY,
 );
+
+// Component-local copy (server-rendered markup). Big self-contained components
+// keep their strings colocated instead of in src/i18n/ui.ts — one place per component.
+const enCopy = {
+  close: 'Close',
+  termsTitle: 'User Agreement and Terms of Use',
+  termsIntro: 'By using our image search feature, I confirm that:',
+  termsList: [
+    'I am at least <strong>18 years of age</strong> or older',
+    '<strong>NOT</strong> use search results to approach or confront individuals',
+    '<strong>NOT</strong> engage in harassment of any person identified in search results',
+    '<strong>NEVER</strong> upload images of minors (under 18 years of age)',
+    '<strong>NOT</strong> follow, monitor, or stalk any individual',
+    '<strong>NOT</strong> attempt to extort, threaten, or blackmail any person',
+    '<strong>NOT</strong> utilize any information in ways that would require findbyface to obtain special licensing or reporting status with government entities',
+    '<strong>NOT</strong> use search results for employment screening, housing decisions, lending evaluations, or insurance assessments',
+    '<strong>NOT</strong> employ this service for any illegal purpose or activity',
+    'I confirm I am <strong>NOT</strong> a resident or citizen of any European Union country',
+    'I confirm full compliance with all laws and regulations applicable in my jurisdiction',
+    'I acknowledge that my jurisdiction permits the use of facial recognition search technology',
+  ],
+  termsAccuracy: '<strong>Accuracy Disclaimer:</strong> findbyface provides no guarantees regarding the accuracy, reliability, or completeness of information presented on this website. All search results and content are provided "as is" without any warranty of any kind.',
+  termsRelease: '<strong>Comprehensive Liability Release:</strong> By using this service, I hereby fully and permanently release, waive, and discharge findbyface, along with its parent organization, affiliated companies, subsidiaries, owners, investors, executives, directors, staff members, contractors, and representatives from any and all claims, liabilities, actions, demands, damages, costs, losses, legal proceedings, and judgments of any nature whatsoever, whether currently known or discovered in the future, that may arise from or relate to my use of findbyface services, including but not limited to search results, content accuracy, or data processing. I explicitly waive any legal rights or protections under any jurisdiction\'s laws that might otherwise limit the scope or effectiveness of this comprehensive release.',
+  termsAcknowledge: 'By clicking "Agree and Search," I acknowledge that I have read, understood, and consent to be legally bound by all terms outlined above.',
+  termsCheck: 'I understand and agree to the terms',
+  termsCancel: 'Cancel',
+  termsAgree: 'Agree and Search',
+  authTitle: "You've used your 2 free searches",
+  authSub: 'Sign in free to unlock unlimited searches and see all matching profiles.',
+  authGoogle: "Continue with Google — it's free",
+  authSkip: 'Maybe later',
+  tabsAria: 'Choose which sources to search',
+  tabAll: 'All',
+  tabPornstars: 'Pornstars',
+  tabOnlyfans: 'OnlyFans',
+  tabCam: 'Cam',
+  comingSoon: 'Coming soon',
+  dedicatedBadge: 'OnlyFans creator face search',
+  idleTitleOnlyfans: 'Search OnlyFans creators by photo',
+  idleTitleAll: 'Search every live index by photo',
+  idleSubOnlyfans: 'Upload one clear adult face and our AI will rank the closest creator profile matches',
+  idleSubAll: 'Upload one clear adult face to search matching videos and creator profiles together',
+  choosePhoto: 'Choose photo',
+  uploadPhotoAria: 'Upload photo',
+  uploadHint: 'JPG · PNG · WEBP &nbsp;·&nbsp; Ctrl+V to paste',
+  scanningAlt: 'Your photo being analyzed',
+  yourPhoto: 'Your photo',
+  matching: 'Matching…',
+  scanningTitle: 'findbyface is searching',
+  scanningSubOnlyfans: 'Analyzing your image across the OnlyFans creator index.',
+  scanningSubAll: 'Analyzing your image across creator profiles and indexed adult videos.',
+  scanCounter: 'Compared with <strong>0</strong> indexed faces',
+  stepDetect: 'Detecting face',
+  stepLandmarks: 'Mapping landmarks',
+  stepIndexes: 'Searching live indexes',
+  stepRanking: 'Ranking matches',
+  doneAlt: 'Searched photo',
+  doneLabel: 'Searched image',
+  newSearch: '← New Search',
+  sourceLabelOnlyfans: 'OnlyFans face search',
+  sourceLabelAll: 'All-source face search',
+  yourMatches: 'Your matches',
+  copyTitle: 'Copy your top 10 closest matches',
+  copyTop10: 'Copy top 10',
+  pornstarsHeading: 'Pornstars',
+  shareCta: 'Matches copied! Now paste &amp; share your results on Reddit',
+  postToReddit: 'Post to Reddit',
+  loadMore12: 'Load 12 more matches',
+  unlockBanner: '🔒 <strong>8 more matches found</strong> — sign in free to see all',
+  createFreeAccount: 'Create free account',
+  logIn: 'Log in',
+};
+
+const esCopy: typeof enCopy = {
+  close: 'Cerrar',
+  termsTitle: 'Acuerdo de Usuario y Términos de Uso',
+  termsIntro: 'Al usar nuestra función de búsqueda por imagen, confirmo que:',
+  termsList: [
+    'Tengo al menos <strong>18 años de edad</strong> o más',
+    '<strong>NO</strong> usaré los resultados de búsqueda para abordar o confrontar a personas',
+    '<strong>NO</strong> acosaré a ninguna persona identificada en los resultados de búsqueda',
+    '<strong>NUNCA</strong> subiré imágenes de menores (menores de 18 años)',
+    '<strong>NO</strong> seguiré, vigilaré ni acecharé a ninguna persona',
+    '<strong>NO</strong> intentaré extorsionar, amenazar ni chantajear a ninguna persona',
+    '<strong>NO</strong> utilizaré ninguna información de maneras que requieran que findbyface obtenga licencias especiales o estatus de reporte ante entidades gubernamentales',
+    '<strong>NO</strong> usaré los resultados de búsqueda para evaluaciones de empleo, decisiones de vivienda, evaluaciones crediticias ni valoraciones de seguros',
+    '<strong>NO</strong> emplearé este servicio para ningún propósito o actividad ilegal',
+    'Confirmo que <strong>NO</strong> soy residente ni ciudadano de ningún país de la Unión Europea',
+    'Confirmo el pleno cumplimiento de todas las leyes y regulaciones aplicables en mi jurisdicción',
+    'Reconozco que mi jurisdicción permite el uso de tecnología de búsqueda por reconocimiento facial',
+  ],
+  termsAccuracy: '<strong>Descargo de Exactitud:</strong> findbyface no ofrece garantías sobre la exactitud, fiabilidad o integridad de la información presentada en este sitio web. Todos los resultados de búsqueda y el contenido se proporcionan "tal cual", sin garantía de ningún tipo.',
+  termsRelease: '<strong>Liberación Integral de Responsabilidad:</strong> Al usar este servicio, libero, renuncio y exonero plena y permanentemente a findbyface, junto con su organización matriz, empresas afiliadas, subsidiarias, propietarios, inversionistas, ejecutivos, directores, personal, contratistas y representantes, de todas y cada una de las reclamaciones, responsabilidades, acciones, demandas, daños, costos, pérdidas, procedimientos legales y sentencias de cualquier naturaleza, ya sean conocidas actualmente o descubiertas en el futuro, que puedan surgir de o estar relacionadas con mi uso de los servicios de findbyface, incluyendo, entre otros, los resultados de búsqueda, la exactitud del contenido o el procesamiento de datos. Renuncio explícitamente a cualquier derecho o protección legal bajo las leyes de cualquier jurisdicción que de otro modo pudiera limitar el alcance o la efectividad de esta liberación integral.',
+  termsAcknowledge: 'Al hacer clic en "Aceptar y buscar", reconozco que he leído, comprendido y consiento quedar legalmente obligado por todos los términos descritos arriba.',
+  termsCheck: 'He leído y acepto los términos',
+  termsCancel: 'Cancelar',
+  termsAgree: 'Aceptar y buscar',
+  authTitle: 'Ya usaste tus 2 búsquedas gratis',
+  authSub: 'Inicia sesión gratis para desbloquear búsquedas ilimitadas y ver todos los perfiles coincidentes.',
+  authGoogle: 'Continuar con Google — es gratis',
+  authSkip: 'Quizás luego',
+  tabsAria: 'Elige qué fuentes buscar',
+  tabAll: 'Todo',
+  tabPornstars: 'Actrices',
+  tabOnlyfans: 'OnlyFans',
+  tabCam: 'Cam',
+  comingSoon: 'Muy pronto',
+  dedicatedBadge: 'Búsqueda facial de creadoras OnlyFans',
+  idleTitleOnlyfans: 'Busca creadoras de OnlyFans por foto',
+  idleTitleAll: 'Busca en todos los índices por foto',
+  idleSubOnlyfans: 'Sube un rostro adulto nítido y nuestra IA clasificará los perfiles de creadoras más parecidos',
+  idleSubAll: 'Sube un rostro adulto nítido para buscar videos y perfiles de creadoras a la vez',
+  choosePhoto: 'Elegir foto',
+  uploadPhotoAria: 'Subir foto',
+  uploadHint: 'JPG · PNG · WEBP &nbsp;·&nbsp; Ctrl+V para pegar',
+  scanningAlt: 'Tu foto siendo analizada',
+  yourPhoto: 'Tu foto',
+  matching: 'Comparando…',
+  scanningTitle: 'findbyface está buscando',
+  scanningSubOnlyfans: 'Analizando tu imagen en el índice de creadoras de OnlyFans.',
+  scanningSubAll: 'Analizando tu imagen en perfiles de creadoras y videos indexados.',
+  scanCounter: 'Comparado con <strong>0</strong> rostros indexados',
+  stepDetect: 'Detectando rostro',
+  stepLandmarks: 'Mapeando puntos',
+  stepIndexes: 'Buscando en índices',
+  stepRanking: 'Clasificando resultados',
+  doneAlt: 'Foto buscada',
+  doneLabel: 'Imagen buscada',
+  newSearch: '← Nueva búsqueda',
+  sourceLabelOnlyfans: 'Búsqueda facial OnlyFans',
+  sourceLabelAll: 'Búsqueda facial en todas las fuentes',
+  yourMatches: 'Tus coincidencias',
+  copyTitle: 'Copia tus 10 coincidencias más cercanas',
+  copyTop10: 'Copiar top 10',
+  pornstarsHeading: 'Actrices',
+  shareCta: '¡Coincidencias copiadas! Pégalas y comparte tus resultados en Reddit',
+  postToReddit: 'Publicar en Reddit',
+  loadMore12: 'Cargar 12 coincidencias más',
+  unlockBanner: '🔒 <strong>8 coincidencias más encontradas</strong> — inicia sesión gratis para verlas todas',
+  createFreeAccount: 'Crear cuenta gratis',
+  logIn: 'Iniciar sesión',
+};
+
+const C = lang === 'es' ? esCopy : enCopy;
+
+// Strings used by the client-side script, delivered via the inline JSON block below.
+const enClient = {
+  errLoadFaceApi: 'Failed to load face-api.js — check your connection',
+  psUnavailable: 'Pornstar video search is temporarily unavailable.',
+  psTimeoutKeepOF: 'Pornstar video search timed out. Your OnlyFans results are still available.',
+  psUnavailableKeepOF: 'Pornstar video search is temporarily unavailable. Your OnlyFans results are still available.',
+  psResultsUnavailable: 'Pornstar video results were unavailable for this search.',
+  loadingModels: 'Loading face detection models (first load may take ~15s)...',
+  detectingFace: 'Detecting face in your photo...',
+  searchingBoth: 'Searching creator profiles and indexed videos...',
+  searchingVideos: 'Searching indexed videos...',
+  ofUnavailable: 'OnlyFans creator search was unavailable.',
+  searchingOF: 'Searching OnlyFans creator profiles...',
+  noFaceDetected: 'The OnlyFans matcher could not detect a face in this image.',
+  imageDecodeFailed: 'The image could not be read — try a different photo.',
+  analyzingOF: 'Analyzing your image across the OnlyFans creator index.',
+  analyzingAll: 'Analyzing your image across creator profiles and indexed adult videos.',
+  searchFailed: 'Search failed — please try again',
+  lockedCreatorAlt: 'Locked creator',
+  unlockBtn: '🔓 Unlock',
+  viewProfile: 'View Profile',
+  free: 'FREE',
+  matchWord: 'match',
+  indexedVideoMatch: 'Indexed video match',
+  similarityPct: '{pct}% similarity',
+  rankedMatch: 'Ranked match',
+  supportOne: '1 supporting face',
+  supportMany: '{n} supporting faces',
+  openSourceVideo: 'Open source video ↗',
+  unavailable: '(unavailable)',
+  videoMatchOne: 'video match',
+  videoMatchMany: 'video matches',
+  videosIndexed: '{v} videos indexed',
+  noVideoMatches: 'No matching video appearances were found in the current index. Try another clear frame.',
+  yourMatches: 'Your matches',
+  noOFMatches: 'No matching OnlyFans creator profiles were found. Try a clearer, front-facing photo.',
+  restoreFailed: 'Your saved search could not be restored. Please upload the photo again.',
+  unlockedMatches: 'Your unlocked matches',
+  unlockedNotice: 'Unlocked — your original face-search results are ready to explore.',
+  loadMoreOne: 'Load 1 more match',
+  loadMoreMany: 'Load {n} more matches',
+  showing: 'Showing {shown} of {total} matches',
+  moreLocked: '🔒 <strong>More matches are locked</strong> — sign in free to reveal every lookalike',
+  shareHeader: 'My top {n} OnlyFans lookalike matches from findbyface.org:',
+  shareFooter: 'Find yours free at https://findbyface.org',
+  shareMatchTag: ' — {pct}% match',
+  copied: 'Copied!',
+  copyTop10: 'Copy top 10',
+  copyTitle: 'Copy your top 10 closest matches',
+  copyTitleSignIn: 'Sign in free to copy your top 10 matches',
+  historyPhotoSearch: 'Photo search',
+  historyTopMatch: 'Photo search · top match {name}',
+  historyPornstar: 'Pornstar face search',
+};
+
+const esClient: Record<keyof typeof enClient, string> = {
+  errLoadFaceApi: 'No se pudo cargar face-api.js — revisa tu conexión',
+  psUnavailable: 'La búsqueda de videos de actrices no está disponible temporalmente.',
+  psTimeoutKeepOF: 'La búsqueda de videos expiró. Tus resultados de OnlyFans siguen disponibles.',
+  psUnavailableKeepOF: 'La búsqueda de videos no está disponible temporalmente. Tus resultados de OnlyFans siguen disponibles.',
+  psResultsUnavailable: 'Los resultados de video no estuvieron disponibles para esta búsqueda.',
+  loadingModels: 'Cargando modelos de detección facial (la primera vez puede tardar ~15s)...',
+  detectingFace: 'Detectando el rostro en tu foto...',
+  searchingBoth: 'Buscando perfiles de creadoras y videos indexados...',
+  searchingVideos: 'Buscando videos indexados...',
+  ofUnavailable: 'La búsqueda de creadoras de OnlyFans no estuvo disponible.',
+  searchingOF: 'Buscando perfiles de creadoras de OnlyFans...',
+  noFaceDetected: 'El buscador de OnlyFans no pudo detectar un rostro en esta imagen.',
+  imageDecodeFailed: 'No se pudo leer la imagen — prueba con otra foto.',
+  analyzingOF: 'Analizando tu imagen en el índice de creadoras de OnlyFans.',
+  analyzingAll: 'Analizando tu imagen en perfiles de creadoras y videos indexados.',
+  searchFailed: 'La búsqueda falló — inténtalo de nuevo',
+  lockedCreatorAlt: 'Creadora bloqueada',
+  unlockBtn: '🔓 Desbloquear',
+  viewProfile: 'Ver perfil',
+  free: 'GRATIS',
+  matchWord: 'match',
+  indexedVideoMatch: 'Video indexado coincidente',
+  similarityPct: '{pct}% de similitud',
+  rankedMatch: 'Coincidencia clasificada',
+  supportOne: '1 rostro de apoyo',
+  supportMany: '{n} rostros de apoyo',
+  openSourceVideo: 'Abrir video original ↗',
+  unavailable: '(no disponible)',
+  videoMatchOne: 'coincidencia de video',
+  videoMatchMany: 'coincidencias de video',
+  videosIndexed: '{v} videos indexados',
+  noVideoMatches: 'No se encontraron apariciones en video en el índice actual. Prueba con otra imagen nítida.',
+  yourMatches: 'Tus coincidencias',
+  noOFMatches: 'No se encontraron perfiles de creadoras de OnlyFans coincidentes. Prueba con una foto más nítida y de frente.',
+  restoreFailed: 'No se pudo restaurar tu búsqueda guardada. Sube la foto de nuevo.',
+  unlockedMatches: 'Tus coincidencias desbloqueadas',
+  unlockedNotice: 'Desbloqueado — tus resultados originales están listos para explorar.',
+  loadMoreOne: 'Cargar 1 coincidencia más',
+  loadMoreMany: 'Cargar {n} coincidencias más',
+  showing: 'Mostrando {shown} de {total} coincidencias',
+  moreLocked: '🔒 <strong>Hay más coincidencias bloqueadas</strong> — inicia sesión gratis para ver todas',
+  shareHeader: 'Mis {n} mejores parecidos de OnlyFans según findbyface.org:',
+  shareFooter: 'Encuentra los tuyos gratis en https://findbyface.org',
+  shareMatchTag: ' — {pct}% match',
+  copied: '¡Copiado!',
+  copyTop10: 'Copiar top 10',
+  copyTitle: 'Copia tus 10 coincidencias más cercanas',
+  copyTitleSignIn: 'Inicia sesión gratis para copiar tu top 10',
+  historyPhotoSearch: 'Búsqueda por foto',
+  historyTopMatch: 'Búsqueda por foto · mejor coincidencia {name}',
+  historyPornstar: 'Búsqueda facial de actrices',
+};
+
+const CLIENT = lang === 'es' ? esClient : enClient;
 ---
 
 <!-- Terms of Use Modal -->
 <div id="termsModal" class="auth-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="termsTitle">
   <div class="auth-backdrop" id="termsBackdrop"></div>
   <div class="auth-box terms-box">
-    <button class="auth-close" id="termsClose" aria-label="Close">×</button>
-    <h3 id="termsTitle">User Agreement and Terms of Use</h3>
-    <p class="terms-intro">By using our image search feature, I confirm that:</p>
+    <button class="auth-close" id="termsClose" aria-label={C.close}>×</button>
+    <h3 id="termsTitle">{C.termsTitle}</h3>
+    <p class="terms-intro">{C.termsIntro}</p>
     <div class="terms-scroll">
       <ul class="terms-list">
-        <li>I am at least <strong>18 years of age</strong> or older</li>
-        <li><strong>NOT</strong> use search results to approach or confront individuals</li>
-        <li><strong>NOT</strong> engage in harassment of any person identified in search results</li>
-        <li><strong>NEVER</strong> upload images of minors (under 18 years of age)</li>
-        <li><strong>NOT</strong> follow, monitor, or stalk any individual</li>
-        <li><strong>NOT</strong> attempt to extort, threaten, or blackmail any person</li>
-        <li><strong>NOT</strong> utilize any information in ways that would require findbyface to obtain special licensing or reporting status with government entities</li>
-        <li><strong>NOT</strong> use search results for employment screening, housing decisions, lending evaluations, or insurance assessments</li>
-        <li><strong>NOT</strong> employ this service for any illegal purpose or activity</li>
-        <li>I confirm I am <strong>NOT</strong> a resident or citizen of any European Union country</li>
-        <li>I confirm full compliance with all laws and regulations applicable in my jurisdiction</li>
-        <li>I acknowledge that my jurisdiction permits the use of facial recognition search technology</li>
+        {C.termsList.map(item => <li set:html={item} />)}
       </ul>
-      <p class="terms-section"><strong>Accuracy Disclaimer:</strong> findbyface provides no guarantees regarding the accuracy, reliability, or completeness of information presented on this website. All search results and content are provided "as is" without any warranty of any kind.</p>
-      <p class="terms-section"><strong>Comprehensive Liability Release:</strong> By using this service, I hereby fully and permanently release, waive, and discharge findbyface, along with its parent organization, affiliated companies, subsidiaries, owners, investors, executives, directors, staff members, contractors, and representatives from any and all claims, liabilities, actions, demands, damages, costs, losses, legal proceedings, and judgments of any nature whatsoever, whether currently known or discovered in the future, that may arise from or relate to my use of findbyface services, including but not limited to search results, content accuracy, or data processing. I explicitly waive any legal rights or protections under any jurisdiction's laws that might otherwise limit the scope or effectiveness of this comprehensive release.</p>
-      <p class="terms-section">By clicking "Agree and Search," I acknowledge that I have read, understood, and consent to be legally bound by all terms outlined above.</p>
+      <p class="terms-section" set:html={C.termsAccuracy} />
+      <p class="terms-section" set:html={C.termsRelease} />
+      <p class="terms-section">{C.termsAcknowledge}</p>
     </div>
     <label class="terms-check-label">
       <input type="checkbox" id="termsCheckbox" />
-      I understand and agree to the terms
+      {C.termsCheck}
     </label>
     <div class="terms-actions">
-      <button class="terms-cancel-btn" id="termsCancelBtn">Cancel</button>
-      <button class="terms-agree-btn" id="termsAgreeBtn" disabled>Agree and Search</button>
+      <button class="terms-cancel-btn" id="termsCancelBtn">{C.termsCancel}</button>
+      <button class="terms-agree-btn" id="termsAgreeBtn" disabled>{C.termsAgree}</button>
     </div>
   </div>
 </div>
@@ -54,10 +300,10 @@ const rouletteSrcs = await getRouletteAvatars(
 <div id="authModal" class="auth-modal" style="display:none" role="dialog" aria-modal="true">
   <div class="auth-backdrop" id="authBackdrop"></div>
   <div class="auth-box">
-    <button class="auth-close" id="authClose" aria-label="Close">×</button>
+    <button class="auth-close" id="authClose" aria-label={C.close}>×</button>
     <div class="auth-icon-wrap">🔍</div>
-    <h3>You've used your 2 free searches</h3>
-    <p>Sign in free to unlock unlimited searches and see all matching profiles.</p>
+    <h3>{C.authTitle}</h3>
+    <p>{C.authSub}</p>
     <a id="googleAuthBtn" href="#" class="google-btn">
       <svg viewBox="0 0 24 24" width="20" height="20" style="flex-shrink:0" aria-hidden="true">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -65,32 +311,32 @@ const rouletteSrcs = await getRouletteAvatars(
         <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
         <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
       </svg>
-      Continue with Google — it's free
+      {C.authGoogle}
     </a>
-    <button class="auth-skip" id="authSkip">Maybe later</button>
+    <button class="auth-skip" id="authSkip">{C.authSkip}</button>
   </div>
 </div>
 
 <div class:list={["upload-section", { "onlyfans-mode": searchMode === 'onlyfans' }]} id="onlyfans-finder" data-search-mode={searchMode}>
-  {searchMode === 'all' ? <div class="finder-tabs" role="group" aria-label="Choose which sources to search">
+  {searchMode === 'all' ? <div class="finder-tabs" role="group" aria-label={C.tabsAria}>
     <button type="button" class="finder-tab" id="sourceTabAll">
       <span class="finder-tab-icon" aria-hidden="true">✦</span>
-      <span>All</span>
+      <span>{C.tabAll}</span>
     </button>
     <button type="button" class="finder-tab" id="sourceTabPornstars" aria-pressed="true">
       <span class="finder-tab-icon" aria-hidden="true">▶</span>
-      <span>Pornstars</span>
+      <span>{C.tabPornstars}</span>
     </button>
     <button type="button" class="finder-tab" id="sourceTabOnlyfans" aria-pressed="true">
       <span class="finder-tab-icon" aria-hidden="true">♡</span>
-      <span>OnlyFans</span>
+      <span>{C.tabOnlyfans}</span>
     </button>
     <button type="button" class="finder-tab disabled" id="sourceTabCam" disabled aria-disabled="true">
       <span class="finder-tab-icon" aria-hidden="true">◉</span>
-      <span>Cam</span>
-      <small>Coming soon</small>
+      <span>{C.tabCam}</span>
+      <small>{C.comingSoon}</small>
     </button>
-  </div> : <div class="dedicated-tool-badge"><span aria-hidden="true">♡</span> OnlyFans creator face search</div>}
+  </div> : <div class="dedicated-tool-badge"><span aria-hidden="true">♡</span> {C.dedicatedBadge}</div>}
   <div class="upload-box" id="uploadBox">
 
     <!-- State 1: Idle -->
@@ -98,24 +344,24 @@ const rouletteSrcs = await getRouletteAvatars(
       <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
         <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <h3>{searchMode === 'onlyfans' ? 'Search OnlyFans creators by photo' : 'Search every live index by photo'}</h3>
-      <p>{searchMode === 'onlyfans' ? 'Upload one clear adult face and our AI will rank the closest creator profile matches' : 'Upload one clear adult face to search matching videos and creator profiles together'}</p>
-      <button class="choose-btn" id="chooseBtn">Choose photo</button>
-      <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" style="display:none" aria-label="Upload photo" />
-      <p class="upload-hint">JPG · PNG · WEBP &nbsp;·&nbsp; Ctrl+V to paste</p>
+      <h3>{searchMode === 'onlyfans' ? C.idleTitleOnlyfans : C.idleTitleAll}</h3>
+      <p>{searchMode === 'onlyfans' ? C.idleSubOnlyfans : C.idleSubAll}</p>
+      <button class="choose-btn" id="chooseBtn">{C.choosePhoto}</button>
+      <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" style="display:none" aria-label={C.uploadPhotoAria} />
+      <p class="upload-hint" set:html={C.uploadHint} />
     </div>
 
     <!-- State 2: Scanning -->
     <div id="uploadScanning" style="display:none" class="scanning-state">
       <div class="scan-stage">
         <div class="scanning-img-box">
-          <img id="scanningImg" alt="Your photo being analyzed" />
+          <img id="scanningImg" alt={C.scanningAlt} />
           <div class="scan-line"></div>
           <span class="scan-bracket tl"></span>
           <span class="scan-bracket tr"></span>
           <span class="scan-bracket bl"></span>
           <span class="scan-bracket br"></span>
-          <span class="scan-tag">Your photo</span>
+          <span class="scan-tag">{C.yourPhoto}</span>
         </div>
 
         <div class="scan-connector">
@@ -144,33 +390,33 @@ const rouletteSrcs = await getRouletteAvatars(
               )
             : <div class="roulette-placeholder"></div>}
           <span class="roulette-ring"></span>
-          <span class="scan-tag">Matching…</span>
+          <span class="scan-tag">{C.matching}</span>
         </div>
       </div>
 
-      <p class="scanning-title">findbyface is searching</p>
-      <p class="scanning-sub">{searchMode === 'onlyfans' ? 'Analyzing your image across the OnlyFans creator index.' : 'Analyzing your image across creator profiles and indexed adult videos.'}</p>
+      <p class="scanning-title">{C.scanningTitle}</p>
+      <p class="scanning-sub">{searchMode === 'onlyfans' ? C.scanningSubOnlyfans : C.scanningSubAll}</p>
 
       <div class="progress-track">
         <div class="progress-fill"></div>
       </div>
 
-      <p class="scan-counter" id="scanCounter">Compared with <strong>0</strong> indexed faces</p>
+      <p class="scan-counter" id="scanCounter" set:html={C.scanCounter} />
 
       <div class="scan-steps" id="scanSteps">
-        <span class="scan-step active" data-step="0"><i class="step-mark"></i>Detecting face</span>
-        <span class="scan-step" data-step="1"><i class="step-mark"></i>Mapping landmarks</span>
-        <span class="scan-step" data-step="2"><i class="step-mark"></i>Searching live indexes</span>
-        <span class="scan-step" data-step="3"><i class="step-mark"></i>Ranking matches</span>
+        <span class="scan-step active" data-step="0"><i class="step-mark"></i>{C.stepDetect}</span>
+        <span class="scan-step" data-step="1"><i class="step-mark"></i>{C.stepLandmarks}</span>
+        <span class="scan-step" data-step="2"><i class="step-mark"></i>{C.stepIndexes}</span>
+        <span class="scan-step" data-step="3"><i class="step-mark"></i>{C.stepRanking}</span>
       </div>
     </div>
 
     <!-- State 3: Done -->
     <div id="uploadDone" style="display:none" class="done-state">
-      <img id="thumbnailImg" class="thumbnail-img" alt="Searched photo" />
+      <img id="thumbnailImg" class="thumbnail-img" alt={C.doneAlt} />
       <div class="done-info">
-        <p class="done-label">Searched image</p>
-        <button class="new-search-btn" id="newSearchBtn">← New Search</button>
+        <p class="done-label">{C.doneLabel}</p>
+        <button class="new-search-btn" id="newSearchBtn">{C.newSearch}</button>
       </div>
     </div>
 
@@ -195,12 +441,12 @@ const rouletteSrcs = await getRouletteAvatars(
 <div id="faceResults" class="face-results" style="display:none">
   <div class="results-header">
     <div>
-      <span class="results-source-label">{searchMode === 'onlyfans' ? 'OnlyFans face search' : 'All-source face search'}</span>
-      <h2 class="results-heading">Your matches</h2>
+      <span class="results-source-label">{searchMode === 'onlyfans' ? C.sourceLabelOnlyfans : C.sourceLabelAll}</span>
+      <h2 class="results-heading">{C.yourMatches}</h2>
     </div>
-    <button id="copyResultsBtn" class="copy-results-btn" type="button" title="Copy your top 10 closest matches">
+    <button id="copyResultsBtn" class="copy-results-btn" type="button" title={C.copyTitle}>
       <span class="copy-ico" aria-hidden="true">📋</span>
-      <span class="copy-label">Copy top 10</span>
+      <span class="copy-label">{C.copyTop10}</span>
     </button>
   </div>
   <div id="onlyfansResultsPanel" class="result-source-panel">
@@ -209,35 +455,43 @@ const rouletteSrcs = await getRouletteAvatars(
     <div id="shareCta" class="share-cta" style="display:none">
       <span class="share-cta-step">1</span>
       <span class="share-cta-arrow" aria-hidden="true">→</span>
-      <p class="share-cta-text">Matches copied! Now paste &amp; share your results on Reddit</p>
+      <p class="share-cta-text" set:html={C.shareCta} />
       <a id="shareRedditBtn" href="https://www.reddit.com/r/OnlyfansReviewsCenter/submit" target="_blank" rel="noopener" class="share-reddit-btn">
-        <span aria-hidden="true">👽</span> Post to Reddit
+        <span aria-hidden="true">👽</span> {C.postToReddit}
       </a>
     </div>
     <div id="faceResultsGrid" class="face-results-grid"></div>
     <div id="faceLoadMoreWrap" class="face-load-more-wrap" style="display:none">
-      <button id="faceLoadMoreBtn" class="face-load-more-btn" type="button">Load 12 more matches</button>
+      <button id="faceLoadMoreBtn" class="face-load-more-btn" type="button">{C.loadMore12}</button>
       <p id="faceResultsCount" class="face-results-count"></p>
     </div>
     <div id="unlockBanner" class="unlock-banner" style="display:none">
-      <p id="unlockBannerText">🔒 <strong>8 more matches found</strong> — sign in free to see all</p>
+      <p id="unlockBannerText" set:html={C.unlockBanner} />
       <div class="unlock-banner-actions">
-        <a id="unlockBannerBtn" href="/signup/" class="unlock-banner-btn">Create free account</a>
-        <a id="unlockLoginBtn" href="/login/" class="unlock-login-btn">Log in</a>
+        <a id="unlockBannerBtn" href={lang === 'es' ? '/es/signup/' : '/signup/'} class="unlock-banner-btn">{C.createFreeAccount}</a>
+        <a id="unlockLoginBtn" href={lang === 'es' ? '/es/login/' : '/login/'} class="unlock-login-btn">{C.logIn}</a>
       </div>
     </div>
   </div>
   <div id="pornstarResultsPanel" class="result-source-panel" hidden>
-    <h3 class="result-panel-heading">▶ Pornstars <span id="pornstarResultCount"></span></h3>
+    <h3 class="result-panel-heading">▶ {C.pornstarsHeading} <span id="pornstarResultCount"></span></h3>
     <div id="pornstarPanelNotice" class="result-panel-notice" style="display:none"></div>
     <div id="pornstarResultsMeta" class="video-results-meta"></div>
     <div id="pornstarResultsGrid" class="video-results-grid"></div>
   </div>
 </div>
 
+<script type="application/json" id="i18nUploadBox" set:html={JSON.stringify(CLIENT)} />
+
 <script>
   import { currentAccountId, newSearchHistoryId, saveAccountSearchHistoryForOwner, scopedSearchHistoryKey } from '../lib/accountSearchHistory';
   import { initCardClickThrough } from '../lib/cardClickThrough';
+
+  // Locale strings server-rendered into the JSON block above (see frontmatter CLIENT).
+  const T = JSON.parse(document.getElementById('i18nUploadBox')!.textContent!) as Record<string, string>;
+  const fmtT = (s: string, v: Record<string, string | number> = {}) =>
+    s.replace(/\{(\w+)\}/g, (_, k: string) => String(v[k] ?? ''));
+  const langPrefix = document.documentElement.lang === 'es' ? '/es' : '';
   import { creatorCardDataAttributes } from '../lib/creatorCardUi';
 
   type HomepageVideoResult = {
@@ -354,7 +608,7 @@ const rouletteSrcs = await getRouletteAvatars(
     if (searchMode !== 'all') return;
     const turnstile = (window as typeof window & { turnstile?: any }).turnstile;
     if (!turnstile || !TURNSTILE_SITE_KEY || turnstileWidgetId) return;
-    turnstileWidgetId = turnstile.render('#uploadBoxTurnstile', { sitekey: TURNSTILE_SITE_KEY });
+    turnstileWidgetId = turnstile.render('#uploadBoxTurnstile', { sitekey: TURNSTILE_SITE_KEY, language: document.documentElement.lang || 'en' });
   }
   // The ready-queue script only exists at all when searchMode === 'all' (see the markup above)
   // — renderTurnstile() itself also no-ops for 'onlyfans' mode, so this stays consistent.
@@ -389,7 +643,7 @@ const rouletteSrcs = await getRouletteAvatars(
   }
 
   function authHref(path: '/signup/' | '/login/'): string {
-    return `${path}?next=${encodeURIComponent(faceResultsReturnPath())}`;
+    return `${langPrefix}${path}?next=${encodeURIComponent(faceResultsReturnPath())}`;
   }
 
   function configureUnlockLinks(): void {
@@ -457,7 +711,7 @@ const rouletteSrcs = await getRouletteAvatars(
     const entry = {
       id: clientSearchId,
       type: 'image',
-      label: topName ? `Photo search · top match ${topName}` : 'Photo search',
+      label: topName ? fmtT(T.historyTopMatch, { name: topName }) : T.historyPhotoSearch,
       count: results.length,
       date: new Date().toISOString(),
       results: saved,
@@ -498,7 +752,7 @@ const rouletteSrcs = await getRouletteAvatars(
     void saveAccountSearchHistoryForOwner(ownerAccountId, {
       clientSearchId: newSearchHistoryId('video_face'),
       searchType: 'video_face',
-      label: 'Pornstar face search',
+      label: T.historyPornstar,
       resultCount: payload.results?.length ?? 0,
       filters: {
         indexedVideos: payload.indexedVideos ?? 0,
@@ -645,7 +899,7 @@ const rouletteSrcs = await getRouletteAvatars(
         const s = document.createElement('script');
         s.src = '/face-api.js';
         s.onload = () => resolve();
-        s.onerror = () => reject(new Error('Failed to load face-api.js — check your connection'));
+        s.onerror = () => reject(new Error(T.errLoadFaceApi));
         document.head.appendChild(s);
       });
     }
@@ -732,7 +986,7 @@ const rouletteSrcs = await getRouletteAvatars(
         return {
           ...payload,
           ok: false,
-          error: payload.error || 'Pornstar video search is temporarily unavailable.',
+          error: payload.error || T.psUnavailable,
         };
       }
       return payload;
@@ -740,8 +994,8 @@ const rouletteSrcs = await getRouletteAvatars(
       return {
         ok: false,
         error: error instanceof DOMException && error.name === 'AbortError'
-          ? 'Pornstar video search timed out. Your OnlyFans results are still available.'
-          : 'Pornstar video search is temporarily unavailable. Your OnlyFans results are still available.',
+          ? T.psTimeoutKeepOF
+          : T.psUnavailableKeepOF,
       };
     } finally {
       window.clearTimeout(timeout);
@@ -784,7 +1038,7 @@ const rouletteSrcs = await getRouletteAvatars(
 
       if (wantsOnlyfans) {
         // Phase 1: load models
-        setProgressLabel('Loading face detection models (first load may take ~15s)...');
+        setProgressLabel(T.loadingModels);
         let faceapi: any;
         try {
           faceapi = await loadFaceApi();
@@ -794,10 +1048,10 @@ const rouletteSrcs = await getRouletteAvatars(
         }
 
         // Phase 2: detect face
-        setProgressLabel('Detecting face in your photo...');
+        setProgressLabel(T.detectingFace);
         const img = new Image();
         img.src = dataUrl;
-        await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error('Image failed to decode')); });
+        await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error(T.imageDecodeFailed)); });
 
         let descriptor: Float32Array | null;
         try {
@@ -807,13 +1061,13 @@ const rouletteSrcs = await getRouletteAvatars(
         }
 
         if (!descriptor) {
-          throw new Error('The OnlyFans matcher could not detect a face in this image.');
+          throw new Error(T.noFaceDetected);
         }
 
         // Phase 3: search API
         setProgressLabel(wantsPornstars
-          ? 'Searching creator profiles and indexed videos...'
-          : 'Searching OnlyFans creator profiles...');
+          ? T.searchingBoth
+          : T.searchingOF);
         try {
           const resp = await fetch('/api/face-search', {
             method: 'POST',
@@ -829,7 +1083,7 @@ const rouletteSrcs = await getRouletteAvatars(
           throw new Error(`Search API failed: ${e?.message ?? e}`);
         }
       } else {
-        setProgressLabel('Searching indexed videos...');
+        setProgressLabel(T.searchingVideos);
       }
 
       const pornstarData = await pornstarSearch;
@@ -838,9 +1092,7 @@ const rouletteSrcs = await getRouletteAvatars(
       stopScanFX();
       uploadScanning.style.display = 'none';
       uploadDone.style.display = 'flex';
-      setProgressLabel(searchMode === 'onlyfans'
-        ? 'Analyzing your image across the OnlyFans creator index.'
-        : 'Analyzing your image across creator profiles and indexed adult videos.');
+      setProgressLabel(searchMode === 'onlyfans' ? T.analyzingOF : T.analyzingAll);
       const results = data.results ?? [];
       const topName = results[0] ? ((results[0].name || results[0].username) as string) : undefined;
       // Each requested source owns exactly one history record. In video-only mode
@@ -858,19 +1110,17 @@ const rouletteSrcs = await getRouletteAvatars(
       const pornstarData = await pornstarSearch;
       stopScanFX();
       uploadScanning.style.display = 'none';
-      setProgressLabel(searchMode === 'onlyfans'
-        ? 'Analyzing your image across the OnlyFans creator index.'
-        : 'Analyzing your image across creator profiles and indexed adult videos.');
+      setProgressLabel(searchMode === 'onlyfans' ? T.analyzingOF : T.analyzingAll);
       const msg = err?.message ?? String(err);
       if (wantsPornstars && pornstarData.ok) {
         // The creator lookup may fail independently while the video lookup completes.
         // Preserve the successful source without creating a bogus creator entry.
         recordVideoSearchHistory(pornstarData, searchOwnerId);
         uploadDone.style.display = 'flex';
-        showResults([], undefined, pornstarData, msg.length > 10 ? msg : 'OnlyFans creator search was unavailable.', wantsOnlyfans, wantsPornstars);
+        showResults([], undefined, pornstarData, msg.length > 10 ? msg : T.ofUnavailable, wantsOnlyfans, wantsPornstars);
       } else {
         uploadIdle.style.display = 'flex';
-        uploadError.textContent = msg.length > 10 ? msg : 'Search failed — please try again';
+        uploadError.textContent = msg.length > 10 ? msg : T.searchFailed;
         uploadError.style.display = 'block';
       }
       console.error('[findbyface] handleFile error:', err);
@@ -891,10 +1141,11 @@ const rouletteSrcs = await getRouletteAvatars(
     const avatar = c.avatar as string;
     const imgSrc = avatar?.startsWith('/') ? avatar : avatar?.startsWith('http') ? proxyImg(avatar, 320, 427) : '/no-image.png';
     const price = (c.subscribePrice ?? c.subscribeprice) as number;
-    const priceLabel = (!price || isNaN(Number(price))) ? 'FREE' : `$${parseFloat(String(price)).toFixed(2)}`;
+    const priceIsFree = (!price || isNaN(Number(price)));
+    const priceLabel = priceIsFree ? T.free : `$${parseFloat(String(price)).toFixed(2)}`;
     const matchPct = c.matchPct != null ? (c.matchPct as number) : null;
     const matchBadge = matchPct != null && matchPct > 0
-      ? `<span class="match-badge"><strong>${matchPct}%</strong><span>match</span></span>`
+      ? `<span class="match-badge"><strong>${matchPct}%</strong><span>${T.matchWord}</span></span>`
       : '';
     const isSponsored = !!c.sponsored;
     const profileUrl = (c.profileUrl as string) || `https://onlyfans.com/${encodeURIComponent(c.username as string)}`;
@@ -907,19 +1158,19 @@ const rouletteSrcs = await getRouletteAvatars(
       const unlockHref = authHref('/signup/');
       return `<div class="creator-card locked" data-href="${unlockHref}">
         <div class="card-img-wrap">
-          <img src="${imgSrc}" alt="Locked creator" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+          <img src="${imgSrc}" alt="${T.lockedCreatorAlt}" loading="lazy" decoding="async" referrerpolicy="no-referrer"
             style="filter:blur(10px);transform:scale(1.08);"
             onerror="this.onerror=null;this.src='/no-image.png';">
           ${matchBadge}
           <div class="lock-overlay">
-            <a class="unlock-btn" href="${unlockHref}">🔓 Unlock</a>
+            <a class="unlock-btn" href="${unlockHref}">${T.unlockBtn}</a>
           </div>
         </div>
         <div class="card-body locked-body">
           <p class="creator-name">••••• •••••</p>
           <p class="username">@••••••••</p>
           <p class="price">${priceLabel}</p>
-          <div class="view-btn-locked">View Profile</div>
+          <div class="view-btn-locked">${T.viewProfile}</div>
         </div>
       </div>`;
     }
@@ -935,8 +1186,8 @@ const rouletteSrcs = await getRouletteAvatars(
       <div class="card-body">
         <p class="creator-name">${(c.name || c.username) as string}</p>
         <p class="username">@${c.username as string}</p>
-        <p class="price ${priceLabel === 'FREE' ? 'price-free' : ''}">${priceLabel}</p>
-        <a href="${profileUrl}" class="view-btn" target="_blank" rel="${rel}">View Profile</a>
+        <p class="price ${priceIsFree ? 'price-free' : ''}">${priceLabel}</p>
+        <a href="${profileUrl}" class="view-btn" target="_blank" rel="${rel}">${T.viewProfile}</a>
       </div>
     </div>`;
   }
@@ -989,11 +1240,11 @@ const rouletteSrcs = await getRouletteAvatars(
     const body = document.createElement('div');
     body.className = 'home-video-body';
     const title = document.createElement('h3');
-    title.textContent = result.title || 'Indexed video match';
+    title.textContent = result.title || T.indexedVideoMatch;
     body.appendChild(title);
     const metrics = document.createElement('p');
-    const similarity = Number.isFinite(result.similarity) ? `${(result.similarity * 100).toFixed(1)}% similarity` : 'Ranked match';
-    const evidence = `${result.supportingEmbeddings || 0} supporting face${result.supportingEmbeddings === 1 ? '' : 's'}`;
+    const similarity = Number.isFinite(result.similarity) ? fmtT(T.similarityPct, { pct: (result.similarity * 100).toFixed(1) }) : T.rankedMatch;
+    const evidence = result.supportingEmbeddings === 1 ? T.supportOne : fmtT(T.supportMany, { n: result.supportingEmbeddings || 0 });
     metrics.textContent = `${similarity} · ${evidence}`;
     body.appendChild(metrics);
     if (hasSource) {
@@ -1002,7 +1253,7 @@ const rouletteSrcs = await getRouletteAvatars(
       source.target = '_blank';
       source.rel = 'noopener noreferrer';
       source.className = 'home-video-source';
-      source.textContent = 'Open source video ↗';
+      source.textContent = T.openSourceVideo;
       body.appendChild(source);
     }
     card.appendChild(body);
@@ -1013,16 +1264,16 @@ const rouletteSrcs = await getRouletteAvatars(
     const results = payload.results ?? [];
     pornstarResultsGrid.replaceChildren();
     pornstarPanelNotice.style.display = 'none';
-    pornstarResultCount.textContent = payload.ok ? `(${results.length})` : '(unavailable)';
+    pornstarResultCount.textContent = payload.ok ? `(${results.length})` : T.unavailable;
     if (!payload.ok) {
-      pornstarPanelNotice.textContent = payload.error || 'Pornstar video search is temporarily unavailable.';
+      pornstarPanelNotice.textContent = payload.error || T.psUnavailable;
       pornstarPanelNotice.style.display = 'block';
       pornstarResultsMeta.textContent = '';
       return;
     }
-    pornstarResultsMeta.textContent = `${results.length} video match${results.length === 1 ? '' : 'es'} · ${(payload.indexedVideos ?? 0).toLocaleString()} videos indexed · ${(payload.elapsedSeconds ?? 0).toFixed(1)}s`;
+    pornstarResultsMeta.textContent = `${results.length} ${results.length === 1 ? T.videoMatchOne : T.videoMatchMany} · ${fmtT(T.videosIndexed, { v: (payload.indexedVideos ?? 0).toLocaleString() })} · ${(payload.elapsedSeconds ?? 0).toFixed(1)}s`;
     if (results.length === 0) {
-      pornstarPanelNotice.textContent = 'No matching video appearances were found in the current index. Try another clear frame.';
+      pornstarPanelNotice.textContent = T.noVideoMatches;
       pornstarPanelNotice.style.display = 'block';
       return;
     }
@@ -1044,7 +1295,7 @@ const rouletteSrcs = await getRouletteAvatars(
   ): void {
     const heading = document.querySelector('.results-heading') as HTMLElement | null;
     if (heading) {
-      heading.textContent = 'Your matches';
+      heading.textContent = T.yourMatches;
     }
     allFaceResults = results;
     currentFaceSearchMode = mode;
@@ -1055,16 +1306,16 @@ const rouletteSrcs = await getRouletteAvatars(
     updateCopyBtn();
     configureUnlockLinks();
     if (!isSignedIn()) savePendingFaceResults();
-    onlyfansResultCount.textContent = onlyfansError ? '(unavailable)' : `(${results.length})`;
+    onlyfansResultCount.textContent = onlyfansError ? T.unavailable : `(${results.length})`;
     onlyfansPanelNotice.style.display = onlyfansError || results.length === 0 ? 'block' : 'none';
     onlyfansPanelNotice.textContent = onlyfansError || (results.length === 0
-      ? 'No matching OnlyFans creator profiles were found. Try a clearer, front-facing photo.'
+      ? T.noOFMatches
       : '');
     onlyfansResultsPanel.hidden = !wantsOnlyfans;
     copyResultsBtn.style.display = wantsOnlyfans ? 'inline-flex' : 'none';
 
     if (searchMode === 'all' && wantsPornstars) {
-      renderPornstarResults(pornstarPayload ?? { ok: false, error: 'Pornstar video results were unavailable for this search.' });
+      renderPornstarResults(pornstarPayload ?? { ok: false, error: T.psResultsUnavailable });
       pornstarResultsPanel.hidden = false;
     } else {
       pornstarResultsPanel.hidden = true;
@@ -1089,7 +1340,7 @@ const rouletteSrcs = await getRouletteAvatars(
 
     if (!valid || !pending) {
       try { localStorage.removeItem(PENDING_FACE_RESULTS_KEY); } catch { /* noop */ }
-      uploadError.textContent = 'Your saved search could not be restored. Please upload the photo again.';
+      uploadError.textContent = T.restoreFailed;
       uploadError.style.display = 'block';
       return;
     }
@@ -1103,8 +1354,8 @@ const rouletteSrcs = await getRouletteAvatars(
     updateFaceResultsUI();
 
     const heading = document.querySelector('.results-heading') as HTMLElement | null;
-    if (heading) heading.textContent = 'Your unlocked matches';
-    onlyfansPanelNotice.textContent = 'Unlocked — your original face-search results are ready to explore.';
+    if (heading) heading.textContent = T.unlockedMatches;
+    onlyfansPanelNotice.textContent = T.unlockedNotice;
     onlyfansPanelNotice.style.display = 'block';
 
     const topName = pending.results[0]
@@ -1145,12 +1396,12 @@ const rouletteSrcs = await getRouletteAvatars(
     if (faceShownCount < total) {
       const remaining = total - faceShownCount;
       const nextBatch = Math.min(FACE_PAGE_SIZE, remaining);
-      faceLoadMoreBtn.textContent = `Load ${nextBatch} more match${nextBatch === 1 ? '' : 'es'}`;
+      faceLoadMoreBtn.textContent = nextBatch === 1 ? T.loadMoreOne : fmtT(T.loadMoreMany, { n: nextBatch });
       faceLoadMoreWrap.style.display = 'flex';
     } else {
       faceLoadMoreWrap.style.display = 'none';
     }
-    faceResultsCount.textContent = `Showing ${faceShownCount} of ${total} matches`;
+    faceResultsCount.textContent = fmtT(T.showing, { shown: faceShownCount, total });
 
     const shownRegularResults = allFaceResults
       .slice(0, faceShownCount)
@@ -1159,7 +1410,7 @@ const rouletteSrcs = await getRouletteAvatars(
 
     // Unlock banner: shown once a locked regular result has been rendered.
     if (!signedIn && shownRegularResults > FREE_REGULAR_RESULT_COUNT) {
-      unlockBannerText.innerHTML = `🔒 <strong>More matches are locked</strong> — sign in free to reveal every lookalike`;
+      unlockBannerText.innerHTML = T.moreLocked;
       unlockBanner.style.display = 'flex';
     } else {
       unlockBanner.style.display = 'none';
@@ -1178,10 +1429,10 @@ const rouletteSrcs = await getRouletteAvatars(
       const name = (c.name || c.username) as string;
       const handle = c.username as string;
       const matchPct = c.matchPct != null ? (c.matchPct as number) : null;
-      const matchTag = matchPct != null && matchPct > 0 ? ` — ${matchPct}% match` : '';
+      const matchTag = matchPct != null && matchPct > 0 ? fmtT(T.shareMatchTag, { pct: matchPct }) : '';
       return `${i + 1}. ${name} (@${handle})${matchTag}\n   https://onlyfans.com/${handle}`;
     });
-    return `My top ${top.length} OnlyFans lookalike matches from findbyface.org:\n\n${lines.join('\n')}\n\nFind yours free at https://findbyface.org`;
+    return `${fmtT(T.shareHeader, { n: top.length })}\n\n${lines.join('\n')}\n\n${T.shareFooter}`;
   }
 
   copyResultsBtn?.addEventListener('click', async () => {
@@ -1194,7 +1445,7 @@ const rouletteSrcs = await getRouletteAvatars(
 
     const text = buildTop10Text();
     const labelEl = copyResultsBtn.querySelector('.copy-label') as HTMLElement | null;
-    const original = labelEl?.textContent ?? 'Copy top 10';
+    const original = labelEl?.textContent ?? T.copyTop10;
 
     try {
       await navigator.clipboard.writeText(text);
@@ -1211,7 +1462,7 @@ const rouletteSrcs = await getRouletteAvatars(
     }
 
     copyResultsBtn.classList.add('copied');
-    if (labelEl) labelEl.textContent = 'Copied!';
+    if (labelEl) labelEl.textContent = T.copied;
     if (shareCta) {
       shareCta.style.display = 'flex';
       shareCta.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1227,12 +1478,12 @@ const rouletteSrcs = await getRouletteAvatars(
     const labelEl = copyResultsBtn.querySelector('.copy-label') as HTMLElement | null;
     if (isSignedIn()) {
       copyResultsBtn.classList.remove('locked');
-      if (labelEl) labelEl.textContent = 'Copy top 10';
-      copyResultsBtn.title = 'Copy your top 10 closest matches';
+      if (labelEl) labelEl.textContent = T.copyTop10;
+      copyResultsBtn.title = T.copyTitle;
     } else {
       copyResultsBtn.classList.add('locked');
-      if (labelEl) labelEl.textContent = 'Copy top 10';
-      copyResultsBtn.title = 'Sign in free to copy your top 10 matches';
+      if (labelEl) labelEl.textContent = T.copyTop10;
+      copyResultsBtn.title = T.copyTitleSignIn;
     }
   }
 

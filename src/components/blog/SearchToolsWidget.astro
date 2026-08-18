@@ -1,29 +1,33 @@
 ---
+import { localeOf, localizePath } from '../../i18n/routes';
+import { t } from '../../i18n/ui';
+
+const lang = localeOf(Astro.url.pathname);
 ---
 
-<aside class="tools-widget" aria-label="Try our search tools">
-  <p class="tools-widget-kicker">Try it yourself</p>
-  <a class="tool-card" href="/onlyfans-finder-by-face/">
+<aside class="tools-widget" aria-label={t(lang, 'blog.toolsAria')}>
+  <p class="tools-widget-kicker">{t(lang, 'blog.tryIt')}</p>
+  <a class="tool-card" href={localizePath('/onlyfans-finder-by-face/', lang)}>
     <span class="tool-icon" aria-hidden="true">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M9 21H5a2 2 0 0 1-2-2v-4M15 21h4a2 2 0 0 0 2-2v-4"/><circle cx="12" cy="12" r="3"/></svg>
     </span>
     <span class="tool-copy">
-      <strong>OnlyFans Finder</strong>
-      <small>Search creator profiles by face</small>
+      <strong>{t(lang, 'blog.toolOF')}</strong>
+      <small>{t(lang, 'blog.toolOFsub')}</small>
     </span>
     <span class="tool-arrow" aria-hidden="true">→</span>
   </a>
-  <a class="tool-card" href="/pornstar-finder-by-face/">
+  <a class="tool-card" href={localizePath('/pornstar-finder-by-face/', lang)}>
     <span class="tool-icon" aria-hidden="true">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
     </span>
     <span class="tool-copy">
-      <strong>Pornstar Finder</strong>
-      <small>Search &amp; find pornstars by face</small>
+      <strong>{t(lang, 'blog.toolPS')}</strong>
+      <small>{t(lang, 'blog.toolPSsub')}</small>
     </span>
     <span class="tool-arrow" aria-hidden="true">→</span>
   </a>
-  <p class="tools-widget-note">Free to start. No account required for your first search.</p>
+  <p class="tools-widget-note">{t(lang, 'blog.toolsNote')}</p>
 </aside>
 
 <style>

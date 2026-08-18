@@ -1,0 +1,87 @@
+---
+{/* i18n-twin: src/pages/about.astro — mirror copy/structure changes */}
+import Base from '../../layouts/Base.astro';
+import { absUrl } from '../../lib/site';
+---
+
+<Base
+  title="Sobre findbyface — Búsqueda Facial con IA para OnlyFans"
+  description="Descubre qué es findbyface, cómo funciona nuestra comparación facial con IA y los principios detrás de nuestro buscador de parecidos privado y gratis."
+  canonical={absUrl('/es/sobre-nosotros/')}
+>
+  <article class="prose-page">
+    <div class="page-head">
+      <h1>Sobre <span class="gradient-text">findbyface</span></h1>
+      <p>La forma más rápida de encontrar creadoras de OnlyFans que se parecen al rostro de cualquier foto.</p>
+    </div>
+
+    <div class="prose">
+      <h2>¿Qué es findbyface?</h2>
+      <p>
+        <strong>findbyface</strong> es un motor de búsqueda de creadoras de OnlyFans, construido de dos
+        maneras. Puedes <a href="/es/buscador-de-onlyfans/">buscar o explorar por nombre y categoría</a>,
+        con resultados ordenados por interacción real, o subir una foto en nuestra
+        <a href="/es/buscador-de-onlyfans-por-cara/">búsqueda facial con IA</a> para encontrar al instante
+        creadoras con rasgos faciales similares — mismos ojos, sonrisa y aspecto general. Está hecho para
+        descubrir: ya sea que viste a alguien en redes sociales, tengas un crush con una celebridad o
+        simplemente quieras encontrar creadoras de tu tipo, te ayudamos a encontrarlas en segundos.
+      </p>
+      <p>
+        También tenemos un <a href="/es/buscador-de-actrices-porno-por-cara/">buscador de actrices</a>
+        aparte, actualmente en beta privada. Sube una foto o captura de video y busca rostros en un índice
+        creciente de videos para adultos, devolviendo coincidencias agrupadas por video y ordenadas por
+        similitud visual — útil para encontrar una escena cuando solo tienes una captura, no un nombre.
+      </p>
+
+      <h2>Cómo funciona</h2>
+      <p>
+        Los resultados de exploración y búsqueda se ordenan por <strong>FindRank</strong>, nuestro ranking
+        basado en interacción — ningún editor humano decide el orden. La búsqueda facial corre en una
+        canalización de IA aparte: cuando subes una foto, un modelo de reconocimiento facial detecta el
+        rostro y lo convierte en un descriptor numérico — una huella matemática de la geometría facial —
+        y luego compara ese descriptor con los perfiles de creadoras para clasificar las coincidencias
+        visuales más cercanas. No se requieren nombres, búsquedas inversas ni datos personales. Para el
+        desglose completo de ambos sistemas, consulta
+        <a href="/es/como-funciona-nuestro-buscador/">cómo funciona nuestro buscador</a>.
+      </p>
+
+      <h2>Colocaciones patrocinadas</h2>
+      <p>
+        findbyface es gratis, en parte porque las creadoras pueden pagar por una colocación específica y
+        divulgada — como la parte superior de una página de categoría. El patrocinio nunca cambia una
+        puntuación de FindRank ni de coincidencia facial y nunca oculta resultados orgánicos; cada tarjeta
+        patrocinada está etiquetada como "Patrocinado" o "Anuncio". Todos los detalles están en la
+        <a href="/es/como-funciona-nuestro-buscador/">página de metodología</a>.
+      </p>
+
+      <h2>Privacidad primero</h2>
+      <p>
+        Tu foto subida se procesa para generar coincidencias y no se almacena ni se comparte. No se
+        requiere cuenta para hacer una búsqueda y no vendemos tus datos. Lee más en nuestra
+        <a href="/es/politica-de-privacidad/">Política de Privacidad</a>.
+      </p>
+
+      <h2>Nota importante sobre los resultados</h2>
+      <p>
+        findbyface devuelve creadoras que <strong>se parecen visualmente</strong> a un rostro subido. Las
+        coincidencias se basan en la apariencia y están pensadas solo para descubrimiento y
+        entretenimiento — <strong>no</strong> son una confirmación de identidad. Un porcentaje de
+        coincidencia alto no significa que dos personas sean la misma.
+      </p>
+
+      <h2>Quién está detrás</h2>
+      <p>
+        findbyface está construido y mantenido por <a href="/es/blog/autor/nick/">Nick</a>, incluidos
+        FindRank y el modelo de patrocinio divulgado descrito arriba.
+      </p>
+
+      <h2>Contacto</h2>
+      <p>
+        ¿Preguntas, comentarios o una inquietud sobre contenido? Visita nuestra
+        <a href="/es/contacto/">página de contacto</a>, o revisa nuestros
+        <a href="/es/terminos-de-uso/">Términos de Uso</a> y nuestra
+        <a href="/es/dmca/">política DMCA</a>.
+      </p>
+    </div>
+  </article>
+</Base>

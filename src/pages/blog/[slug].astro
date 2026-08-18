@@ -23,6 +23,12 @@ const { Content, headings } = await render(post);
 const { title, description, date, updated, author, image, summary, references, disclaimer } = post.data;
 const slug = post.id.replace(/\.md$/, '');
 const canonical = `https://findbyface.org/blog/${slug}/`;
+
+// hreflang pairing: a Spanish twin declares `translationOf: <this post's id>`.
+// Prerendered, so this collection scan is build-time only. `null` (no twin)
+// tells Base.astro to suppress the hreflang cluster for this post.
+const esTwin = (await getCollection('blogEs')).find(p => p.data.translationOf === slug);
+const alternate = esTwin ? `/es/blog/${esTwin.id.replace(/\.md$/, '')}/` : null;
 const dateOpts: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
 const formattedDate = new Date(date).toLocaleDateString('en-US', dateOpts);
 const formattedUpdated = updated ? new Date(updated).toLocaleDateString('en-US', dateOpts) : undefined;
@@ -55,7 +61,7 @@ const jsonLd = {
 };
 ---
 
-<Base title={`${title} | findbyface`} description={description} canonical={canonical}>
+<Base title={`${title} | findbyface`} description={description} canonical={canonical} alternate={alternate}>
   <slot name="head" slot="head">
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   </slot>

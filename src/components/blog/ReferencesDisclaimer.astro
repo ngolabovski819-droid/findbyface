@@ -1,4 +1,7 @@
 ---
+import { localeOf } from '../../i18n/routes';
+import { t } from '../../i18n/ui';
+
 interface Reference {
   title: string;
   description: string;
@@ -10,25 +13,26 @@ interface Props {
   disclaimer?: string;
 }
 
+const lang = localeOf(Astro.url.pathname);
 const {
   references = [],
-  disclaimer = 'This article is for general information and safety awareness only. It is not legal, investigative, or law-enforcement advice. Similarity results from any face-search tool are a ranking signal, not proof of identity — always verify independently before acting on them.',
+  disclaimer = t(lang, 'blog.disclaimerDefault'),
 } = Astro.props;
 
 const hasReferences = references.length > 0;
 ---
 
-<section class="ref-disc" aria-label="References and disclaimer">
+<section class="ref-disc" aria-label={t(lang, 'blog.refsAria')}>
   <div class="ref-disc-tabs" role="tablist">
     {hasReferences && (
       <button type="button" class="ref-tab active" data-tab="references" role="tab" aria-selected="true">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        References
+        {t(lang, 'blog.references')}
       </button>
     )}
     <button type="button" class={`ref-tab${hasReferences ? '' : ' active'}`} data-tab="disclaimer" role="tab" aria-selected={hasReferences ? 'false' : 'true'}>
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      Disclaimer
+      {t(lang, 'blog.disclaimer')}
     </button>
   </div>
 

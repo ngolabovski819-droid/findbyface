@@ -1,49 +1,58 @@
 ---
+import { localeOf, localizePath, routeKey } from '../i18n/routes';
+import { t } from '../i18n/ui';
+
 const pathname = Astro.url.pathname;
-const isHome = pathname === '/' || pathname === '';
-const isOnlyFansFinder = pathname.startsWith('/onlyfans-finder-by-face');
+const lang = localeOf(pathname);
+// Active-state matching runs on the ENGLISH route key so it works for both
+// locales ('/es/batalla/' -> '/battle/').
+const key = routeKey(pathname);
+const isHome = key === '/';
+const isOnlyFansFinder = key.startsWith('/onlyfans-finder-by-face');
 const isVideoSearch =
-  pathname.startsWith('/pornstar-finder-by-face') ||
-  pathname.startsWith('/video-search');
-const isDiscover = pathname.startsWith('/ai-discover');
-const isSearch = pathname.startsWith('/onlyfans-search');
-const isBattle = pathname.startsWith('/battle');
+  key.startsWith('/pornstar-finder-by-face') ||
+  key.startsWith('/video-search');
+const isDiscover = key.startsWith('/ai-discover');
+const isSearch = key.startsWith('/onlyfans-search');
+const isBattle = key.startsWith('/battle');
+
+const lp = (p: string) => localizePath(p, lang);
 ---
 
 <header class="nav">
   <div class="nav-inner">
-    <a href="/" class="nav-logo">
+    <a href={lang === 'es' ? '/es/' : '/'} class="nav-logo">
       <img class="nav-logo-mark" src="/findbyface-logo.png" alt="" width="34" height="34" />
       <span class="logo-find">find</span><span class="logo-byface">byface</span>
     </a>
 
     <nav class="nav-links" id="navLinks">
-      <a href="/" class={isHome ? 'active' : ''}>Home</a>
+      <a href={lang === 'es' ? '/es/' : '/'} class={isHome ? 'active' : ''}>{t(lang, 'nav.home')}</a>
       {/* Discover is under development — hidden from nav until ready */}
-      {false && <a href="/ai-discover/" class={isDiscover ? 'active' : ''}>Discover</a>}
-      <a href="/onlyfans-finder-by-face/" class={isOnlyFansFinder ? 'active' : ''}>OnlyFans Finder</a>
-      <a href="/pornstar-finder-by-face/" class={`nav-feature-link ${isVideoSearch ? 'active' : ''}`}>
-        <span>Pornstar Finder</span><small class="nav-new-badge">New</small>
+      {false && <a href="/ai-discover/" class={isDiscover ? 'active' : ''}>{t(lang, 'nav.discover')}</a>}
+      <a href={lp('/onlyfans-finder-by-face/')} class={isOnlyFansFinder ? 'active' : ''}>{t(lang, 'nav.onlyfansFinder')}</a>
+      <a href={lp('/pornstar-finder-by-face/')} class={`nav-feature-link ${isVideoSearch ? 'active' : ''}`}>
+        <span>{t(lang, 'nav.pornstarFinder')}</span><small class="nav-new-badge">{t(lang, 'nav.new')}</small>
       </a>
-      <a href="/onlyfans-search/" class={isSearch ? 'active' : ''}>OnlyFans Search</a>
-      <a href="/battle/" class={`nav-feature-link ${isBattle ? 'active' : ''}`}>
-        <span>Battle</span><small class="nav-new-badge">New</small>
+      <a href={lp('/onlyfans-search/')} class={isSearch ? 'active' : ''}>{t(lang, 'nav.search')}</a>
+      <a href={lp('/battle/')} class={`nav-feature-link ${isBattle ? 'active' : ''}`}>
+        <span>{t(lang, 'nav.battle')}</span><small class="nav-new-badge">{t(lang, 'nav.new')}</small>
       </a>
       <div class="mobile-auth-actions" id="mobileAuthActions">
-        <a href="/login/" class="mobile-login">Log in</a>
-        <a href="/signup/" class="mobile-signup">Sign up free</a>
+        <a href={lp('/login/')} class="mobile-login">{t(lang, 'nav.login')}</a>
+        <a href={lp('/signup/')} class="mobile-signup">{t(lang, 'nav.signupFree')}</a>
       </div>
     </nav>
 
     <div class="nav-right">
-      <a href="/wishlist/" class="nav-wishlist-btn" id="navWishlistBtn" aria-label="Wishlist">
+      <a href={lp('/wishlist/')} class="nav-wishlist-btn" id="navWishlistBtn" aria-label={t(lang, 'nav.wishlist')}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.6-4.06-9.33-7.86C.86 10.64 1.1 7.28 3.6 5.34c2.2-1.7 5.02-1.24 6.7.86L12 8.1l1.7-1.9c1.68-2.1 4.5-2.56 6.7-.86 2.5 1.94 2.74 5.3 0.93 7.8C18.6 16.94 12 21 12 21Z"/></svg>
         <span class="nav-wishlist-count" id="navWishlistCount" hidden>0</span>
       </a>
       <!-- Signed-out state (default, overridden by JS if signed in) -->
       <div class="auth-actions" id="authActions">
-        <a href="/login/" class="login-btn">Log in</a>
-        <a href="/signup/" class="signup-btn">Sign up</a>
+        <a href={lp('/login/')} class="login-btn">{t(lang, 'nav.login')}</a>
+        <a href={lp('/signup/')} class="signup-btn">{t(lang, 'nav.signup')}</a>
       </div>
       <!-- Signed-in state (hidden until JS sets it) -->
       <div class="user-menu" id="userMenu" style="display:none">
@@ -57,25 +66,25 @@ const isBattle = pathname.startsWith('/battle');
             <span class="dd-avatar" id="ddAvatar"></span>
             <div class="dd-meta">
               <span class="dd-name" id="ddName"></span>
-              <span class="dd-plan">Free Plan</span>
+              <span class="dd-plan">{t(lang, 'nav.freePlan')}</span>
             </div>
           </div>
-          <a href="/dashboard/" class="dd-item">
+          <a href={lp('/dashboard/')} class="dd-item">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-            Dashboard
+            {t(lang, 'nav.dashboard')}
           </a>
-          <a href="/settings/" class="dd-item">
+          <a href={lp('/settings/')} class="dd-item">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-            Settings
+            {t(lang, 'nav.settings')}
           </a>
           <div class="dd-divider"></div>
           <button class="dd-item dd-logout" id="signOutBtn">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-            Logout
+            {t(lang, 'nav.logout')}
           </button>
         </div>
       </div>
-      <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks">
+      <button class="hamburger" id="hamburger" aria-label={t(lang, 'nav.openMenu')} aria-expanded="false" aria-controls="navLinks">
         <span></span>
         <span></span>
         <span></span>
@@ -273,7 +282,7 @@ const isBattle = pathname.startsWith('/battle');
     localStorage.removeItem('fbf_history');
     localStorage.removeItem('fbf_pornstar_history');
     localStorage.removeItem('fbf_search_queries');
-    window.location.href = '/';
+    window.location.href = document.documentElement.lang === 'es' ? '/es/' : '/';
   });
 
   void loadAuthState();

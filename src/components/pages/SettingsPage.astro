@@ -1,0 +1,479 @@
+---
+// Shared page body for /settings/ (EN) and /es/settings/ (ES).
+import Base from '../../layouts/Base.astro';
+import { localeOf } from '../../i18n/routes';
+import { absUrl } from '../../lib/site';
+
+const lang = localeOf(Astro.url.pathname);
+const langPrefix = lang === 'es' ? '/es' : '';
+
+const enC = {
+  title: 'Settings — findbyface',
+  description: 'Manage your findbyface account, privacy and data.',
+  gateTitle: 'Sign in to manage settings',
+  gateSub: 'Your account, privacy controls and data live here.',
+  goHome: 'Go to homepage',
+  profile: 'Profile',
+  avatarAlt: 'Your player avatar',
+  player: 'Player',
+  shownOnLeaderboards: 'Shown on Battle leaderboards',
+  battleNickname: 'Battle nickname',
+  saveChanges: 'Save changes',
+  nicknameHelp: '3–24 characters. Nicknames are unique.',
+  chooseAvatarAria: 'Choose a player avatar',
+  chooseAvatar: 'Choose avatar {n}',
+  email: 'Email',
+  yourEmail: 'Your email address',
+  subscription: 'Subscription',
+  currentPlan: 'Current plan',
+  freePlan: 'Free Plan',
+  upgrade: 'Upgrade',
+  activeSessions: 'Active Sessions',
+  current: 'Current',
+  logoutDevice: 'Log out on this device',
+  savedData: 'Saved Data',
+  clearAllTitle: 'Clear all saved data',
+  clearAllSub: 'Remove all search history from your account and this device.',
+  clearAll: '🗑 Clear All',
+  dangerZone: 'Danger Zone',
+  requestDeletion: 'Request account deletion',
+  requestDeletionSub: 'Contact us to permanently remove your account and associated data.',
+  requestDeletionBtn: 'Request deletion',
+};
+const esC: typeof enC = {
+  title: 'Ajustes — findbyface',
+  description: 'Gestiona tu cuenta, privacidad y datos de findbyface.',
+  gateTitle: 'Inicia sesión para gestionar los ajustes',
+  gateSub: 'Tu cuenta, controles de privacidad y datos viven aquí.',
+  goHome: 'Ir al inicio',
+  profile: 'Perfil',
+  avatarAlt: 'Tu avatar de jugador',
+  player: 'Jugador',
+  shownOnLeaderboards: 'Se muestra en las tablas de Batalla',
+  battleNickname: 'Apodo de Batalla',
+  saveChanges: 'Guardar cambios',
+  nicknameHelp: '3–24 caracteres. Los apodos son únicos.',
+  chooseAvatarAria: 'Elige un avatar de jugador',
+  chooseAvatar: 'Elegir avatar {n}',
+  email: 'Correo electrónico',
+  yourEmail: 'Tu dirección de correo',
+  subscription: 'Suscripción',
+  currentPlan: 'Plan actual',
+  freePlan: 'Plan Gratis',
+  upgrade: 'Mejorar',
+  activeSessions: 'Sesiones Activas',
+  current: 'Actual',
+  logoutDevice: 'Cerrar sesión en este dispositivo',
+  savedData: 'Datos Guardados',
+  clearAllTitle: 'Borrar todos los datos guardados',
+  clearAllSub: 'Elimina todo el historial de búsqueda de tu cuenta y de este dispositivo.',
+  clearAll: '🗑 Borrar Todo',
+  dangerZone: 'Zona de Peligro',
+  requestDeletion: 'Solicitar eliminación de la cuenta',
+  requestDeletionSub: 'Contáctanos para eliminar permanentemente tu cuenta y los datos asociados.',
+  requestDeletionBtn: 'Solicitar eliminación',
+};
+const C = lang === 'es' ? esC : enC;
+
+const enClient = {
+  player: 'Player',
+  updateFailed: 'Could not update your profile',
+  saving: 'Saving…',
+  saved: 'Saved ✓',
+  saveFailed: 'Could not save your profile',
+  thisDevice: 'This device',
+  clearing: 'Clearing…',
+  clearFailed: 'Could not clear — try again',
+  cleared: 'Cleared ✓',
+  confirmDeletion: 'Open the contact page to request permanent account deletion?',
+  contactHref: '/contact/',
+  homeHref: '/',
+  dateLocale: 'en-US',
+};
+const esClient: typeof enClient = {
+  player: 'Jugador',
+  updateFailed: 'No se pudo actualizar tu perfil',
+  saving: 'Guardando…',
+  saved: 'Guardado ✓',
+  saveFailed: 'No se pudo guardar tu perfil',
+  thisDevice: 'Este dispositivo',
+  clearing: 'Borrando…',
+  clearFailed: 'No se pudo borrar — inténtalo de nuevo',
+  cleared: 'Borrado ✓',
+  confirmDeletion: '¿Abrir la página de contacto para solicitar la eliminación permanente de la cuenta?',
+  contactHref: '/es/contacto/',
+  homeHref: '/es/',
+  dateLocale: 'es',
+};
+const CLIENT = lang === 'es' ? esClient : enClient;
+---
+
+<Base
+  title={C.title}
+  description={C.description}
+  canonical={absUrl(`${langPrefix}/settings/`)}
+  robots="noindex,follow"
+>
+  <section class="settings">
+    <!-- Signed-out gate -->
+    <div class="dash-gate" id="setGate">
+      <div class="gate-card">
+        <h1>{C.gateTitle}</h1>
+        <p>{C.gateSub}</p>
+        <a href={lang === 'es' ? '/es/' : '/'} class="gate-btn">{C.goHome}</a>
+      </div>
+    </div>
+
+    <div class="set-main" id="setMain" style="display:none">
+      <!-- Profile -->
+      <div class="set-panel">
+        <h2>{C.profile}</h2>
+        <div class="set-profile-preview">
+          <img id="profileAvatarPreview" src="/api/player-avatar?style=1" alt={C.avatarAlt} />
+          <div><strong id="profilePreviewName">{C.player}</strong><small>{C.shownOnLeaderboards}</small></div>
+        </div>
+        <label class="set-field-label" for="nameInput">{C.battleNickname}</label>
+        <div class="set-inline">
+          <input type="text" id="nameInput" class="set-input" minlength="3" maxlength="24" autocomplete="nickname" />
+          <button class="set-btn primary" id="saveNameBtn">{C.saveChanges}</button>
+        </div>
+        <p class="set-field-help">{C.nicknameHelp}</p>
+        <div class="set-avatar-picker" aria-label={C.chooseAvatarAria}>
+          {[1,2,3,4,5,6,7,8].map((style) => (
+            <button type="button" data-avatar-style={style} aria-label={C.chooseAvatar.replace('{n}', String(style))}>
+              <img src={`/api/player-avatar?style=${style}`} alt="" />
+              <span aria-hidden="true">✓</span>
+            </button>
+          ))}
+        </div>
+        <p class="set-profile-message" id="profileMessage" role="status" hidden></p>
+      </div>
+
+      <!-- Email -->
+      <div class="set-panel">
+        <h2>{C.email}</h2>
+        <p class="set-field-label">{C.yourEmail}</p>
+        <p class="set-strong" id="setEmail">—</p>
+      </div>
+
+      <!-- Subscription -->
+      <div class="set-panel">
+        <h2>{C.subscription}</h2>
+        <div class="set-row-flex">
+          <div>
+            <p class="set-field-label">{C.currentPlan}</p>
+            <p class="set-strong">{C.freePlan}</p>
+          </div>
+          <a href={`${lang === 'es' ? '/es/' : '/'}#pricing`} class="set-btn primary">{C.upgrade}</a>
+        </div>
+      </div>
+
+      <!-- Active Sessions -->
+      <div class="set-panel">
+        <h2>{C.activeSessions}</h2>
+        <div class="session-row">
+          <div>
+            <p class="set-strong session-ua" id="sessionUa">—</p>
+            <p class="set-field-label" id="sessionMeta">—</p>
+          </div>
+          <span class="session-current">{C.current}</span>
+        </div>
+        <button class="set-btn outline-warn" id="logoutAllBtn">{C.logoutDevice}</button>
+      </div>
+
+      <!-- Saved Data -->
+      <div class="set-panel">
+        <h2>{C.savedData}</h2>
+        <div class="set-row-flex">
+          <div>
+            <p class="set-strong">{C.clearAllTitle}</p>
+            <p class="set-field-label">{C.clearAllSub}</p>
+          </div>
+          <button class="set-btn outline-warn" id="clearDataBtn">{C.clearAll}</button>
+        </div>
+      </div>
+
+      <!-- Danger Zone -->
+      <div class="set-panel danger-panel">
+        <h2 class="danger-title">{C.dangerZone}</h2>
+        <div class="set-row-flex">
+          <div>
+            <p class="set-strong">{C.requestDeletion}</p>
+            <p class="set-field-label">{C.requestDeletionSub}</p>
+          </div>
+          <button class="set-btn danger" id="deleteBtn">{C.requestDeletionBtn}</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<script type="application/json" id="i18nSettingsPage" set:html={JSON.stringify(CLIENT)} />
+
+<script>
+  import { clearAccountSearchHistoryForOwner, currentAccountId, scopedSearchHistoryKey } from '../../lib/accountSearchHistory';
+
+  const T = JSON.parse(document.getElementById('i18nSettingsPage')!.textContent!) as Record<string, string>;
+
+  function init() {
+    let user = null;
+    try { user = JSON.parse(localStorage.getItem('fbf_user') || 'null'); } catch { /* noop */ }
+
+    const gate = document.getElementById('setGate');
+    const main = document.getElementById('setMain');
+    if (!user) { gate.style.display = 'flex'; main.style.display = 'none'; return; }
+    const settingsAccountId = currentAccountId();
+    if (!settingsAccountId || settingsAccountId !== user.id) {
+      localStorage.removeItem('fbf_user');
+      window.location.reload();
+      return;
+    }
+
+    gate.style.display = 'none';
+    main.style.display = 'block';
+
+    // Profile
+    const nameInput = document.getElementById('nameInput') as HTMLInputElement;
+    const avatarPreview = document.getElementById('profileAvatarPreview') as HTMLImageElement;
+    const previewName = document.getElementById('profilePreviewName')!;
+    const profileMessage = document.getElementById('profileMessage')!;
+    const avatarButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-avatar-style]'));
+    let selectedAvatarStyle = 1;
+    nameInput.value = user.name || '';
+    previewName.textContent = user.name || T.player;
+    document.getElementById('setEmail')!.textContent = user.email || '—';
+
+    function selectAvatar(style: number) {
+      selectedAvatarStyle = Math.min(Math.max(Math.trunc(style), 1), 8);
+      avatarPreview.src = `/api/player-avatar?style=${selectedAvatarStyle}`;
+      avatarButtons.forEach(button => button.classList.toggle('selected', Number(button.dataset.avatarStyle) === selectedAvatarStyle));
+    }
+
+    async function profileApi(path: string, options: RequestInit = {}) {
+      const headers = new Headers(options.headers);
+      headers.set('Authorization', `Bearer ${user.access_token || ''}`);
+      if (options.body) headers.set('Content-Type', 'application/json');
+      const response = await fetch(path, { ...options, headers });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || T.updateFailed);
+      return payload;
+    }
+
+    avatarButtons.forEach(button => button.addEventListener('click', () => {
+      selectAvatar(Number(button.dataset.avatarStyle));
+    }));
+    nameInput.addEventListener('input', () => {
+      previewName.textContent = nameInput.value.trim() || T.player;
+    });
+
+    const currentStyle = Number(new URL(user.avatar || '', window.location.origin).searchParams.get('style'));
+    selectAvatar(Number.isInteger(currentStyle) && currentStyle >= 1 && currentStyle <= 8 ? currentStyle : 1);
+
+    profileApi('/api/battle-profile').then(profile => {
+      nameInput.value = profile.displayName;
+      previewName.textContent = profile.displayName;
+      selectAvatar(Number(profile.avatarStyle));
+    }).catch(error => {
+      profileMessage.textContent = error.message;
+      profileMessage.dataset.kind = 'error';
+      profileMessage.hidden = false;
+    });
+
+    document.getElementById('saveNameBtn')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      const newName = nameInput.value.trim().replace(/\s+/g, ' ');
+      if (newName.length < 3) { nameInput.focus(); return; }
+      profileMessage.hidden = true;
+      const original = btn.textContent;
+      btn.textContent = T.saving;
+      btn.disabled = true;
+      try {
+        const profile = await profileApi('/api/battle-profile', {
+          method: 'POST',
+          body: JSON.stringify({ displayName: newName, avatarStyle: selectedAvatarStyle }),
+        });
+        const u = JSON.parse(localStorage.getItem('fbf_user') || '{}');
+        u.name = profile.displayName;
+        u.avatar = profile.avatarUrl;
+        localStorage.setItem('fbf_user', JSON.stringify(u));
+        window.dispatchEvent(new CustomEvent('fbf:profile-updated', { detail: profile }));
+        previewName.textContent = profile.displayName;
+        btn.textContent = T.saved;
+        setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1600);
+      } catch (error) {
+        profileMessage.textContent = error instanceof Error ? error.message : T.saveFailed;
+        profileMessage.dataset.kind = 'error';
+        profileMessage.hidden = false;
+        btn.textContent = original;
+        btn.disabled = false;
+      }
+    });
+
+    // Active session
+    const ua = navigator.userAgent;
+    document.getElementById('sessionUa')!.textContent = ua.length > 70 ? ua.slice(0, 70) + '…' : ua;
+    document.getElementById('sessionMeta')!.textContent =
+      `${navigator.platform || T.thisDevice} · ${new Date().toLocaleString(T.dateLocale, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}`;
+
+    function signOut() {
+      const accountId = currentAccountId();
+      localStorage.removeItem('fbf_user');
+      localStorage.removeItem('fbf_searches');
+      if (accountId) {
+        localStorage.removeItem(scopedSearchHistoryKey('fbf_history', accountId));
+        localStorage.removeItem(scopedSearchHistoryKey('fbf_pornstar_history', accountId));
+        localStorage.removeItem(scopedSearchHistoryKey('fbf_search_queries', accountId));
+      }
+      // Remove only obsolete unowned caches; account-scoped outbox data remains
+      // available for a later retry by its owner.
+      localStorage.removeItem('fbf_history');
+      localStorage.removeItem('fbf_pornstar_history');
+      localStorage.removeItem('fbf_search_queries');
+      window.location.href = T.homeHref;
+    }
+
+    document.getElementById('logoutAllBtn')?.addEventListener('click', signOut);
+
+    document.getElementById('clearDataBtn')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      btn.disabled = true;
+      btn.textContent = T.clearing;
+      if (!(await clearAccountSearchHistoryForOwner(settingsAccountId))) {
+        btn.textContent = T.clearFailed;
+        btn.disabled = false;
+        return;
+      }
+      const accountId = currentAccountId();
+      if (accountId) {
+        localStorage.removeItem(scopedSearchHistoryKey('fbf_history', accountId));
+        localStorage.removeItem(scopedSearchHistoryKey('fbf_pornstar_history', accountId));
+        localStorage.removeItem(scopedSearchHistoryKey('fbf_search_queries', accountId));
+      }
+      localStorage.removeItem('fbf_history');
+      localStorage.removeItem('fbf_pornstar_history');
+      localStorage.removeItem('fbf_search_queries');
+      localStorage.removeItem('fbf_searches');
+      btn.textContent = T.cleared;
+      btn.disabled = true;
+    });
+
+    document.getElementById('deleteBtn')?.addEventListener('click', () => {
+      const ok = window.confirm(T.confirmDeletion);
+      if (!ok) return;
+      // Deletion is handled as a verified support request; signing out never deletes server data.
+      window.location.href = T.contactHref;
+    });
+
+    window.addEventListener('storage', event => {
+      if (event.key === 'fbf_user' && currentAccountId() !== settingsAccountId) {
+        window.location.reload();
+      }
+    });
+  }
+  init();
+</script>
+
+<style>
+  .settings { max-width: 620px; margin: 0 auto; padding: 100px 20px 80px; min-height: 70vh; }
+
+  .dash-gate { display: flex; justify-content: center; padding: 40px 0; }
+  .gate-card {
+    text-align: center; max-width: 440px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 40px 32px;
+  }
+  .gate-card h1 { font-size: 1.5rem; margin-bottom: 12px; }
+  .gate-card p { color: var(--text-muted); margin-bottom: 24px; }
+  .gate-btn {
+    display: inline-block; background: linear-gradient(135deg, var(--accent), var(--accent-light));
+    color: #fff; padding: 11px 26px; border-radius: 999px; font-weight: 700;
+    box-shadow: 0 6px 20px rgba(124,58,237,0.3);
+  }
+
+  .set-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 22px; margin-bottom: 16px;
+  }
+  .set-panel h2 { font-size: 1rem; margin-bottom: 16px; }
+
+  .set-profile-preview { display: flex; margin-bottom: 18px; align-items: center; gap: 12px; }
+  .set-profile-preview img { width: 54px; height: 54px; border: 1px solid rgba(255,255,255,.1); border-radius: 15px; background: var(--surface-raised); }
+  .set-profile-preview div { display: grid; gap: 3px; min-width: 0; }
+  .set-profile-preview strong { overflow: hidden; color: var(--text); font-size: .92rem; text-overflow: ellipsis; white-space: nowrap; }
+  .set-profile-preview small { color: var(--text-muted); font-size: .67rem; }
+
+  .set-field-label { color: var(--text-muted); font-size: 13px; margin-bottom: 4px; }
+  .set-strong { font-weight: 700; font-size: 14.5px; color: var(--text); }
+
+  .set-inline { display: flex; gap: 12px; align-items: center; }
+  .set-input {
+    flex: 1;
+    background: var(--surface-raised); border: 1px solid var(--border);
+    color: var(--text); border-radius: 9px; padding: 10px 13px;
+    font-size: 14px; font-family: inherit; min-width: 0;
+    transition: border-color 0.2s;
+  }
+  .set-input:focus { outline: none; border-color: var(--accent); }
+  .set-field-help { margin-top: 6px; color: var(--text-muted); font-size: .66rem; }
+  .set-avatar-picker { display: grid; margin-top: 16px; grid-template-columns: repeat(8,1fr); gap: 8px; }
+  .set-avatar-picker button { position: relative; min-width: 0; padding: 0; border: 2px solid transparent; border-radius: 12px; outline: 0; background: transparent; cursor: pointer; transition: border-color .16s,transform .16s; }
+  .set-avatar-picker button:hover { transform: translateY(-2px); }
+  .set-avatar-picker button.selected { border-color: #8aa6ff; box-shadow: 0 0 0 3px rgba(113,143,235,.13); }
+  .set-avatar-picker img { display: block; width: 100%; border-radius: 10px; }
+  .set-avatar-picker span { position: absolute; right: -4px; bottom: -4px; display: none; width: 17px; height: 17px; place-items: center; border: 2px solid var(--surface); border-radius: 50%; background: #86a3f7; color: #0d1222; font-size: .55rem; font-weight: 900; }
+  .set-avatar-picker button.selected span { display: grid; }
+  .set-avatar-picker button:focus-visible { outline: 3px solid rgba(124,156,255,.6); outline-offset: 3px; }
+  .set-profile-message { margin-top: 11px; padding: 8px 10px; border-radius: 8px; color: #9edbbd; background: rgba(30,120,79,.11); font-size: .68rem; }
+  .set-profile-message[data-kind="error"] { color: #f2a1b0; background: rgba(136,40,58,.12); }
+  .set-profile-message[hidden] { display: none; }
+
+  .set-row-flex {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap;
+  }
+
+  .set-btn {
+    background: var(--surface-raised); border: 1px solid var(--border);
+    color: var(--text); padding: 9px 18px; border-radius: 9px;
+    font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit;
+    white-space: nowrap; transition: border-color 0.2s, background 0.2s, filter 0.2s;
+    text-decoration: none; display: inline-block;
+  }
+  .set-btn:hover { border-color: var(--accent); }
+  .set-btn:disabled { opacity: 0.75; cursor: default; }
+
+  .set-btn.primary {
+    background: transparent; border-color: var(--accent); color: var(--accent-light);
+  }
+  .set-btn.primary:hover { background: rgba(124,58,237,0.12); }
+
+  .set-btn.outline-warn { border-color: rgba(245,158,11,0.5); color: #f59e0b; }
+  .set-btn.outline-warn:hover { background: rgba(245,158,11,0.1); border-color: #f59e0b; }
+
+  .set-btn.danger { border-color: rgba(248,113,113,0.5); color: #f87171; }
+  .set-btn.danger:hover { background: rgba(248,113,113,0.1); border-color: #f87171; }
+
+  /* Active session */
+  .session-row {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px; margin-bottom: 16px;
+  }
+  .session-ua { word-break: break-word; margin-bottom: 2px; }
+  .session-current {
+    background: rgba(124,58,237,0.16); color: var(--accent-light);
+    font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+    flex-shrink: 0; white-space: nowrap;
+  }
+  #logoutAllBtn { width: 100%; }
+
+  /* Danger zone */
+  .danger-panel { border-color: rgba(248,113,113,0.35); }
+  .danger-title { color: #f87171; }
+
+  @media (max-width: 480px) {
+    .set-inline { flex-direction: column; align-items: stretch; }
+    .set-inline .set-btn { width: 100%; }
+    .session-current { align-self: flex-start; }
+    .set-avatar-picker { grid-template-columns: repeat(4,1fr); gap: 10px; }
+  }
+</style>

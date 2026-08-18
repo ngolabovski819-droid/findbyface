@@ -1,10 +1,207 @@
 ---
 import { getRouletteAvatars } from '../lib/rouletteAvatars';
+import { localeOf, staticRoutes } from '../i18n/routes';
 
 const rouletteSrcs = await getRouletteAvatars(
   import.meta.env.SUPABASE_URL?.replace(/\/+$/, ''),
   import.meta.env.SUPABASE_KEY,
 );
+
+const lang = localeOf(Astro.url.pathname);
+const langPrefix = lang === 'es' ? '/es' : '';
+const pagePath = lang === 'es'
+  ? (staticRoutes['/pornstar-finder-by-face/'] ?? '/pornstar-finder-by-face/')
+  : '/pornstar-finder-by-face/';
+
+const enC = {
+  betaPill: 'Public beta · actively improving',
+  h1: 'AI pornstar finder by face.',
+  h1Span: 'Search videos from one photo.',
+  lede: 'Use this free pornstar face finder with a clear photo, picture, or video screenshot. Upload, drop, or paste it to search sampled faces from the indexed video library and return the strongest matching appearances.',
+  highlightsAria: 'Product highlights',
+  trustRanked: 'Ranked video matches',
+  trustDeleted: 'Upload deleted after search',
+  trustFree: 'Free during beta',
+  queryImage: 'Query image',
+  deletedAfter: 'Deleted after search',
+  dropAria: 'Upload, drop, or paste a face image',
+  dropTitle: 'Drop, paste, or choose a face photo',
+  dropSub: 'Copy a screenshot, then press Ctrl/⌘ + V',
+  pasteHint: 'Paste screenshot',
+  dropFormats: 'JPEG, PNG or WebP · maximum 8 MB',
+  previewAlt: 'Selected face query preview',
+  clickReplace: 'Click to replace',
+  scanningAlt: 'Your photo being analyzed',
+  yourPhoto: 'Your photo',
+  matching: 'Matching…',
+  scanningTitle: 'Searching indexed videos',
+  loadingModel: 'Loading face detection model…',
+  scanCounter: 'Compared with <strong>0</strong> indexed faces',
+  stepDetect: 'Detecting face',
+  stepLandmarks: 'Mapping landmarks',
+  stepFrames: 'Searching indexed frames',
+  stepRanking: 'Ranking matches',
+  guidanceAria: 'Photo guidance',
+  oneFace: 'One face',
+  evenLighting: 'Even lighting',
+  sharpImage: 'Sharp image',
+  usageNote: 'By searching, you confirm you are 18+ and have the right to use the image. Matches are similarity leads, not identity proof.',
+  guestsNote: 'Guests receive one search per day.',
+  signupUnlimited: 'Sign up for unlimited searches',
+  searchButton: 'Search indexed videos',
+  betaIndex: 'Growing beta index',
+  faceToVideo: 'Face-to-video search',
+  betaOnline: 'Beta system online',
+  indexedVideos: 'indexed videos',
+  faceVectors: 'face vectors',
+  sampleInterval: 'sample interval',
+  rtx: 'RTX accelerated',
+  p1: 'Detect', p1s: 'Find the single query face',
+  p2: 'Embed', p2s: 'Create the search vector',
+  p3: 'Retrieve', p3s: 'Group matching faces by video',
+  validationFoot: 'Beta note: ranking thresholds and index coverage are still being calibrated. Always review the source video before drawing conclusions.',
+  retrievalEyebrow: 'Direct face-to-video retrieval',
+  videoMatches: 'Video matches',
+  crossTitle: 'Looking for similar OnlyFans creators?',
+  crossSub: 'Run the same kind of face search across creator profiles.',
+  crossAction: 'Try OnlyFans Finder',
+  loadMoreResults: 'Load more results',
+  emptyTitle: 'No indexed videos crossed the threshold',
+  emptySub: 'Try a clearer, more front-facing photo of the same performer.',
+  closePrompt: 'Close sign-in prompt',
+  close: 'Close',
+  limitTitle: 'Unlock unlimited searches',
+  limitText: 'You’ve used today’s free Pornstar Finder search. Create a free account with any email to continue without a daily limit.',
+  createFreeAccount: 'Create free account',
+  alreadyAccount: 'Already have an account?',
+  logIn: 'Log in',
+  maybeLater: 'Maybe later',
+};
+
+const esC: typeof enC = {
+  betaPill: 'Beta pública · en mejora continua',
+  h1: 'Buscador de actrices porno por cara con IA.',
+  h1Span: 'Busca videos desde una sola foto.',
+  lede: 'Usa este buscador facial de actrices gratis con una foto, imagen o captura de video nítida. Súbela, arrástrala o pégala para buscar entre los rostros muestreados de la videoteca indexada y obtener las apariciones más parecidas.',
+  highlightsAria: 'Puntos destacados',
+  trustRanked: 'Coincidencias de video clasificadas',
+  trustDeleted: 'La foto se elimina tras la búsqueda',
+  trustFree: 'Gratis durante la beta',
+  queryImage: 'Imagen de búsqueda',
+  deletedAfter: 'Se elimina tras buscar',
+  dropAria: 'Sube, arrastra o pega una imagen de un rostro',
+  dropTitle: 'Arrastra, pega o elige una foto de un rostro',
+  dropSub: 'Copia una captura y presiona Ctrl/⌘ + V',
+  pasteHint: 'Pegar captura',
+  dropFormats: 'JPEG, PNG o WebP · máximo 8 MB',
+  previewAlt: 'Vista previa del rostro seleccionado',
+  clickReplace: 'Haz clic para reemplazar',
+  scanningAlt: 'Tu foto siendo analizada',
+  yourPhoto: 'Tu foto',
+  matching: 'Comparando…',
+  scanningTitle: 'Buscando videos indexados',
+  loadingModel: 'Cargando modelo de detección facial…',
+  scanCounter: 'Comparado con <strong>0</strong> rostros indexados',
+  stepDetect: 'Detectando rostro',
+  stepLandmarks: 'Mapeando puntos',
+  stepFrames: 'Buscando fotogramas indexados',
+  stepRanking: 'Clasificando resultados',
+  guidanceAria: 'Guía de foto',
+  oneFace: 'Un solo rostro',
+  evenLighting: 'Luz uniforme',
+  sharpImage: 'Imagen nítida',
+  usageNote: 'Al buscar, confirmas que tienes 18+ y el derecho a usar la imagen. Las coincidencias son pistas de similitud, no prueba de identidad.',
+  guestsNote: 'Los invitados tienen una búsqueda al día.',
+  signupUnlimited: 'Regístrate para búsquedas ilimitadas',
+  searchButton: 'Buscar videos indexados',
+  betaIndex: 'Índice beta en crecimiento',
+  faceToVideo: 'Búsqueda de cara a video',
+  betaOnline: 'Sistema beta en línea',
+  indexedVideos: 'videos indexados',
+  faceVectors: 'vectores faciales',
+  sampleInterval: 'intervalo de muestreo',
+  rtx: 'acelerado por RTX',
+  p1: 'Detectar', p1s: 'Encuentra el único rostro de búsqueda',
+  p2: 'Codificar', p2s: 'Crea el vector de búsqueda',
+  p3: 'Recuperar', p3s: 'Agrupa rostros coincidentes por video',
+  validationFoot: 'Nota de beta: los umbrales de clasificación y la cobertura del índice aún se están calibrando. Revisa siempre el video original antes de sacar conclusiones.',
+  retrievalEyebrow: 'Recuperación directa de cara a video',
+  videoMatches: 'Coincidencias de video',
+  crossTitle: '¿Buscas creadoras de OnlyFans parecidas?',
+  crossSub: 'Haz la misma búsqueda facial entre perfiles de creadoras.',
+  crossAction: 'Probar Buscador OnlyFans',
+  loadMoreResults: 'Cargar más resultados',
+  emptyTitle: 'Ningún video indexado superó el umbral',
+  emptySub: 'Prueba con una foto más nítida y de frente de la misma actriz.',
+  closePrompt: 'Cerrar aviso de registro',
+  close: 'Cerrar',
+  limitTitle: 'Desbloquea búsquedas ilimitadas',
+  limitText: 'Ya usaste la búsqueda gratis de hoy del Buscador de Actrices. Crea una cuenta gratis con cualquier correo para continuar sin límite diario.',
+  createFreeAccount: 'Crear cuenta gratis',
+  alreadyAccount: '¿Ya tienes una cuenta?',
+  logIn: 'Iniciar sesión',
+  maybeLater: 'Quizás luego',
+};
+
+const C = lang === 'es' ? esC : enC;
+
+const enClient = {
+  expiredTitle: 'Log in to continue',
+  expiredText: 'Your previous session expired. Log in again to continue with unlimited searches.',
+  newTo: 'New to findbyface?',
+  createFreeAccount: enC.createFreeAccount,
+  logIn: enC.logIn,
+  limitTitle: enC.limitTitle,
+  limitText: enC.limitText,
+  alreadyAccount: enC.alreadyAccount,
+  historyLabel: 'Pornstar face search',
+  badType: 'Choose a JPEG, PNG, or WebP image.',
+  tooLarge: 'Use an image smaller than 8 MB.',
+  durationUnavailable: 'Duration unavailable',
+  bestCosine: 'Best cosine',
+  supportOne: 'supporting face',
+  supportMany: 'supporting faces',
+  openSource: 'Open source video',
+  loadMoreRemaining: 'Load more ({n} remaining)',
+  matchOne: '1 matching video',
+  matchMany: '{n} matching videos',
+  searchMeta: '{n} indexed · {s}s query',
+  progress1: 'Loading face detection model…',
+  progress2: 'Creating face embedding…',
+  progress3: 'Searching indexed frames…',
+  searchFailed: 'The local face search failed.',
+  searchTimeout: 'The search timed out. Confirm the local Python worker is available.',
+};
+
+const esClient: typeof enClient = {
+  expiredTitle: 'Inicia sesión para continuar',
+  expiredText: 'Tu sesión anterior expiró. Inicia sesión de nuevo para continuar con búsquedas ilimitadas.',
+  newTo: '¿Nuevo en findbyface?',
+  createFreeAccount: esC.createFreeAccount,
+  logIn: esC.logIn,
+  limitTitle: esC.limitTitle,
+  limitText: esC.limitText,
+  alreadyAccount: esC.alreadyAccount,
+  historyLabel: 'Búsqueda facial de actrices',
+  badType: 'Elige una imagen JPEG, PNG o WebP.',
+  tooLarge: 'Usa una imagen de menos de 8 MB.',
+  durationUnavailable: 'Duración no disponible',
+  bestCosine: 'Mejor coseno',
+  supportOne: 'rostro de apoyo',
+  supportMany: 'rostros de apoyo',
+  openSource: 'Abrir video original',
+  loadMoreRemaining: 'Cargar más ({n} restantes)',
+  matchOne: '1 video coincidente',
+  matchMany: '{n} videos coincidentes',
+  searchMeta: '{n} indexados · consulta de {s}s',
+  progress1: 'Cargando modelo de detección facial…',
+  progress2: 'Creando el embedding facial…',
+  progress3: 'Buscando fotogramas indexados…',
+  searchFailed: 'La búsqueda facial falló.',
+  searchTimeout: 'La búsqueda expiró. Inténtalo de nuevo en un momento.',
+};
+
+const CLIENT = { ...(lang === 'es' ? esClient : enClient), langPrefix, pagePath };
 ---
 
 <section class="video-search" aria-labelledby="video-search-heading">
@@ -12,43 +209,41 @@ const rouletteSrcs = await getRouletteAvatars(
     <div class="hero-copy">
       <div class="prototype-pill">
         <span class="live-dot"></span>
-        Public beta · actively improving
+        {C.betaPill}
       </div>
       <h1 id="video-search-heading">
-        AI pornstar finder by face.
-        <span>Search videos from one photo.</span>
+        {C.h1}
+        <span>{C.h1Span}</span>
       </h1>
       <p class="hero-lede">
-        Use this free pornstar face finder with a clear photo, picture, or video
-        screenshot. Upload, drop, or paste it to search sampled faces from the
-        indexed video library and return the strongest matching appearances.
+        {C.lede}
       </p>
-      <ul class="hero-trust" aria-label="Product highlights">
+      <ul class="hero-trust" aria-label={C.highlightsAria}>
         <li>
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
             <path d="m5 10.3 3 3L15.5 6" />
           </svg>
-          Ranked video matches
+          {C.trustRanked}
         </li>
         <li>
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
             <path d="M5.5 9V6.8a4.5 4.5 0 0 1 9 0V9M4 9h12v8H4z" />
           </svg>
-          Upload deleted after search
+          {C.trustDeleted}
         </li>
         <li>
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
             <path d="M10 2.5 12 7l4.8.5-3.6 3.2 1 4.8-4.2-2.4-4.2 2.4 1-4.8-3.6-3.2L8 7z" />
           </svg>
-          Free during beta
+          {C.trustFree}
         </li>
       </ul>
     </div>
 
     <form class="upload-card" id="videoSearchForm">
       <div class="card-kicker">
-        <span>Query image</span>
-        <span class="privacy-note">Deleted after search</span>
+        <span>{C.queryImage}</span>
+        <span class="privacy-note">{C.deletedAfter}</span>
       </div>
 
       <label
@@ -56,7 +251,7 @@ const rouletteSrcs = await getRouletteAvatars(
         id="dropZone"
         for="faceImage"
         tabindex="0"
-        aria-label="Upload, drop, or paste a face image"
+        aria-label={C.dropAria}
       >
         <input
           id="faceImage"
@@ -73,20 +268,20 @@ const rouletteSrcs = await getRouletteAvatars(
               <path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" />
             </svg>
           </div>
-          <strong>Drop, paste, or choose a face photo</strong>
-          <span>Copy a screenshot, then press Ctrl/⌘ + V</span>
+          <strong>{C.dropTitle}</strong>
+          <span>{C.dropSub}</span>
           <span class="paste-hint" aria-hidden="true">
             <kbd>Ctrl</kbd><span>+</span><kbd>V</kbd>
-            Paste screenshot
+            {C.pasteHint}
           </span>
-          <small>JPEG, PNG or WebP · maximum 8 MB</small>
+          <small>{C.dropFormats}</small>
         </div>
 
         <div class="preview-state" id="previewState" hidden>
-          <img id="imagePreview" alt="Selected face query preview" />
+          <img id="imagePreview" alt={C.previewAlt} />
           <div class="preview-overlay">
             <span id="fileName"></span>
-            <span>Click to replace</span>
+            <span>{C.clickReplace}</span>
           </div>
         </div>
       </label>
@@ -94,13 +289,13 @@ const rouletteSrcs = await getRouletteAvatars(
       <div class="scanning-state" id="scanningState">
         <div class="scan-stage">
           <div class="scanning-img-box">
-            <img id="scanningImg" alt="Your photo being analyzed" />
+            <img id="scanningImg" alt={C.scanningAlt} />
             <div class="scan-line"></div>
             <span class="scan-bracket tl"></span>
             <span class="scan-bracket tr"></span>
             <span class="scan-bracket bl"></span>
             <span class="scan-bracket br"></span>
-            <span class="scan-tag">Your photo</span>
+            <span class="scan-tag">{C.yourPhoto}</span>
           </div>
           <div class="scan-connector">
             <span class="connector-core"></span>
@@ -127,59 +322,58 @@ const rouletteSrcs = await getRouletteAvatars(
                 )
               : <div class="roulette-placeholder"></div>}
             <span class="roulette-ring"></span>
-            <span class="scan-tag">Matching…</span>
+            <span class="scan-tag">{C.matching}</span>
           </div>
         </div>
 
-        <p class="scanning-title">Searching indexed videos</p>
-        <p class="scanning-sub" id="scanningSub">Loading face detection model…</p>
+        <p class="scanning-title">{C.scanningTitle}</p>
+        <p class="scanning-sub" id="scanningSub">{C.loadingModel}</p>
 
         <div class="progress-track">
           <div class="progress-fill"></div>
         </div>
 
-        <p class="scan-counter" id="scanCounter">Compared with <strong>0</strong> indexed faces</p>
+        <p class="scan-counter" id="scanCounter" set:html={C.scanCounter} />
 
         <div class="scan-steps" id="scanSteps">
-          <span class="scan-step active" data-step="0"><i class="step-mark"></i>Detecting face</span>
-          <span class="scan-step" data-step="1"><i class="step-mark"></i>Mapping landmarks</span>
-          <span class="scan-step" data-step="2"><i class="step-mark"></i>Searching indexed frames</span>
-          <span class="scan-step" data-step="3"><i class="step-mark"></i>Ranking matches</span>
+          <span class="scan-step active" data-step="0"><i class="step-mark"></i>{C.stepDetect}</span>
+          <span class="scan-step" data-step="1"><i class="step-mark"></i>{C.stepLandmarks}</span>
+          <span class="scan-step" data-step="2"><i class="step-mark"></i>{C.stepFrames}</span>
+          <span class="scan-step" data-step="3"><i class="step-mark"></i>{C.stepRanking}</span>
         </div>
       </div>
 
-      <div class="photo-guidance" aria-label="Photo guidance">
+      <div class="photo-guidance" aria-label={C.guidanceAria}>
         <span>
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
             <circle cx="10" cy="7" r="3" />
             <path d="M4.5 17c.5-3.1 2.3-4.7 5.5-4.7s5 1.6 5.5 4.7" />
           </svg>
-          One face
+          {C.oneFace}
         </span>
         <span>
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
             <circle cx="10" cy="10" r="4" />
             <path d="M10 1.5v2M10 16.5v2M1.5 10h2M16.5 10h2M4 4l1.4 1.4M14.6 14.6L16 16M16 4l-1.4 1.4M5.4 14.6L4 16" />
           </svg>
-          Even lighting
+          {C.evenLighting}
         </span>
         <span>
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
             <path d="M2.5 5.5h3l1.2-2h6.6l1.2 2h3v11h-15z" />
             <circle cx="10" cy="11" r="3.2" />
           </svg>
-          Sharp image
+          {C.sharpImage}
         </span>
       </div>
 
       <p class="usage-note">
-        By searching, you confirm you are 18+ and have the right to use the
-        image. Matches are similarity leads, not identity proof.
+        {C.usageNote}
       </p>
 
       <p class="search-access-note">
-        Guests receive one search per day.
-        <a href="/signup/?next=/pornstar-finder-by-face/">Sign up for unlimited searches</a>.
+        {C.guestsNote}
+        <a href={`${langPrefix}/signup/?next=${pagePath}`}>{C.signupUnlimited}</a>.
       </p>
 
       <p class="form-error" id="formError" role="alert" hidden></p>
@@ -187,7 +381,7 @@ const rouletteSrcs = await getRouletteAvatars(
       <div id="searchTurnstile"></div>
 
       <button class="search-button" id="searchButton" type="submit" disabled>
-        Search indexed videos
+        {C.searchButton}
         <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
           <path d="M4 10h12M11.5 5.5 16 10l-4.5 4.5" />
         </svg>
@@ -198,10 +392,10 @@ const rouletteSrcs = await getRouletteAvatars(
   <aside class="validation-card">
       <div class="validation-head">
         <div>
-          <span class="eyebrow">Growing beta index</span>
-          <h2>Face-to-video search</h2>
+          <span class="eyebrow">{C.betaIndex}</span>
+          <h2>{C.faceToVideo}</h2>
         </div>
-        <div class="status-mark" title="Beta system online">
+        <div class="status-mark" title={C.betaOnline}>
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
             <path d="m5 10.2 3.1 3L15.5 6" />
           </svg>
@@ -211,19 +405,19 @@ const rouletteSrcs = await getRouletteAvatars(
       <div class="metric-grid">
         <div class="metric">
           <strong id="indexedVideoCount" aria-live="polite">—</strong>
-          <span>indexed videos</span>
+          <span>{C.indexedVideos}</span>
         </div>
         <div class="metric">
           <strong>512D</strong>
-          <span>face vectors</span>
+          <span>{C.faceVectors}</span>
         </div>
         <div class="metric">
           <strong>8s</strong>
-          <span>sample interval</span>
+          <span>{C.sampleInterval}</span>
         </div>
         <div class="metric">
           <strong>GPU</strong>
-          <span>RTX accelerated</span>
+          <span>{C.rtx}</span>
         </div>
       </div>
 
@@ -231,55 +425,54 @@ const rouletteSrcs = await getRouletteAvatars(
         <div class="pipeline-step">
           <span>01</span>
           <div>
-            <strong>Detect</strong>
-            <small>Find the single query face</small>
+            <strong>{C.p1}</strong>
+            <small>{C.p1s}</small>
           </div>
         </div>
         <div class="pipeline-line"></div>
         <div class="pipeline-step">
           <span>02</span>
           <div>
-            <strong>Embed</strong>
-            <small>Create the search vector</small>
+            <strong>{C.p2}</strong>
+            <small>{C.p2s}</small>
           </div>
         </div>
         <div class="pipeline-line"></div>
         <div class="pipeline-step">
           <span>03</span>
           <div>
-            <strong>Retrieve</strong>
-            <small>Group matching faces by video</small>
+            <strong>{C.p3}</strong>
+            <small>{C.p3s}</small>
           </div>
         </div>
       </div>
 
       <p class="validation-foot">
-        Beta note: ranking thresholds and index coverage are still being
-        calibrated. Always review the source video before drawing conclusions.
+        {C.validationFoot}
       </p>
   </aside>
 
   <section class="results-section" id="resultsSection" aria-live="polite" hidden>
     <div class="results-heading">
       <div>
-        <span class="eyebrow">Direct face-to-video retrieval</span>
-        <h2 id="resultsTitle">Video matches</h2>
+        <span class="eyebrow">{C.retrievalEyebrow}</span>
+        <h2 id="resultsTitle">{C.videoMatches}</h2>
       </div>
       <div class="search-meta" id="searchMeta"></div>
     </div>
-    <a class="cross-finder-cta" href="/#onlyfans-finder">
+    <a class="cross-finder-cta" href={`${langPrefix}/#onlyfans-finder`}>
       <span class="cross-finder-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none"><circle cx="10" cy="10" r="5" /><path d="m14 14 5 5M8 8.5h4M10 6.5v4" /></svg>
       </span>
       <span class="cross-finder-copy">
-        <strong>Looking for similar OnlyFans creators?</strong>
-        <small>Run the same kind of face search across creator profiles.</small>
+        <strong>{C.crossTitle}</strong>
+        <small>{C.crossSub}</small>
       </span>
-      <span class="cross-finder-action">Try OnlyFans Finder <b>→</b></span>
+      <span class="cross-finder-action">{C.crossAction} <b>→</b></span>
     </a>
     <div class="results-grid" id="resultsGrid"></div>
     <button class="load-more" id="loadMore" type="button" hidden>
-      Load more results
+      {C.loadMoreResults}
     </button>
     <div class="empty-results" id="emptyResults" hidden>
       <div class="empty-result-icon" aria-hidden="true">
@@ -288,27 +481,28 @@ const rouletteSrcs = await getRouletteAvatars(
           <path d="m16 16 4 4M8.5 11h5" />
         </svg>
       </div>
-      <h3>No indexed videos crossed the threshold</h3>
-      <p>Try a clearer, more front-facing photo of the same performer.</p>
+      <h3>{C.emptyTitle}</h3>
+      <p>{C.emptySub}</p>
     </div>
   </section>
 </section>
 
 <div class="search-limit-modal" id="pornstarLimitModal" hidden role="dialog" aria-modal="true" aria-labelledby="pornstarLimitTitle">
-  <button class="search-limit-backdrop" id="pornstarLimitBackdrop" type="button" aria-label="Close sign-in prompt"></button>
+  <button class="search-limit-backdrop" id="pornstarLimitBackdrop" type="button" aria-label={C.closePrompt}></button>
   <div class="search-limit-card">
-    <button class="search-limit-close" id="pornstarLimitClose" type="button" aria-label="Close">×</button>
+    <button class="search-limit-close" id="pornstarLimitClose" type="button" aria-label={C.close}>×</button>
     <span class="search-limit-icon" aria-hidden="true">∞</span>
-    <h2 id="pornstarLimitTitle">Unlock unlimited searches</h2>
-    <p id="pornstarLimitText">You’ve used today’s free Pornstar Finder search. Create a free account with any email to continue without a daily limit.</p>
-    <a class="search-limit-signin" id="pornstarLimitSignIn" href="/signup/?next=/pornstar-finder-by-face/">Create free account</a>
+    <h2 id="pornstarLimitTitle">{C.limitTitle}</h2>
+    <p id="pornstarLimitText">{C.limitText}</p>
+    <a class="search-limit-signin" id="pornstarLimitSignIn" href={`${langPrefix}/signup/?next=${pagePath}`}>{C.createFreeAccount}</a>
     <p class="search-limit-returning">
-      <span id="pornstarLimitReturningText">Already have an account?</span>
-      <a id="pornstarLimitLogin" href="/login/?next=/pornstar-finder-by-face/">Log in</a>
+      <span id="pornstarLimitReturningText">{C.alreadyAccount}</span>
+      <a id="pornstarLimitLogin" href={`${langPrefix}/login/?next=${pagePath}`}>{C.logIn}</a>
     </p>
-    <button class="search-limit-later" id="pornstarLimitLater" type="button">Maybe later</button>
+    <button class="search-limit-later" id="pornstarLimitLater" type="button">{C.maybeLater}</button>
   </div>
 </div>
+<script type="application/json" id="i18nVideoFaceSearch" set:html={JSON.stringify(CLIENT)} />
 
 <script is:inline>
   // See src/pages/contact.astro for why this ready-queue exists instead of an immediate call
@@ -322,6 +516,13 @@ const rouletteSrcs = await getRouletteAvatars(
 <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstileLoad" async defer></script>
 <script>
   import { currentAccountId, newSearchHistoryId, saveAccountSearchHistoryForOwner, scopedSearchHistoryKey } from '../lib/accountSearchHistory';
+
+  // Locale strings server-rendered into the JSON block above (see frontmatter CLIENT).
+  const T = JSON.parse(document.getElementById('i18nVideoFaceSearch')!.textContent!) as Record<string, string>;
+  const fmtT = (s: string, v: Record<string, string | number> = {}) =>
+    s.replace(/\{(\w+)\}/g, (_, k: string) => String(v[k] ?? ''));
+  const langPrefix = T.langPrefix;
+  const pagePath = T.pagePath;
 
   type VideoResult = {
     videoId: number;
@@ -360,7 +561,7 @@ const rouletteSrcs = await getRouletteAvatars(
   function renderTurnstile(): void {
     const turnstile = (window as typeof window & { turnstile?: any }).turnstile;
     if (!turnstile || !TURNSTILE_SITE_KEY || turnstileWidgetId) return;
-    turnstileWidgetId = turnstile.render('#searchTurnstile', { sitekey: TURNSTILE_SITE_KEY });
+    turnstileWidgetId = turnstile.render('#searchTurnstile', { sitekey: TURNSTILE_SITE_KEY, language: document.documentElement.lang || 'en' });
   }
   if ((window as typeof window & { turnstile?: any }).turnstile) renderTurnstile();
   else (window as any).__turnstileReady.push(renderTurnstile);
@@ -505,21 +706,21 @@ const rouletteSrcs = await getRouletteAvatars(
 
   function openLimitModal(mode: 'guest' | 'expired' = 'guest'): void {
     if (mode === 'expired') {
-      limitTitle.textContent = 'Log in to continue';
-      limitText.textContent = 'Your previous session expired. Log in again to continue with unlimited searches.';
-      limitSignIn.textContent = 'Log in';
-      limitSignIn.href = '/login/?next=/pornstar-finder-by-face/';
-      limitReturningText.textContent = 'New to findbyface?';
-      limitLogin.textContent = 'Create free account';
-      limitLogin.href = '/signup/?next=/pornstar-finder-by-face/';
+      limitTitle.textContent = T.expiredTitle;
+      limitText.textContent = T.expiredText;
+      limitSignIn.textContent = T.logIn;
+      limitSignIn.href = `${langPrefix}/login/?next=${pagePath}`;
+      limitReturningText.textContent = T.newTo;
+      limitLogin.textContent = T.createFreeAccount;
+      limitLogin.href = `${langPrefix}/signup/?next=${pagePath}`;
     } else {
-      limitTitle.textContent = 'Unlock unlimited searches';
-      limitText.textContent = 'You’ve used today’s free Pornstar Finder search. Create a free account with any email to continue without a daily limit.';
-      limitSignIn.textContent = 'Create free account';
-      limitSignIn.href = '/signup/?next=/pornstar-finder-by-face/';
-      limitReturningText.textContent = 'Already have an account?';
-      limitLogin.textContent = 'Log in';
-      limitLogin.href = '/login/?next=/pornstar-finder-by-face/';
+      limitTitle.textContent = T.limitTitle;
+      limitText.textContent = T.limitText;
+      limitSignIn.textContent = T.createFreeAccount;
+      limitSignIn.href = `${langPrefix}/signup/?next=${pagePath}`;
+      limitReturningText.textContent = T.alreadyAccount;
+      limitLogin.textContent = T.logIn;
+      limitLogin.href = `${langPrefix}/login/?next=${pagePath}`;
     }
     limitModal.hidden = false;
     document.body.style.overflow = 'hidden';
@@ -569,7 +770,7 @@ const rouletteSrcs = await getRouletteAvatars(
     void saveAccountSearchHistoryForOwner(ownerAccountId, {
       clientSearchId,
       searchType: 'video_face',
-      label: 'Pornstar face search',
+      label: T.historyLabel,
       resultCount: entry.count,
       filters: {
         indexedVideos: entry.indexedVideos,
@@ -594,11 +795,11 @@ const rouletteSrcs = await getRouletteAvatars(
     const allowed = ['image/jpeg', 'image/png', 'image/webp'];
     clearError();
     if (!allowed.includes(file.type)) {
-      showError('Choose a JPEG, PNG, or WebP image.');
+      showError(T.badType);
       return;
     }
     if (file.size > 8 * 1024 * 1024) {
-      showError('Use an image smaller than 8 MB.');
+      showError(T.tooLarge);
       return;
     }
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -665,7 +866,7 @@ const rouletteSrcs = await getRouletteAvatars(
   });
 
   function formatDuration(value?: number): string {
-    if (!value || value < 0) return 'Duration unavailable';
+    if (!value || value < 0) return T.durationUnavailable;
     const total = Math.round(value);
     const hours = Math.floor(total / 3600);
     const minutes = Math.floor((total % 3600) / 60);
@@ -727,7 +928,7 @@ const rouletteSrcs = await getRouletteAvatars(
     const score = document.createElement('div');
     score.className = 'match-score';
     const scoreLabel = document.createElement('span');
-    scoreLabel.textContent = 'Best cosine';
+    scoreLabel.textContent = T.bestCosine;
     const scoreValue = document.createElement('strong');
     scoreValue.textContent = result.similarity.toFixed(3);
     score.append(scoreLabel, scoreValue);
@@ -737,7 +938,7 @@ const rouletteSrcs = await getRouletteAvatars(
     const evidenceValue = document.createElement('strong');
     evidenceValue.textContent = String(result.supportingEmbeddings);
     const evidenceLabel = document.createElement('span');
-    evidenceLabel.textContent = result.supportingEmbeddings === 1 ? 'supporting face' : 'supporting faces';
+    evidenceLabel.textContent = result.supportingEmbeddings === 1 ? T.supportOne : T.supportMany;
     evidence.append(evidenceValue, evidenceLabel);
     scoreRow.append(score, evidence);
     body.appendChild(scoreRow);
@@ -755,7 +956,7 @@ const rouletteSrcs = await getRouletteAvatars(
       open.href = result.sourceUrl;
       open.target = '_blank';
       open.rel = 'noopener noreferrer';
-      open.textContent = 'Open source video';
+      open.textContent = T.openSource;
       const arrow = document.createElement('span');
       arrow.textContent = '↗';
       open.appendChild(arrow);
@@ -777,7 +978,7 @@ const rouletteSrcs = await getRouletteAvatars(
     visibleResultCount = nextCount;
     loadMore.hidden = visibleResultCount >= allResults.length;
     if (!loadMore.hidden) {
-      loadMore.textContent = `Load more (${allResults.length - visibleResultCount} remaining)`;
+      loadMore.textContent = fmtT(T.loadMoreRemaining, { n: allResults.length - visibleResultCount });
     }
   }
 
@@ -788,9 +989,9 @@ const rouletteSrcs = await getRouletteAvatars(
     emptyResults.hidden = allResults.length > 0;
     resultsGrid.hidden = allResults.length === 0;
     resultsTitle.textContent = allResults.length === 1
-      ? '1 matching video'
-      : `${allResults.length} matching videos`;
-    searchMeta.textContent = `${payload.indexedVideos ?? 0} indexed · ${(payload.elapsedSeconds ?? 0).toFixed(1)}s query`;
+      ? T.matchOne
+      : fmtT(T.matchMany, { n: allResults.length });
+    searchMeta.textContent = fmtT(T.searchMeta, { n: payload.indexedVideos ?? 0, s: (payload.elapsedSeconds ?? 0).toFixed(1) });
     renderNextResultsPage();
     resultsSection.hidden = false;
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -878,9 +1079,9 @@ const rouletteSrcs = await getRouletteAvatars(
     resultsSection.hidden = true;
 
     const labels = [
-      'Loading face detection model…',
-      'Creating face embedding…',
-      'Searching indexed frames…',
+      T.progress1,
+      T.progress2,
+      T.progress3,
     ];
     let labelIndex = 0;
     scanningSub.textContent = labels[0];
@@ -933,7 +1134,7 @@ const rouletteSrcs = await getRouletteAvatars(
         return;
       }
       if (!response.ok || !payload.ok) {
-        throw new Error(payload.error || 'The local face search failed.');
+        throw new Error(payload.error || T.searchFailed);
       }
       if (!user?.access_token) localStorage.setItem(GUEST_DAY_KEY, todayUtc());
       if (typeof payload.indexedVideos === 'number') {
@@ -949,7 +1150,7 @@ const rouletteSrcs = await getRouletteAvatars(
       }
     } catch (error) {
       const message = error instanceof DOMException && error.name === 'AbortError'
-        ? 'The search timed out. Confirm the local Python worker is available.'
+        ? T.searchTimeout
         : error instanceof Error
           ? error.message
           : 'The local face search failed.';

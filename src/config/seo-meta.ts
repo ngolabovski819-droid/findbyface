@@ -93,7 +93,50 @@ const NICHE_NOUN: Record<string, string> = {
   threesome: 'group fans',
 };
 
-function nicheFor(slug: string): string {
+// Spanish niche nouns — same slug keys, Spanish flavour phrases.
+const NICHE_NOUN_ES: Record<string, string> = {
+  feet: 'amantes del fetiche de pies',
+  footjob: 'amantes del fetiche de pies',
+  bondage: 'amantes del kink',
+  'rough-sex': 'amantes del kink',
+  anal: 'amantes del kink',
+  bukkake: 'amantes del kink',
+  bbc: 'amantes del kink',
+  'strap-on': 'amantes del kink',
+  bbw: 'amantes de las curvas',
+  mature: 'fans de las maduras',
+  milf: 'fans de las maduras',
+  'old-young': 'fans de la diferencia de edad',
+  latina: 'amantes de las latinas',
+  asian: 'fans de las asiáticas',
+  ebony: 'fans de las chicas negras',
+  indian: 'fans de las indias',
+  korean: 'fans de las coreanas',
+  japanese: 'fans de las japonesas',
+  italian: 'fans de las italianas',
+  dutch: 'fans de las holandesas',
+  greek: 'fans de las griegas',
+  serbian: 'fans de las serbias',
+  petite: 'fans de las petite',
+  'small-tits': 'fans de las petite',
+  'big-tits': 'fans de las tetonas',
+  redhead: 'fans de las pelirrojas',
+  blonde: 'amantes de las rubias',
+  'white-girls': 'fans',
+  free: 'cazadores de ofertas',
+  top: 'fans del mainstream',
+  models: 'fans del mainstream',
+  celebrity: 'fans del mainstream',
+  trans: 'la comunidad trans',
+  hentai: 'fans del anime',
+  blowjob: 'fans del sexo oral',
+  'pussy-licking': 'fans del sexo oral',
+  'solo-male': 'fans del contenido solo',
+  threesome: 'fans del contenido en grupo',
+};
+
+function nicheFor(slug: string, locale: 'en' | 'es' = 'en'): string {
+  if (locale === 'es') return NICHE_NOUN_ES[slug] || 'fans de OnlyFans';
   return NICHE_NOUN[slug] || 'OnlyFans fans';
 }
 
@@ -128,6 +171,37 @@ const CAT_DESCS: ((label: string, n: string, plus: boolean, niche: string) => st
   (l, n, p) => `${n}${p ? '+' : ''} ${l} OnlyFans creators worth following in ${Y}. AI face match included, plus free filters, verification badges, and live bundle pricing.`,
 ];
 
+// ---------- CATEGORY TITLES (Spanish) ----------
+// Same rotation mechanics, hashed on the ENGLISH slug (stable pairing with the
+// EN page). Spanish runs ~20% longer than English, so these are written terse;
+// several must fit even the longest labelEs ('Viejos y Jóvenes').
+
+const CAT_TITLES_ES: ((label: string, n: string, plus: boolean) => string)[] = [
+  (l, n, p) => `Top ${n}${p ? '+' : ''} OnlyFans ${l} · Ranking ${Y}`,
+  (l, n, p) => `Las ${n}${p ? '+' : ''} Mejores ${l} de OnlyFans (${Y})`,
+  (l, n, p) => `${n}${p ? '+' : ''} Creadoras ${l} en OnlyFans · Lista ${Y}`,
+  (l, n, p) => `Mejores Cuentas OnlyFans ${l} — ${n}${p ? '+' : ''} Perfiles ${Y}`,
+  (l, n, p) => `OnlyFans ${l}: ${n}${p ? '+' : ''} Mejores Creadoras (${Y})`,
+  (l, n, p) => `${n}${p ? '+' : ''} OnlyFans ${l} · Verificadas y Gratis ${Y}`,
+  (l, n, p) => `Ranking ${Y}: ${n}${p ? '+' : ''} Creadoras ${l} de OnlyFans`,
+  (l, n, p) => `Las Mejores ${l} de OnlyFans · ${n}${p ? '+' : ''} Perfiles ${Y}`,
+  (l, n, p) => `Top OnlyFans ${l} — ${n}${p ? '+' : ''} Cuentas Destacadas ${Y}`,
+  (l, n, p) => `${n}${p ? '+' : ''} Mejores ${l} en OnlyFans, Según los Fans ${Y}`,
+];
+
+// ---------- CATEGORY DESCRIPTIONS (Spanish) ----------
+
+const CAT_DESCS_ES: ((label: string, n: string, plus: boolean, niche: string) => string)[] = [
+  (l, n, p) => `Descubre las ${n}${p ? '+' : ''} mejores creadoras ${l} de OnlyFans en ${Y}, ordenadas por popularidad real. Cuentas gratis, verificadas y búsqueda facial con IA.`,
+  (l, n, p, ni) => `Explora ${n}${p ? '+' : ''} cuentas OnlyFans ${l} seleccionadas para ${ni}. Precios, verificación y ofertas de packs — sin registro, actualizado a diario.`,
+  (l, n, p) => `La lista definitiva ${Y} con ${n}${p ? '+' : ''} creadoras ${l} de OnlyFans que valen tu suscripción. Filtra gratis, verificadas y packs con descuento en un clic.`,
+  (l, n, p) => `¿Buscas las mejores ${l} de OnlyFans? Nuestro directorio de ${n}${p ? '+' : ''} creadoras ordena cada perfil por popularidad, con filtros de gratis y verificadas.`,
+  (l, n, p) => `${n}${p ? '+' : ''} creadoras ${l} de OnlyFans elegidas a mano para ${Y} — ordenadas por interacción de fans, con verificación, packs y búsqueda facial con IA.`,
+  (l, n, p) => `Explora ${n}${p ? '+' : ''} cuentas ${l} de OnlyFans clasificadas para ${Y}. Compara precios, popularidad y verificación de un vistazo — búsqueda facial gratis.`,
+  (l, n, p) => `De cuentas nuevas a las más top: las ${n}${p ? '+' : ''} mejores creadoras ${l} de OnlyFans de ${Y}, filtrables por precio, gratis y verificación.`,
+  (l, n, p) => `${n}${p ? '+' : ''} creadoras ${l} de OnlyFans que seguir en ${Y}. Búsqueda facial con IA, filtros de cuentas gratis, verificación y precios de packs en vivo.`,
+];
+
 // ---------- public API ----------
 
 export interface CategorySeo {
@@ -139,12 +213,16 @@ export interface CategorySeo {
   hasPlus: boolean;
 }
 
-export function categorySeo(slug: string, label: string, total: number): CategorySeo {
+// `slug` is ALWAYS the English slug (stable hash + niche key across locales);
+// pass `labelEs` as `label` when locale is 'es'.
+export function categorySeo(slug: string, label: string, total: number, locale: 'en' | 'es' = 'en'): CategorySeo {
   const { display, hasPlus } = bucketCount(total);
-  const niche = nicheFor(slug);
+  const niche = nicheFor(slug, locale);
 
-  const title = pickByHash(slug, CAT_TITLES, [label, display, hasPlus], 60, 30);
-  const description = pickByHash(slug, CAT_DESCS, [label, display, hasPlus, niche], 165, 120);
+  const titles = locale === 'es' ? CAT_TITLES_ES : CAT_TITLES;
+  const descs = locale === 'es' ? CAT_DESCS_ES : CAT_DESCS;
+  const title = pickByHash(slug, titles, [label, display, hasPlus], 60, 30);
+  const description = pickByHash(slug, descs, [label, display, hasPlus, niche], 165, 120);
 
   return { title, description, niche, countDisplay: display, hasPlus };
 }
@@ -172,4 +250,29 @@ export const BLOG_SEO = {
   title: `OnlyFans Insights · Guides, Lists & Reviews | findbyface`,
   description:
     'Honest OnlyFans guides, ranked lists, and creator reviews. Tips on free accounts, bundle deals, verification, and AI face search — updated weekly.',
+};
+
+// ---------- static page meta, Spanish (hand-tuned, not translated 1:1) ----------
+
+export const HOME_SEO_ES = {
+  title: `Buscador Facial de Contenido Adulto · Busca por Foto`,
+  description:
+    'Sube una foto para buscar perfiles de creadoras de OnlyFans y apariciones en videos para adultos con reconocimiento facial IA. Gratis para empezar, sin registro.',
+};
+
+export const SEARCH_SEO_ES = {
+  title: `Buscador de OnlyFans · Filtra 2.4M+ Perfiles (${Y})`,
+  description: `Busca entre 2.4M+ creadoras de OnlyFans con filtros de verificadas, gratis y packs. Tu próxima suscripción en segundos — sin registro, actualizado a diario.`,
+};
+
+export const AI_DISCOVER_SEO_ES = {
+  title: `Crea Tu Tipo Ideal · Descubrimiento Visual con IA (${Y})`,
+  description:
+    'Ajusta el rostro ideal — color de ojos, mandíbula, labios y más — y ve al instante las creadoras de OnlyFans que coinciden. Sin subir ninguna foto.',
+};
+
+export const BLOG_SEO_ES = {
+  title: `Guías y Rankings de OnlyFans en Español | findbyface`,
+  description:
+    'Guías honestas de OnlyFans, listas clasificadas y reseñas de creadoras. Consejos sobre cuentas gratis, packs, verificación y búsqueda facial con IA — en español.',
 };

@@ -1,6 +1,9 @@
 ---
 import Nav from '../components/Nav.astro';
 import CreatorCardEnhancements from '../components/CreatorCardEnhancements.astro';
+import { alternatePath, localeOf, localizePath, type Locale } from '../i18n/routes';
+import { t } from '../i18n/ui';
+import { absUrl } from '../lib/site';
 
 interface Props {
   title: string;
@@ -11,11 +14,21 @@ interface Props {
   imageAlt?: string;
   imageWidth?: number;
   imageHeight?: number;
+  lang?: Locale;
+  // Counterpart URL path in the other locale, for the hreflang cluster.
+  // undefined = look it up in the routes map (static pages — automatic);
+  // string    = explicit counterpart (dynamic pages: blog posts, categories);
+  // null      = no translation exists → suppress hreflang entirely.
+  alternate?: string | null;
 }
+
+const lang: Locale = Astro.props.lang ?? localeOf(Astro.url.pathname);
 
 const {
   title,
-  description = 'Find lookalike OnlyFans creators instantly. Upload a photo and discover matching creators in seconds.',
+  description = lang === 'es'
+    ? 'Encuentra creadoras de OnlyFans parecidas al instante. Sube una foto y descubre perfiles similares en segundos.'
+    : 'Find lookalike OnlyFans creators instantly. Upload a photo and discover matching creators in seconds.',
   canonical,
   robots,
   image,
@@ -24,12 +37,36 @@ const {
   imageHeight = 630,
 } = Astro.props;
 
-const canonicalUrl = canonical ?? new URL(Astro.url.pathname, 'https://findbyface.org').href;
+const pathWithSlash = Astro.url.pathname.endsWith('/') ? Astro.url.pathname : `${Astro.url.pathname}/`;
+const canonicalUrl = canonical ?? absUrl(pathWithSlash);
 const socialImageUrl = image ? new URL(image, canonicalUrl).href : null;
+
+// hreflang cluster: en + es + x-default (English). Only emitted when a real
+// translation counterpart exists and the page is indexable.
+const alt = Astro.props.alternate === undefined
+  ? alternatePath(Astro.url.pathname)
+  : (Astro.props.alternate ?? undefined);
+const altHref = alt ? absUrl(alt) : undefined;
+const enHref = lang === 'en' ? canonicalUrl : altHref;
+const esHref = lang === 'es' ? canonicalUrl : altHref;
+const noindex = robots?.includes('noindex') ?? false;
+
+// Facebook's locale code for "Spanish (Latin America)" is es_LA — this is
+// intentionally not an ISO code ('LA' here is not Laos); do not "fix" it.
+const ogLocale = lang === 'es' ? 'es_LA' : 'en_US';
+const ogLocaleAlt = lang === 'es' ? 'en_US' : 'es_LA';
+
+const lp = (p: string) => localizePath(p, lang);
+const categoriesHref = lang === 'es' ? '/es/categorias/top/' : '/categories/top/';
+
+// Footer language switcher targets: counterpart of the current page, falling
+// back to the other locale's homepage when no translation exists.
+const esTarget = lang === 'es' ? Astro.url.pathname : (alt ?? '/es/');
+const enTarget = lang === 'en' ? Astro.url.pathname : (alt ?? '/');
 ---
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang={lang}>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -65,11 +102,19 @@ const socialImageUrl = image ? new URL(image, canonicalUrl).href : null;
   <meta name="description" content={description} />
   {robots && <meta name="robots" content={robots} />}
   <link rel="canonical" href={canonicalUrl} />
+  {!noindex && enHref && esHref && (
+    <>
+      <link rel="alternate" hreflang="en" href={enHref} />
+      <link rel="alternate" hreflang="es" href={esHref} />
+      <link rel="alternate" hreflang="x-default" href={enHref} />
+    </>
+  )}
 
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="findbyface" />
-  <meta property="og:locale" content="en_US" />
+  <meta property="og:locale" content={ogLocale} />
+  {altHref && <meta property="og:locale:alternate" content={ogLocaleAlt} />}
   <meta property="og:url" content={canonicalUrl} />
   <meta property="og:title" content={title} />
   <meta property="og:description" content={description} />
@@ -102,33 +147,67 @@ const socialImageUrl = image ? new URL(image, canonicalUrl).href : null;
   </main>
   <footer class="site-footer">
     <div class="footer-inner">
-      <a href="/" class="logo-text">
+      <a href={lang === 'es' ? '/es/' : '/'} class="logo-text">
         <img class="footer-logo-mark" src="/findbyface-logo.png" alt="" width="40" height="40" loading="lazy" />
         <span><span style="color:#fff">find</span><span style="background:linear-gradient(135deg,#7c3aed,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">byface</span></span>
       </a>
       <nav class="footer-links">
-        <a href="/about/">About</a>
-        <a href="/how-our-search-engine-works/">How Our Search Engine Works</a>
-        <a href="/blog/">Blog</a>
-        <a href="/onlyfans-search/">Search</a>
-        <a href="/onlyfans-finder-by-face/">OnlyFans Finder</a>
-        <a href="/pornstar-finder-by-face/">Pornstar Finder</a>
-        <a href="/battle/">Creator Battle</a>
-        <a href="/categories/top/">Categories</a>
-        <a href="/promote/">Promote Your OnlyFans</a>
-        <a href="/contact/">Contact</a>
-        <a href="/privacy-policy/">Privacy</a>
-        <a href="/terms-of-use/">Terms</a>
-        <a href="/community-guidelines/">Community Guidelines</a>
-        <a href="/dmca/">DMCA</a>
-        <a href="/sitemap/">Sitemap</a>
+        <a href={lp('/about/')}>{t(lang, 'footer.about')}</a>
+        <a href={lp('/how-our-search-engine-works/')}>{t(lang, 'footer.how')}</a>
+        <a href={lp('/blog/')}>{t(lang, 'footer.blog')}</a>
+        <a href={lp('/onlyfans-search/')}>{t(lang, 'footer.search')}</a>
+        <a href={lp('/onlyfans-finder-by-face/')}>{t(lang, 'footer.onlyfansFinder')}</a>
+        <a href={lp('/pornstar-finder-by-face/')}>{t(lang, 'footer.pornstarFinder')}</a>
+        <a href={lp('/battle/')}>{t(lang, 'footer.battle')}</a>
+        <a href={categoriesHref}>{t(lang, 'footer.categories')}</a>
+        <a href={lp('/promote/')}>{t(lang, 'footer.promote')}</a>
+        <a href={lp('/contact/')}>{t(lang, 'footer.contact')}</a>
+        <a href={lp('/privacy-policy/')}>{t(lang, 'footer.privacy')}</a>
+        <a href={lp('/terms-of-use/')}>{t(lang, 'footer.terms')}</a>
+        <a href={lp('/community-guidelines/')}>{t(lang, 'footer.guidelines')}</a>
+        <a href={lp('/dmca/')}>{t(lang, 'footer.dmca')}</a>
+        <a href={lp('/sitemap/')}>{t(lang, 'footer.sitemap')}</a>
       </nav>
+      <div class="lang-menu footer-lang" aria-label="Language / Idioma">
+        <button type="button" class="lang-trigger" id="footerLangTrigger" aria-haspopup="true" aria-expanded="false">
+          <svg class="lang-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span>{lang === 'es' ? 'Español' : 'English'}</span>
+          <svg class="lang-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="lang-dropdown" id="footerLangDropdown">
+          <a href={enTarget} hreflang="en" lang="en" class={lang === 'en' ? 'active' : ''}>English {lang === 'en' && <span class="lang-check" aria-hidden="true">✓</span>}</a>
+          <a href={esTarget} hreflang="es" lang="es" class={lang === 'es' ? 'active' : ''}>Español {lang === 'es' && <span class="lang-check" aria-hidden="true">✓</span>}</a>
+        </div>
+      </div>
       <div class="footer-legal-group">
-        <p class="footer-legal">© {new Date().getFullYear()} findbyface.org — For entertainment purposes only. Results are based on visual similarity and are not an indication of identity.</p>
-        <p class="footer-legal">All rights reserved. findbyface.org is neither owned nor affiliated with onlyfans.com, which is a registered trademark of Fenix International Limited.</p>
+        <p class="footer-legal">{t(lang, 'footer.legal1', { year: new Date().getFullYear() })}</p>
+        <p class="footer-legal">{t(lang, 'footer.legal2')}</p>
       </div>
     </div>
   </footer>
+  <script>
+    // Footer language switcher toggle
+    const langMenu = document.querySelector('.footer-lang');
+    const langTrigger = document.getElementById('footerLangTrigger');
+    const langDropdown = document.getElementById('footerLangDropdown');
+    if (langMenu && langTrigger && langDropdown) {
+      const closeLang = () => {
+        langDropdown.classList.remove('open');
+        langTrigger.setAttribute('aria-expanded', 'false');
+      };
+      langTrigger.addEventListener('click', event => {
+        event.stopPropagation();
+        const open = langDropdown.classList.toggle('open');
+        langTrigger.setAttribute('aria-expanded', String(open));
+      });
+      document.addEventListener('click', event => {
+        if (!langMenu.contains(event.target as Node)) closeLang();
+      });
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeLang();
+      });
+    }
+  </script>
 </body>
 </html>
 
@@ -212,6 +291,71 @@ const socialImageUrl = image ? new URL(image, canonicalUrl).href : null;
   }
 
   .footer-links a:hover { color: var(--text); }
+
+  /* Footer language switcher — compact globe pill with a drop-UP menu */
+  .footer-lang { position: relative; }
+
+  .lang-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 13px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.025);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .lang-trigger:hover { border-color: rgba(167,139,250,0.55); background: rgba(124,58,237,0.11); }
+  .lang-globe { width: 15px; height: 15px; color: var(--text-muted); flex-shrink: 0; }
+  .lang-chevron { width: 12px; height: 12px; color: var(--text-muted); transition: transform 0.2s; flex-shrink: 0; }
+  .lang-trigger[aria-expanded="true"] .lang-chevron { transform: rotate(180deg); }
+
+  .lang-dropdown {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    min-width: 158px;
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+    opacity: 0;
+    visibility: hidden;
+    transform: translate(-50%, 6px);
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
+    z-index: 200;
+    text-align: left;
+  }
+  .lang-dropdown.open { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+
+  .lang-dropdown a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 9px 11px;
+    border-radius: 9px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: background 0.15s, color 0.15s;
+  }
+  .lang-dropdown a:hover { background: rgba(124,58,237,0.14); color: var(--text); }
+  .lang-dropdown a.active { color: var(--text); font-weight: 700; }
+  .lang-check {
+    background: linear-gradient(135deg, var(--accent-light), var(--accent-pink));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 900;
+  }
 
   .footer-legal-group {
     display: flex;

@@ -3,6 +3,12 @@
 // guests (hidden automatically once signed in — see the script below). Supports more than
 // one instance per page (dashboard + /wishlist could both render it) via class-scoped
 // queries rather than ids, so nothing collides if it's ever dropped in twice.
+import { localeOf } from '../i18n/routes';
+
+const lang = localeOf(Astro.url.pathname);
+const C = lang === 'es'
+  ? { label: 'Favoritos', sub: 'Elementos guardados', cta: 'Regístrate para más espacio', href: '/es/signup/?next=/es/wishlist/' }
+  : { label: 'Wishlist', sub: 'Items saved', cta: 'Sign up for more space', href: '/signup/?next=/wishlist/' };
 ---
 
 <div class="wishlist-widget">
@@ -11,13 +17,13 @@
       <svg viewBox="0 0 24 24"><path d="M12 21s-6.6-4.06-9.33-7.86C.86 10.64 1.1 7.28 3.6 5.34c2.2-1.7 5.02-1.24 6.7.86L12 8.1l1.7-1.9c1.68-2.1 4.5-2.56 6.7-.86 2.5 1.94 2.74 5.3 0.93 7.8C18.6 16.94 12 21 12 21Z"/></svg>
     </span>
     <div class="ww-meta">
-      <span class="ww-label">Wishlist</span>
+      <span class="ww-label">{C.label}</span>
       <strong class="ww-count"><span class="ww-current">0</span><span class="ww-slash">/</span><span class="ww-limit">10</span></strong>
     </div>
   </div>
-  <p class="ww-sub">Items saved</p>
+  <p class="ww-sub">{C.sub}</p>
   <div class="ww-bar-track"><div class="ww-bar-fill" style="width:0%"></div></div>
-  <a href="/signup/?next=/wishlist/" class="ww-cta" hidden>Sign up for more space <span>→</span></a>
+  <a href={C.href} class="ww-cta" hidden>{C.cta} <span>→</span></a>
 </div>
 
 <script>

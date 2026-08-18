@@ -1,0 +1,204 @@
+---
+{/* i18n-twin: src/pages/blog/author/nick.astro — mirror copy/structure changes */}
+import Base from '../../../../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+import { absUrl } from '../../../../lib/site';
+
+const allPosts = (await getCollection('blogEs')).sort(
+  (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime()
+);
+const posts = allPosts.filter(post => post.data.author === 'Nick');
+---
+
+<Base
+  title="Nick — findbyface"
+  description="Nick construye y mantiene findbyface: el motor de búsqueda facial con IA, el ranking de creadoras FindRank y el directorio de OnlyFans."
+  canonical={absUrl('/es/blog/autor/nick/')}
+>
+  <article class="author-page">
+    <div class="author-head">
+      <div class="author-avatar" aria-hidden="true">N</div>
+      <h1>Nick</h1>
+      <p class="author-role">Fundador y constructor, findbyface</p>
+      <p class="author-bio">
+        Nick construye y mantiene findbyface — el motor de búsqueda facial y el directorio de OnlyFans
+        de este sitio, incluido el <a href="/es/como-funciona-nuestro-buscador/">sistema de ranking FindRank</a>
+        y el modelo divulgado de patrocinios que lo mantiene gratis.
+      </p>
+      <div class="author-links">
+        <a href="/es/como-funciona-nuestro-buscador/">Cómo funciona el buscador</a>
+        <span aria-hidden="true">·</span>
+        <a href="/es/sobre-nosotros/">Sobre findbyface</a>
+        <span aria-hidden="true">·</span>
+        <a href="/es/contacto/">Contacto</a>
+      </div>
+    </div>
+
+    <div class="author-posts">
+      <h2>Artículos publicados</h2>
+      {posts.length === 0 ? (
+        <p class="no-posts">Todavía no hay artículos publicados — vuelve pronto.</p>
+      ) : (
+        <div class="posts-grid">
+          {posts.map(post => (
+            <a href={`/es/blog/${post.id.replace(/\.md$/, '')}/`} class="post-card">
+              {post.data.image && (
+                <div class="post-img-wrap">
+                  <img src={post.data.image} alt={post.data.title} loading="lazy" />
+                </div>
+              )}
+              <div class="post-body">
+                <p class="post-date">{new Date(post.data.date).toLocaleDateString('es', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                <h3>{post.data.title}</h3>
+                <p class="post-desc">{post.data.description}</p>
+                <span class="read-more">Leer más →</span>
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  </article>
+</Base>
+
+<style>
+  .author-page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 100px 24px 60px;
+  }
+
+  .author-head {
+    text-align: center;
+    max-width: 640px;
+    margin: 0 auto 56px;
+  }
+
+  .author-avatar {
+    width: 84px;
+    height: 84px;
+    margin: 0 auto 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 34px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+  }
+
+  .author-head h1 {
+    font-size: clamp(1.8rem, 4vw, 2.4rem);
+    margin-bottom: 4px;
+  }
+
+  .author-role {
+    color: var(--accent-light);
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
+  .author-bio {
+    color: var(--text-muted);
+    line-height: 1.7;
+    margin-bottom: 18px;
+  }
+
+  .author-bio a { color: var(--accent-light); text-decoration: underline; }
+  .author-bio a:hover { color: var(--accent-pink); }
+
+  .author-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .author-links a { color: var(--text-muted); text-decoration: underline; }
+  .author-links a:hover { color: var(--accent-light); }
+
+  .author-posts h2 {
+    font-size: 1.3rem;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .no-posts { text-align: center; color: var(--text-muted); padding: 40px 0; }
+
+  .posts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 24px;
+  }
+
+  .post-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .post-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px var(--accent-glow);
+  }
+
+  .post-img-wrap {
+    aspect-ratio: 16/9;
+    overflow: hidden;
+    background: var(--surface-raised);
+  }
+
+  .post-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .post-body {
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .post-date {
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+
+  .post-body h3 {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+
+  .post-desc {
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.6;
+    flex: 1;
+    margin-bottom: 14px;
+  }
+
+  .read-more {
+    color: var(--accent-light);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  @media (max-width: 600px) {
+    .author-page { padding-top: 90px; }
+  }
+</style>

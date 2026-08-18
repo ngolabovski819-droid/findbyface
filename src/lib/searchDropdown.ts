@@ -47,6 +47,49 @@ const POPULAR_CATEGORY_SLUGS = ['milf', 'latina', 'blonde', 'asian', 'bbw', 'fee
 const SUGGESTION_DELAY_MS = 180;
 const MAX_CATEGORY_RESULTS = 5;
 
+// Client-side lib: locale comes from the <html lang> Base.astro rendered.
+const IS_ES = typeof document !== 'undefined' && document.documentElement.lang === 'es';
+const L = IS_ES
+  ? {
+      popularCategories: 'Categorías populares',
+      categories: 'Categorías',
+      creators: 'Creadoras',
+      search: 'Buscar',
+      suggestions: 'Sugerencias de búsqueda',
+      sponsored: 'Patrocinado',
+      sponsoredCreator: 'Creadora patrocinada',
+      removeRecent: (q: string) => `Quitar ${q} de búsquedas recientes`,
+      browseCategory: 'Explorar categoría',
+      verified: 'Verificada',
+      creatorsUnavailable: 'Las sugerencias de creadoras no están disponibles. Aún puedes buscar.',
+      noMatching: 'No hay nombres de creadoras coincidentes',
+      finding: 'Buscando creadoras…',
+      searchAllFor: (q: string) => `Buscar “${q}” entre todas las creadoras`,
+      typeOneMore: 'Escribe un carácter más para buscar nombres de creadoras.',
+    }
+  : {
+      popularCategories: 'Popular categories',
+      categories: 'Categories',
+      creators: 'Creators',
+      search: 'Search',
+      suggestions: 'Search suggestions',
+      sponsored: 'Sponsored',
+      sponsoredCreator: 'Sponsored creator',
+      removeRecent: (q: string) => `Remove ${q} from recent searches`,
+      browseCategory: 'Browse category',
+      verified: 'Verified',
+      creatorsUnavailable: 'Creator suggestions are unavailable. You can still search.',
+      noMatching: 'No matching creator names',
+      finding: 'Finding creators…',
+      searchAllFor: (q: string) => `Search all creators for “${q}”`,
+      typeOneMore: 'Type one more character to search creator names.',
+    };
+
+const categoryLabel = (category: Category): string => (IS_ES ? category.labelEs : category.label);
+const categoryHref = (category: Category): string => IS_ES
+  ? `/es/categorias/${encodeURIComponent(category.slugEs ?? category.slug)}/`
+  : `/categories/${encodeURIComponent(category.slug)}/`;
+
 function proxyImg(url: string | null | undefined, w: number, h: number): string {
   if (url?.startsWith('/')) return url;
   if (!url || !/^https?:\/\//i.test(url)) return '';
@@ -72,7 +115,7 @@ function categoryMatches(query: string): Category[] {
 
   return categories
     .map((category, originalIndex) => {
-      const candidates = [category.label, ...category.terms].map(normalize);
+      const candidates = [category.label, category.labelEs, ...category.terms].map(normalize);
       const exact = candidates.some(value => value === needle);
       const prefix = candidates.some(value => value.startsWith(needle));
       const contains = needle.length >= 2 && candidates.some(value => value.includes(needle));
@@ -123,10 +166,10 @@ function setText(parent: HTMLElement, className: string, text: string): HTMLElem
 export function initSearchDropdown(refs: SearchDropdownRefs): void {
   const { wrapper, input, dropdown, adSlot, historyList, clearAllBtn, onSelect } = refs;
   const historyHeader = historyList.previousElementSibling as HTMLElement | null;
-  const popular = makeSection('Popular categories');
-  const matchingCategories = makeSection('Categories');
-  const profiles = makeSection('Creators');
-  const searchAll = makeSection('Search');
+  const popular = makeSection(L.popularCategories);
+  const matchingCategories = makeSection(L.categories);
+  const profiles = makeSection(L.creators);
+  const searchAll = makeSection(L.search);
   dropdown.append(popular.section, matchingCategories.section, profiles.section, searchAll.section);
 
   let isOpen = false;
@@ -144,7 +187,7 @@ export function initSearchDropdown(refs: SearchDropdownRefs): void {
   input.setAttribute('aria-controls', dropdown.id);
   input.setAttribute('aria-expanded', 'false');
   dropdown.setAttribute('role', 'listbox');
-  dropdown.setAttribute('aria-label', 'Search suggestions');
+  dropdown.setAttribute('aria-label', L.suggestions);
 
   function options(): HTMLElement[] {
     return Array.from(dropdown.querySelectorAll<HTMLElement>('[role="option"]'))
@@ -235,8 +278,8 @@ export function initSearchDropdown(refs: SearchDropdownRefs): void {
     const body = document.createElement('span');
     body.className = 'dd-ad-body';
     setText(body, 'dd-ad-name', ad.name || ad.username);
-    const badge = setText(body, 'sponsored-badge', 'Sponsored');
-    badge.setAttribute('aria-label', 'Sponsored creator');
+    const badge = setText(body, 'sponsored-badge', L.sponsored);
+    badge.setAttribute('aria-label', L.sponsoredCreator);
     link.append(avatar, body);
     adSlot.append(link);
     adSlot.style.display = 'block';
@@ -263,7 +306,7 @@ export function initSearchDropdown(refs: SearchDropdownRefs): void {
       remove.className = 'dd-row-del';
       remove.type = 'button';
       remove.dataset.removeQuery = query;
-      remove.setAttribute('aria-label', `Remove ${query} from recent searches`);
+      remove.setAttribute('aria-label', L.removeRecent(query));
       remove.textContent = '×';
       row.append(remove);
       historyList.append(row);
@@ -292,13 +335,13 @@ export function initSearchDropdown(refs: SearchDropdownRefs): void {
 
   function categoryOption(category: Category): HTMLElement {
     const option = makeOption('category');
-    option.dataset.href = `/categories/${encodeURIComponent(category.slug)}/`;
+    option.dataset.href = categoryHref(category);
     const icon = setText(option, 'dd-category-icon', '#');
     icon.setAttribute('aria-hidden', 'true');
     const body = document.createElement('span');
     body.className = 'dd-option-body';
-    setText(body, 'dd-option-title', category.label);
-    setText(body, 'dd-option-meta', 'Browse category');
+    setText(body, 'dd-option-title', categoryLabel(category));
+    setText(body, 'dd-option-meta', L.browseCategory);
     option.append(body);
     return option;
   }
@@ -340,7 +383,7 @@ export function initSearchDropdown(refs: SearchDropdownRefs): void {
     title.textContent = creator.name || creator.username;
     if (creator.isVerified) {
       const verified = setText(title, 'dd-verified', '✓');
-      verified.setAttribute('aria-label', 'Verified');
+      verified.setAttribute('aria-label', L.verified);
     }
     body.append(title);
     setText(body, 'dd-option-meta', `@${creator.username}`);
@@ -354,7 +397,7 @@ export function initSearchDropdown(refs: SearchDropdownRefs): void {
     if (!creators.length) {
       const empty = document.createElement('p');
       empty.className = 'dd-empty';
-      empty.textContent = failed ? 'Creator suggestions are unavailable. You can still search.' : 'No matching creator names';
+      empty.textContent = failed ? L.creatorsUnavailable : L.noMatching;
       profiles.list.append(empty);
     } else {
       profiles.list.append(...creators.slice(0, 6).map(creatorOption));
@@ -367,7 +410,7 @@ export function initSearchDropdown(refs: SearchDropdownRefs): void {
     const loading = document.createElement('p');
     loading.className = 'dd-empty dd-loading';
     loading.setAttribute('role', 'status');
-    loading.textContent = 'Finding creators…';
+    loading.textContent = L.finding;
     profiles.list.replaceChildren(loading);
   }
 
@@ -381,7 +424,7 @@ export function initSearchDropdown(refs: SearchDropdownRefs): void {
     setText(option, 'dd-search-icon', '⌕').setAttribute('aria-hidden', 'true');
     const body = document.createElement('span');
     body.className = 'dd-option-body';
-    setText(body, 'dd-option-title', `Search all creators for “${query}”`);
+    setText(body, 'dd-option-title', L.searchAllFor(query));
     option.append(body);
     searchAll.list.append(option);
   }
@@ -442,7 +485,7 @@ export function initSearchDropdown(refs: SearchDropdownRefs): void {
         searchAll.section.hidden = false;
         const hint = document.createElement('p');
         hint.className = 'dd-empty';
-        hint.textContent = 'Type one more character to search creator names.';
+        hint.textContent = L.typeOneMore;
         searchAll.list.replaceChildren(hint);
       }
       return;

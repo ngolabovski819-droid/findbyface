@@ -1,6 +1,8 @@
 ---
 import { proxyImg } from '../utils/image';
 import { creatorCardImages } from '../lib/creatorCardUi';
+import { localeOf } from '../i18n/routes';
+import { t } from '../i18n/ui';
 
 interface Props {
   creator: {
@@ -43,7 +45,9 @@ const imgSrcset = avatar?.startsWith('http')
   : '';
 const imgSizes = '(max-width:480px) 144px, (max-width:768px) 240px, 320px';
 
-const priceLabel = (!price || isNaN(Number(price))) ? 'FREE' : `$${parseFloat(String(price)).toFixed(2)}`;
+const lang = localeOf(Astro.url.pathname);
+const priceIsFree = (!price || isNaN(Number(price)));
+const priceLabel = priceIsFree ? t(lang, 'common.free') : `$${parseFloat(String(price)).toFixed(2)}`;
 const profileUrl = creator.profileUrl || `https://onlyfans.com/${encodeURIComponent(username)}`;
 // GOTCHA: never use rel="noreferrer" on a /go/ link — it zeroes out the Referer that
 // route depends on for placement attribution. noopener + nofollow(+sponsored) instead.
@@ -77,9 +81,9 @@ const rel = profileUrl.startsWith('/go/') ? 'noopener nofollow sponsored' : 'noo
   <div class="card-body">
     <p class="creator-name">{name}</p>
     <p class="username">@{username}</p>
-    <p class={`price ${priceLabel === 'FREE' ? 'price-free' : ''}`}>{priceLabel}</p>
+    <p class={`price ${priceIsFree ? 'price-free' : ''}`}>{priceLabel}</p>
     <a href={profileUrl} class="view-btn" target="_blank" rel={rel}>
-      View Profile
+      {t(lang, 'common.viewProfile')}
     </a>
   </div>
 </div>

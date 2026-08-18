@@ -1,0 +1,564 @@
+---
+{/* i18n-twin: src/pages/promote.astro — mirror copy/structure changes. Styles are copied
+   verbatim from the English twin; the visible FAQ renders from the same `faqs` array that
+   feeds the JSON-LD. */}
+import Base from '../../layouts/Base.astro';
+import { absUrl } from '../../lib/site';
+
+const APPLY_URL = 'https://tally.so/r/kd16Xe';
+
+const faqs = [
+  {
+    question: '¿Promocionarse en findbyface es seguro y cumple los ToS de OnlyFans?',
+    answer: 'Sí. Solo mostramos tu perfil público en nuestros resultados de búsqueda y páginas de categorías — igual que un buscador lista un sitio web. Nunca publicamos en tu nombre, nunca tocamos tu cuenta y nunca hacemos nada que viole los términos de servicio de OnlyFans.',
+  },
+  {
+    question: '¿Necesitan mi contraseña de OnlyFans?',
+    answer: 'Nunca. Solo necesitamos el enlace de tu perfil público y algunos detalles sobre tu nicho. Tú mantienes el control total de tu cuenta en todo momento.',
+  },
+  {
+    question: '¿Qué tan rápido estará en vivo mi perfil?',
+    answer: 'Dentro de las 24 horas posteriores a la aprobación de tu solicitud, tu perfil está en vivo y destacado en los resultados de búsqueda de findbyface, las páginas de categorías y los resultados de coincidencia facial con IA.',
+  },
+  {
+    question: '¿Es lo mismo que comprar seguidores?',
+    answer: 'No — es lo contrario. Los seguidores comprados son bots que nunca gastan un centavo. findbyface te envía personas reales que buscaron creadoras con tu look y nicho exactos, y llegan listas para suscribirse.',
+  },
+  {
+    question: '¿Qué resultados puedo esperar?',
+    answer: 'Los resultados varían según el nicho y la calidad del perfil, pero las creadoras destacadas suelen ver un flujo constante de visitantes con alta intención desde el primer día. El tráfico de búsqueda convierte mucho mejor que las redes sociales porque los visitantes buscan activamente a una creadora como tú.',
+  },
+  {
+    question: '¿Trabajan con agencias o varias cuentas?',
+    answer: 'Sí. Si gestionas varias creadoras, menciónalo en tu solicitud y configuraremos una colocación masiva con soporte prioritario.',
+  },
+];
+
+const faqJsonLd = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  inLanguage: 'es',
+  mainEntity: faqs.map((item) => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: { '@type': 'Answer', text: item.answer },
+  })),
+});
+---
+
+<Base
+  title="Promociona tu OnlyFans — Fans Reales que Pagan | findbyface"
+  description="Destaca tu OnlyFans en findbyface y llega a miles de fans con alta intención que buscan por cara, nicho y categoría cada día. En vivo en 24 horas — sin contraseña."
+  canonical={absUrl('/es/promociona-tu-onlyfans/')}
+>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={faqJsonLd} />
+  </Fragment>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      Quedan 3 lugares esta semana — se llenan rápido
+    </div>
+    <h1><span class="h1-white">Promociona tu</span> <span class="gradient-text">OnlyFans</span><br /><span class="h1-white">y consigue fans reales que pagan</span></h1>
+    <p class="hero-sub">findbyface llega a miles de fans que buscan creadoras por cara, nicho y categoría cada día. Destaca tu perfil frente a audiencias con alta intención listas para suscribirse.</p>
+    <div class="section-cta hero-cta-wrap">
+      <a href={APPLY_URL} target="_blank" rel="noopener" class="hero-cta">
+        <span class="cta-icon">🚀</span>
+        Reclama tu Lugar — En Vivo en 24h
+      </a>
+    </div>
+    <ul class="hero-trust">
+      <li><span class="trust-ico">🔒</span> Sin contraseña</li>
+      <li><span class="trust-ico">✓</span> Solicitud gratis</li>
+      <li><span class="trust-ico">⚡</span> Tráfico de búsqueda real</li>
+    </ul>
+  </div>
+
+  <!-- Stats -->
+  <section class="promo-stats">
+    <div class="stat">
+      <span class="stat-num">2.4M+</span>
+      <span class="stat-label">Perfiles indexados</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">Miles</span>
+      <span class="stat-label">Búsquedas faciales diarias</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num">24h</span>
+      <span class="stat-label">Para estar en vivo</span>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="home-section">
+    <div class="section-head">
+      <span class="eyebrow">Simple y rápido</span>
+      <h2 class="section-title-lg">Cómo funciona promocionarse en findbyface</h2>
+      <p class="section-lead">Cuatro pasos desde la solicitud hasta un flujo constante de suscriptores nuevos — sin trabajo continuo de tu parte.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card">
+        <span class="step-num">1</span>
+        <span class="step-emoji">📝</span>
+        <h3>Envía tu perfil</h3>
+        <p>Completa una solicitud corta con tu enlace de OnlyFans y tu nicho. Toma menos de dos minutos — sin contraseña, sin acceso a tu cuenta.</p>
+      </div>
+      <div class="step-card">
+        <span class="step-num">2</span>
+        <span class="step-emoji">✨</span>
+        <h3>Optimizamos tu listado</h3>
+        <p>Nuestro equipo prepara tu listado destacado — fotos, etiquetas y textos afinados para que aparezcas en las búsquedas que coinciden con tu look y nicho.</p>
+      </div>
+      <div class="step-card">
+        <span class="step-num">3</span>
+        <span class="step-emoji">⚡</span>
+        <h3>En vivo en 24 horas</h3>
+        <p>Tu perfil se destaca en los resultados de búsqueda facial, las páginas de categorías y el descubrimiento con IA — en todos los lugares donde los fans ya están buscando.</p>
+      </div>
+      <div class="step-card">
+        <span class="step-num">4</span>
+        <span class="step-emoji">📈</span>
+        <h3>Mira crecer tus suscriptores</h3>
+        <p>Fans con alta intención te encuentran, hacen clic y se suscriben. El tráfico sigue fluyendo mes tras mes sin esfuerzo extra de tu parte.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Why it works -->
+  <section class="home-section">
+    <div class="section-head">
+      <span class="eyebrow">Diferente de verdad</span>
+      <h2 class="section-title-lg">Por qué el tráfico de búsqueda convierte mejor que las redes sociales</h2>
+      <p class="section-lead">Las publicaciones sociales desaparecen en horas. La visibilidad en búsqueda se acumula — los fans que te encuentran aquí ya buscaban a alguien exactamente como tú.</p>
+    </div>
+    <div class="why-grid">
+      <article class="why-card">
+        <span class="why-emoji">🎯</span>
+        <h3>Audiencia con alta intención</h3>
+        <p>Cada visitante buscó una creadora con tu look o nicho. Llegan listos para suscribirse — no pasan de largo como en los feeds sociales.</p>
+      </article>
+      <article class="why-card">
+        <span class="why-emoji">📈</span>
+        <h3>Tráfico constante y predecible</h3>
+        <p>Sin ruleta de algoritmos. La demanda de búsqueda es estable mes tras mes, así que tu lugar destacado sigue enviando fans mucho después de que las publicaciones sociales mueren.</p>
+      </article>
+      <article class="why-card">
+        <span class="why-emoji">🛡️</span>
+        <h3>100% seguro y conforme</h3>
+        <p>Destacamos tu perfil público — nada más. Sin acceso a tu cuenta, sin publicar en tu nombre, sin riesgo para tu estado en OnlyFans.</p>
+      </article>
+      <article class="why-card">
+        <span class="why-emoji">👥</span>
+        <h3>Fans que se quedan</h3>
+        <p>Los suscriptores que te eligieron deliberadamente renuevan más tiempo y gastan más en PPV que los clics impulsivos de shoutouts y drops.</p>
+      </article>
+      <article class="why-card">
+        <span class="why-emoji">📍</span>
+        <h3>Segmentación por nicho y look</h3>
+        <p>Los fans buscan por cara, categoría y tipo. Tu listado se asocia a tu nicho exacto, así que el tráfico que recibes realmente encaja con tu contenido.</p>
+      </article>
+      <article class="why-card">
+        <span class="why-emoji">⏰</span>
+        <h3>Sin trabajo continuo</h3>
+        <p>Solicita una vez y listo. Sin publicaciones diarias, sin la rutina de engagement, sin DMs a desconocidos — el tráfico llega a ti.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- Comparison -->
+  <section class="home-section">
+    <div class="section-head">
+      <span class="eyebrow">Las cuentas honestas</span>
+      <h2 class="section-title-lg">findbyface vs otros canales de promoción</h2>
+      <p class="section-lead">¿Dónde se convierte de verdad un dólar de promoción en suscriptores?</p>
+    </div>
+    <div class="compare-wrap">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Canal</th>
+            <th>Intención del visitante</th>
+            <th>Calidad del tráfico</th>
+            <th>Duración</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="highlight-row">
+            <td><strong>Lugar destacado en findbyface</strong></td>
+            <td><span class="pill pill-good">Alta — buscando activamente</span></td>
+            <td>Fans reales listos para gastar</td>
+            <td>Constante, mes tras mes</td>
+          </tr>
+          <tr>
+            <td>Promoción en Reddit</td>
+            <td><span class="pill pill-mid">Mixta</span></td>
+            <td>Depende del subreddit</td>
+            <td>Picos que se apagan en días</td>
+          </tr>
+          <tr>
+            <td>Drops en Twitter/X</td>
+            <td><span class="pill pill-mid">Baja</span></td>
+            <td>Mayormente scrollers pasivos</td>
+            <td>Horas, y desaparece</td>
+          </tr>
+          <tr>
+            <td>Shoutouts de Instagram</td>
+            <td><span class="pill pill-mid">Baja–mixta</span></td>
+            <td>Depende de la página</td>
+            <td>Unas semanas como máximo</td>
+          </tr>
+          <tr>
+            <td>Seguidores comprados</td>
+            <td><span class="pill pill-bad">Ninguna — bots</span></td>
+            <td>Cero gastadores</td>
+            <td>ROI negativo</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Mid-page CTA banner -->
+  <section class="home-section">
+    <div class="free-card">
+      <span class="free-badge">LUGARES LIMITADOS</span>
+      <h2>Tus futuros suscriptores están buscando ahora mismo</h2>
+      <p>Cada día que tu perfil no está destacado, los fans que buscan tu look exacto encuentran a otra persona. Las solicitudes toman menos de dos minutos y los perfiles aprobados están en vivo dentro de 24 horas.</p>
+      <div class="section-cta">
+        <a href={APPLY_URL} target="_blank" rel="noopener" class="hero-cta light">
+          <span class="cta-icon">🚀</span>
+          Reclama tu Lugar — En Vivo en 24h
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="home-section">
+    <div class="section-head">
+      <h2 class="section-title-lg">Preguntas frecuentes</h2>
+    </div>
+    <div class="faq-list">
+      {faqs.map((item) => (
+        <details class="faq-item">
+          <summary>{item.question}</summary>
+          <p>{item.answer}</p>
+        </details>
+      ))}
+    </div>
+  </section>
+
+  <!-- Closing CTA -->
+  <section class="home-section closing-section">
+    <div class="section-head">
+      <h2 class="section-title-lg">¿Lista para hacer crecer tu <span class="gradient-text">OnlyFans</span>?</h2>
+      <p class="section-lead">Únete a las creadoras que ya están siendo descubiertas por fans con alta intención en findbyface todos los días.</p>
+    </div>
+    <div class="section-cta closing-cta">
+      <a href={APPLY_URL} target="_blank" rel="noopener" class="hero-cta">
+        <span class="cta-icon">🚀</span>
+        Reclama tu Lugar — En Vivo en 24h
+      </a>
+    </div>
+  </section>
+</Base>
+
+<style>
+  /* ── Hero ─────────────────────────────────────────────── */
+  .hero {
+    text-align: center;
+    padding: 110px 20px 28px;
+    max-width: 780px;
+    margin: 0 auto;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(236,72,153,0.12);
+    border: 1px solid rgba(236,72,153,0.35);
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: 13px;
+    color: var(--accent-pink);
+    margin-bottom: 18px;
+    font-weight: 600;
+  }
+
+  .badge-dot {
+    width: 6px; height: 6px;
+    background: var(--accent-pink);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .hero h1 {
+    font-size: clamp(2rem, 4.5vw, 3rem);
+    line-height: 1.12;
+    margin-bottom: 14px;
+  }
+
+  .h1-white { color: #ffffff; }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    color: var(--text-muted);
+    font-size: 0.98rem;
+    line-height: 1.6;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .hero-cta-wrap { margin-top: 30px; }
+
+  .hero-trust {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin: 22px 0 0;
+    padding: 0;
+  }
+  .hero-trust li {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text);
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.12), rgba(236,72,153,0.10));
+    border: 1px solid var(--border);
+    backdrop-filter: blur(6px);
+  }
+  .hero-trust .trust-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px; height: 18px;
+    font-size: 0.72rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    color: #fff;
+  }
+
+  /* ── Stats ────────────────────────────────────────────── */
+  .promo-stats {
+    max-width: 760px;
+    margin: 48px auto 0;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .stat {
+    text-align: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px 16px;
+  }
+  .stat-num {
+    display: block;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 800;
+    font-size: 1.8rem;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .stat-label {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  /* ── Shared section scaffolding ───────────────────────── */
+  .home-section { max-width: 1100px; margin: 88px auto 0; padding: 0 20px; }
+  .section-head { text-align: center; max-width: 680px; margin: 0 auto 40px; }
+  .eyebrow {
+    display: inline-block; font-size: 0.78rem; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent-light); margin-bottom: 12px;
+  }
+  .section-title-lg { font-size: clamp(1.6rem, 3.5vw, 2.3rem); line-height: 1.15; margin-bottom: 14px; }
+  .section-lead { color: var(--text-muted); font-size: 1rem; line-height: 1.6; }
+  .section-cta { display: flex; justify-content: center; margin-top: 40px; }
+
+  /* ── CTA button ───────────────────────────────────────── */
+  .hero-cta {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    color: #fff; border: none; cursor: pointer;
+    font-family: 'Manrope', sans-serif; font-weight: 800;
+    font-size: 1.05rem; padding: 16px 34px; border-radius: 999px;
+    box-shadow: 0 10px 30px rgba(124,58,237,0.4);
+    transition: transform 0.15s, box-shadow 0.2s;
+  }
+  .hero-cta:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 14px 40px rgba(236,72,153,0.45); }
+  .hero-cta:active { transform: translateY(0) scale(0.99); }
+  .hero-cta.light { box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+  .cta-icon { font-size: 1.1rem; }
+
+  /* ── Steps ────────────────────────────────────────────── */
+  .steps-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;
+    margin-top: 28px;
+  }
+  .step-card {
+    position: relative; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 32px 22px 26px; text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  }
+  .step-card:hover { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 12px 36px var(--accent-glow); }
+  .step-num {
+    position: absolute; top: -16px; left: 50%; transform: translateX(-50%);
+    width: 34px; height: 34px; border-radius: 50%;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    color: #fff; font-family: 'Manrope', sans-serif; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 18px rgba(124,58,237,0.4);
+  }
+  .step-emoji { font-size: 2rem; display: block; margin: 8px 0 14px; }
+  .step-card h3 { font-size: 1.08rem; margin-bottom: 10px; }
+  .step-card p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; }
+
+  /* ── Why cards ────────────────────────────────────────── */
+  .why-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+  }
+  .why-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 26px 22px;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  }
+  .why-card:hover { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 12px 36px var(--accent-glow); }
+  .why-emoji { font-size: 1.8rem; display: block; margin-bottom: 14px; }
+  .why-card h3 { font-size: 1.08rem; margin-bottom: 8px; }
+  .why-card p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; }
+
+  /* ── Comparison table ─────────────────────────────────── */
+  .compare-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+  }
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 640px;
+    font-size: 0.92rem;
+  }
+  .compare-table th {
+    text-align: left;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 800;
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .compare-table td {
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(124,58,237,0.1);
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .compare-table tbody tr:last-child td { border-bottom: none; }
+  .compare-table td strong { color: var(--text); }
+  .highlight-row {
+    background: linear-gradient(135deg, rgba(124,58,237,0.14), rgba(236,72,153,0.10));
+  }
+  .highlight-row td { color: var(--text); }
+
+  .pill {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .pill-good { background: rgba(34,197,94,0.15); color: var(--success); }
+  .pill-mid { background: rgba(251,191,36,0.12); color: #fbbf24; }
+  .pill-bad { background: rgba(248,113,113,0.12); color: #f87171; }
+
+  /* ── Mid-page banner ──────────────────────────────────── */
+  .free-card {
+    text-align: center; border-radius: var(--radius-lg);
+    padding: 48px 32px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.18), rgba(236,72,153,0.14));
+    border: 1px solid rgba(124,58,237,0.35);
+  }
+  .free-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    color: #fff;
+    font-weight: 800; font-size: 0.78rem; letter-spacing: 0.06em;
+    padding: 5px 14px; border-radius: 999px; margin-bottom: 18px;
+  }
+  .free-card h2 { font-size: clamp(1.5rem, 3vw, 2.1rem); margin-bottom: 16px; }
+  .free-card > p { color: var(--text); opacity: 0.85; max-width: 720px; margin: 0 auto; line-height: 1.7; font-size: 0.98rem; }
+
+  /* ── FAQ ──────────────────────────────────────────────── */
+  .faq-list { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+  .faq-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 4px 20px;
+  }
+  .faq-item summary {
+    cursor: pointer; padding: 16px 0; font-family: 'Manrope', sans-serif;
+    font-weight: 700; font-size: 1rem; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px;
+  }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item summary::after { content: '+'; color: var(--accent-light); font-size: 1.4rem; font-weight: 400; transition: transform 0.2s; flex-shrink: 0; }
+  .faq-item[open] summary::after { transform: rotate(45deg); }
+  .faq-item p { color: var(--text-muted); font-size: 0.93rem; line-height: 1.65; padding: 0 0 18px; }
+
+  /* ── Closing ──────────────────────────────────────────── */
+  .closing-section { margin-bottom: 20px; }
+  .closing-section .section-head { margin-bottom: 0; }
+  .closing-cta { margin-top: 28px; }
+
+  /* ── Responsive ───────────────────────────────────────── */
+  @media (max-width: 980px) {
+    .steps-grid { grid-template-columns: 1fr 1fr; row-gap: 32px; }
+  }
+  @media (max-width: 880px) {
+    .why-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 600px) {
+    .home-section { margin-top: 64px; }
+    .hero { padding-top: 96px; }
+    .steps-grid, .why-grid { grid-template-columns: 1fr; }
+    .steps-grid { row-gap: 32px; }
+    .promo-stats { grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .stat { padding: 18px 10px; }
+    .stat-num { font-size: 1.4rem; }
+    .hero-cta { width: 100%; justify-content: center; text-align: center; font-size: 0.95rem; padding: 15px 20px; }
+  }
+</style>

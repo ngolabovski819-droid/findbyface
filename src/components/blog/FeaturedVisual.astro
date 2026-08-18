@@ -1,5 +1,7 @@
 ---
 import ShareButtons from './ShareButtons.astro';
+import { localeOf } from '../../i18n/routes';
+import { t } from '../../i18n/ui';
 
 interface Props {
   image?: string;
@@ -10,6 +12,7 @@ interface Props {
 }
 
 const { image, title, publishedLabel, updatedLabel, shareUrl } = Astro.props;
+const lang = localeOf(Astro.url.pathname);
 ---
 
 <div class="featured-visual">
@@ -29,8 +32,8 @@ const { image, title, publishedLabel, updatedLabel, shareUrl } = Astro.props;
   )}
   <div class="fv-overlay">
     <div class="fv-dates">
-      <span>Published {publishedLabel}</span>
-      {updatedLabel && <span class="fv-updated">Updated {updatedLabel}</span>}
+      <span>{t(lang, 'blog.published')} {publishedLabel}</span>
+      {updatedLabel && <span class="fv-updated">{t(lang, 'blog.updated')} {updatedLabel}</span>}
     </div>
     <ShareButtons url={shareUrl} title={title} />
   </div>

@@ -1,0 +1,117 @@
+---
+{/* i18n-twin: src/pages/privacy-policy.astro — mirror copy/structure changes */}
+import Base from '../../layouts/Base.astro';
+import { absUrl } from '../../lib/site';
+
+const updated = '13 de agosto de 2026';
+---
+
+<Base
+  title="Política de Privacidad | findbyface"
+  description="Cómo findbyface maneja las fotos que subes, qué datos recopilamos, cookies, analítica y tus derechos de privacidad."
+  canonical={absUrl('/es/politica-de-privacidad/')}
+>
+  <article class="prose-page">
+    <div class="page-head">
+      <h1>Política de <span class="gradient-text">Privacidad</span></h1>
+      <p class="page-updated">Última actualización: {updated}</p>
+    </div>
+
+    <div class="prose">
+      <p>
+        Esta Política de Privacidad explica cómo findbyface ("nosotros", "nuestro") maneja la información
+        cuando usas findbyface.org (el "Servicio"). Al usar el Servicio, aceptas las prácticas descritas aquí.
+      </p>
+
+      <h2>1. Fotos que subes</h2>
+      <p>
+        Cuando subes una foto para hacer una búsqueda facial, la imagen se procesa para detectar un rostro y
+        generar un descriptor facial numérico que se usa para clasificar creadoras visualmente similares.
+        <strong>No</strong> almacenamos las fotos subidas en nuestros servidores una vez completada la búsqueda,
+        y no las usamos para identificarte ni para crear un perfil sobre ti.
+      </p>
+
+      <h2>2. Información que recopilamos</h2>
+      <ul>
+        <li><strong>Datos de uso:</strong> páginas visitadas, búsquedas realizadas y datos generales de interacción, recopilados mediante analítica.</li>
+        <li><strong>Datos del dispositivo:</strong> tipo de navegador, tipo de dispositivo y región aproximada derivada de tu dirección IP.</li>
+        <li><strong>Datos de cuenta (opcional):</strong> si inicias sesión, recibimos tu nombre, correo e imagen de perfil de tu proveedor de autenticación.</li>
+        <li><strong>Historial de búsqueda de la cuenta:</strong> para usuarios con sesión iniciada, guardamos los términos de búsqueda enviados, los filtros seleccionados, el número de resultados y un conjunto limitado de referencias de resultados para que las búsquedas puedan revisarse desde varios dispositivos. No incluimos fotos subidas ni descriptores faciales en el historial de búsqueda.</li>
+        <li><strong>Historias de Búsqueda:</strong> si contribuyes, procesamos el apodo público, el resultado de la búsqueda, el nombre de usuario público de la creadora o nombre artístico opcional, la historia o respuesta, y la preferencia de notificación que envíes. Tu correo se usa de forma privada para verificar la propiedad y enviar las notificaciones solicitadas; no se muestra junto a tu contribución.</li>
+        <li><strong>Interacciones de la comunidad:</strong> procesamos votos de Útil, reportes, estado de moderación e información limitada anti-abuso. Una cookie propia recuerda si tu navegador marcó una contribución como Útil. Podemos procesar temporalmente un identificador de red con sal o clave para limitar abusos, pero no vinculamos tu imagen subida, descriptor facial ni lista privada de resultados a una historia, respuesta, voto o reporte.</li>
+        <li><strong>Opinión al completar la búsqueda:</strong> después de una búsqueda puedes seleccionar de forma privada "La encontré", "Casi la encuentro" o "Todavía no". Lo almacenamos como retroalimentación agregada del producto. Una prueba firmada de corta duración confirma que se completó una búsqueda, sin contener la imagen subida, el descriptor facial ni los resultados.</li>
+        <li><strong>Datos de contacto:</strong> si nos contactas, recibimos el nombre, correo y mensaje que proporciones.</li>
+      </ul>
+
+      <h2>3. Cookies y analítica</h2>
+      <p>
+        Usamos cookies y tecnologías similares, incluido Google Analytics, para entender cómo se usa el
+        Servicio y mejorarlo. Puedes controlar las cookies desde la configuración de tu navegador.
+        Los proveedores de analítica pueden procesar datos según sus propias políticas de privacidad.
+      </p>
+
+      <h2>4. Cómo usamos la información</h2>
+      <ul>
+        <li>Para operar y mejorar las funciones de búsqueda facial y descubrimiento.</li>
+        <li>Para ofrecer un historial de búsqueda privado y multi-dispositivo a las cuentas con sesión iniciada.</li>
+        <li>Para verificar, publicar, moderar y permitir a los contribuyentes gestionar sus Historias de Búsqueda y respuestas.</li>
+        <li>Para entregar las notificaciones solicitadas de estado de comentarios y respuestas con asuntos de correo neutrales.</li>
+        <li>Para entender los resultados agregados del buscador y qué contribuciones de la comunidad resultan útiles.</li>
+        <li>Para medir el rendimiento, diagnosticar problemas y prevenir abusos.</li>
+        <li>Para responder a tus consultas y solicitudes de soporte.</li>
+      </ul>
+
+      <h2>5. Compartición de información</h2>
+      <p>
+        No vendemos tu información personal. Podemos compartir datos limitados con proveedores de servicios
+        (como alojamiento, base de datos, autenticación, correo transaccional, anti-abuso y analítica) que
+        los procesan en nuestro nombre, y cuando la ley lo exija. Las Historias de Búsqueda aprobadas,
+        respuestas, apodos, resultados y nombres públicos opcionales de creadoras o nombres artísticos
+        pueden ser leídos por cualquiera y pueden ser indexados por buscadores.
+      </p>
+
+      <h2>6. Retención de datos</h2>
+      <p>
+        Las fotos subidas y los descriptores faciales no se conservan después de una búsqueda. El historial
+        de búsqueda de cuentas con sesión iniciada se conserva hasta que elimines búsquedas individuales,
+        borres tu historial o se elimine tu cuenta. Los borradores de verificación de comentarios expirados
+        se eliminan o anonimizan en un plazo operativo corto. Las contribuciones aprobadas de la comunidad
+        permanecen públicas hasta que su propietario las elimine o se retiren por moderación. Las
+        contribuciones rechazadas o retiradas, los reportes y los registros de moderación pueden conservarse
+        en la medida razonablemente necesaria para gestionar apelaciones, hacer cumplir nuestras normas,
+        proteger a los usuarios y prevenir abusos reincidentes. Los registros de votos de Útil y anti-abuso
+        pueden conservarse en la medida razonablemente necesaria para la integridad y la limitación de uso.
+        Otros datos, como la analítica y los mensajes de contacto, se conservan solo el tiempo necesario para
+        los fines descritos arriba.
+      </p>
+
+      <h2>7. Tus derechos</h2>
+      <p>
+        Según tu ubicación, puedes tener derechos de acceso, corrección o eliminación de tus datos
+        personales. Los contribuyentes verificados pueden solicitar la eliminación de sus contribuciones,
+        y cualquier persona nombrada o afectada puede solicitar una corrección o retirada. Para hacer una
+        solicitud, usa los controles incluidos con la contribución o contáctanos a través de nuestra
+        <a href="/es/contacto/">página de contacto</a>.
+      </p>
+
+      <h2>8. Menores</h2>
+      <p>
+        El Servicio está destinado únicamente a adultos de 18 años o más. No recopilamos conscientemente
+        datos de nadie menor de 18 años.
+      </p>
+
+      <h2>9. Cambios en esta política</h2>
+      <p>
+        Podemos actualizar esta Política de Privacidad ocasionalmente. Los cambios sustanciales se
+        reflejarán en la fecha de "Última actualización" indicada arriba.
+      </p>
+
+      <h2>10. Contacto</h2>
+      <p>
+        ¿Preguntas sobre esta política? Escríbenos a través de nuestra <a href="/es/contacto/">página de contacto</a>.
+      </p>
+
+      <p><em>La versión en inglés de este documento prevalece en caso de discrepancia.</em></p>
+    </div>
+  </article>
+</Base>

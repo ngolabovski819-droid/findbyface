@@ -1,5 +1,7 @@
 ---
 import AuthorAvatar from './AuthorAvatar.astro';
+import { localeOf } from '../../i18n/routes';
+import { t } from '../../i18n/ui';
 
 interface Props {
   name?: string;
@@ -7,21 +9,22 @@ interface Props {
   avatarSrc?: string;
 }
 
+const lang = localeOf(Astro.url.pathname);
 const {
   name = 'Nick',
-  bio = 'Writes about online safety, visual search, and how to use face search responsibly. Been building findbyface\'s search tools since day one.',
+  bio = t(lang, 'blog.authorBioDefault'),
   avatarSrc,
 } = Astro.props;
 ---
 
-<section class="author-bio" aria-label="About the author">
+<section class="author-bio" aria-label={t(lang, 'blog.aboutAuthor')}>
   {avatarSrc ? (
     <img class="author-avatar" src={avatarSrc} alt={name} width="64" height="64" loading="lazy" />
   ) : (
     <AuthorAvatar size={64} />
   )}
   <div class="author-copy">
-    <p class="author-kicker">Written by</p>
+    <p class="author-kicker">{t(lang, 'blog.writtenBy')}</p>
     <p class="author-name">{name}</p>
     <p class="author-desc">{bio}</p>
   </div>

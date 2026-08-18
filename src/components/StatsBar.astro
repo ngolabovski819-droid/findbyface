@@ -1,9 +1,13 @@
 ---
+import { localeOf } from '../i18n/routes';
+import { t } from '../i18n/ui';
+
+const lang = localeOf(Astro.url.pathname);
 const stats = [
-  { number: '2.4M+', label: 'CREATORS INDEXED' },
-  { number: '98%',   label: 'MATCH ACCURACY' },
-  { number: '<2s',   label: 'SEARCH TIME' },
-  { number: 'free',  label: 'TO START' },
+  { number: '2.4M+', label: t(lang, 'stats.creators') },
+  { number: '98%',   label: t(lang, 'stats.accuracy') },
+  { number: '<2s',   label: t(lang, 'stats.searchTime') },
+  { number: t(lang, 'stats.free'), label: t(lang, 'stats.toStart') },
 ];
 ---
 

@@ -1,5 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
+import { localeOf } from '../i18n/routes';
+import { absUrl } from '../lib/site';
 
 interface Props {
   mode: 'login' | 'signup';
@@ -7,16 +9,121 @@ interface Props {
 
 const { mode } = Astro.props;
 const isSignup = mode === 'signup';
-const title = isSignup ? 'Create your free account' : 'Welcome back';
-const subtitle = isSignup
-  ? 'Use any email address to unlock unlimited searches and keep your history.'
-  : 'Use your email and password, or choose the optional Google shortcut.';
+const lang = localeOf(Astro.url.pathname);
+const langPrefix = lang === 'es' ? '/es' : '';
+
+const enC = {
+  pageTitle: isSignup ? 'Sign up — findbyface' : 'Log in — findbyface',
+  pageDesc: isSignup ? 'Create a free findbyface account.' : 'Log in to your findbyface account.',
+  title: isSignup ? 'Create your free account' : 'Welcome back',
+  subtitle: isSignup
+    ? 'Use any email address to unlock unlimited searches and keep your history.'
+    : 'Use your email and password, or choose the optional Google shortcut.',
+  email: 'Email address',
+  emailPlaceholder: 'you@example.com',
+  password: 'Password',
+  passwordPlaceholder: isSignup ? 'At least 8 characters' : 'Enter your password',
+  show: 'Show',
+  showPassword: 'Show password',
+  confirmPassword: 'Confirm password',
+  confirmPlaceholder: 'Repeat your password',
+  submit: isSignup ? 'Create account' : 'Log in',
+  verifyTitle: 'Verify your email address',
+  sentLinkTo: 'We sent a confirmation link to',
+  openEmail: 'Open that email and click the verification link to activate your account. If it is not in your inbox, check your spam or junk folder.',
+  verifiedLogin: 'I’ve verified my email — log in',
+  useDifferentEmail: 'Use a different email address',
+  verificationNote: 'Email verification is required before your first login.',
+  orGoogle: 'or use Google (optional)',
+  continueGoogle: 'Continue with Google',
+  switchQuestion: isSignup ? 'Already have an account?' : 'New to findbyface?',
+  switchCta: isSignup ? 'Log in' : 'Create one free',
+  legalHtml: `By continuing, you agree to our <a href="/terms-of-use/">Terms</a> and <a href="/privacy-policy/">Privacy Policy</a>.`,
+};
+
+const esC: typeof enC = {
+  pageTitle: isSignup ? 'Registrarse — findbyface' : 'Iniciar sesión — findbyface',
+  pageDesc: isSignup ? 'Crea una cuenta gratis de findbyface.' : 'Inicia sesión en tu cuenta de findbyface.',
+  title: isSignup ? 'Crea tu cuenta gratis' : 'Bienvenido de nuevo',
+  subtitle: isSignup
+    ? 'Usa cualquier correo para desbloquear búsquedas ilimitadas y guardar tu historial.'
+    : 'Usa tu correo y contraseña, o elige el atajo opcional de Google.',
+  email: 'Correo electrónico',
+  emailPlaceholder: 'tu@ejemplo.com',
+  password: 'Contraseña',
+  passwordPlaceholder: isSignup ? 'Mínimo 8 caracteres' : 'Ingresa tu contraseña',
+  show: 'Mostrar',
+  showPassword: 'Mostrar contraseña',
+  confirmPassword: 'Confirmar contraseña',
+  confirmPlaceholder: 'Repite tu contraseña',
+  submit: isSignup ? 'Crear cuenta' : 'Iniciar sesión',
+  verifyTitle: 'Verifica tu correo electrónico',
+  sentLinkTo: 'Enviamos un enlace de confirmación a',
+  openEmail: 'Abre ese correo y haz clic en el enlace de verificación para activar tu cuenta. Si no está en tu bandeja de entrada, revisa la carpeta de spam.',
+  verifiedLogin: 'Ya verifiqué mi correo — iniciar sesión',
+  useDifferentEmail: 'Usar otro correo electrónico',
+  verificationNote: 'Se requiere verificar el correo antes de tu primer inicio de sesión.',
+  orGoogle: 'o usa Google (opcional)',
+  continueGoogle: 'Continuar con Google',
+  switchQuestion: isSignup ? '¿Ya tienes una cuenta?' : '¿Nuevo en findbyface?',
+  switchCta: isSignup ? 'Iniciar sesión' : 'Crea una gratis',
+  legalHtml: `Al continuar, aceptas nuestros <a href="/es/terminos-de-uso/">Términos</a> y nuestra <a href="/es/politica-de-privacidad/">Política de Privacidad</a>.`,
+};
+
+const C = lang === 'es' ? esC : enC;
+
+// Strings + locale plumbing for the define:vars client script below.
+const enClient = {
+  checkInbox: 'Check your inbox',
+  confirmToActivate: 'Confirm your email address to activate your FindByFace account.',
+  emailYouEntered: 'the email address you entered',
+  show: 'Show',
+  hide: 'Hide',
+  showPassword: 'Show password',
+  hidePassword: 'Hide password',
+  verifiedFinish: 'Email verified. Log in with your email and password to finish.',
+  openVerificationFirst: 'Open the verification email first, then log in here.',
+  confirmationFailed: 'That verification link could not be completed. Try logging in, or return to signup for a fresh link.',
+  enterBoth: 'Enter your email and password.',
+  passwordTooShort: 'Use at least 8 characters for your password.',
+  passwordsMismatch: 'Your passwords do not match.',
+  creatingAccount: 'Creating account…',
+  loggingIn: 'Logging in…',
+  rateLimited: 'Our confirmation-email service has reached its temporary sending limit. Use Google sign-in now, or try email signup again later.',
+  authFailed: 'Authentication failed.',
+  verifyThenLogin: 'Verify your email using the link we sent, then try logging in again.',
+  submit: enC.submit,
+};
+
+const esClient: typeof enClient = {
+  checkInbox: 'Revisa tu bandeja de entrada',
+  confirmToActivate: 'Confirma tu correo para activar tu cuenta de FindByFace.',
+  emailYouEntered: 'el correo que ingresaste',
+  show: 'Mostrar',
+  hide: 'Ocultar',
+  showPassword: 'Mostrar contraseña',
+  hidePassword: 'Ocultar contraseña',
+  verifiedFinish: 'Correo verificado. Inicia sesión con tu correo y contraseña para terminar.',
+  openVerificationFirst: 'Abre primero el correo de verificación y luego inicia sesión aquí.',
+  confirmationFailed: 'Ese enlace de verificación no se pudo completar. Intenta iniciar sesión o vuelve al registro para recibir un enlace nuevo.',
+  enterBoth: 'Ingresa tu correo y contraseña.',
+  passwordTooShort: 'Usa al menos 8 caracteres en tu contraseña.',
+  passwordsMismatch: 'Tus contraseñas no coinciden.',
+  creatingAccount: 'Creando cuenta…',
+  loggingIn: 'Iniciando sesión…',
+  rateLimited: 'Nuestro servicio de correos de confirmación alcanzó su límite temporal de envío. Usa Google ahora o intenta el registro por correo más tarde.',
+  authFailed: 'La autenticación falló.',
+  verifyThenLogin: 'Verifica tu correo con el enlace que enviamos y luego intenta iniciar sesión de nuevo.',
+  submit: esC.submit,
+};
+
+const CLIENT = lang === 'es' ? esClient : enClient;
 ---
 
 <Base
-  title={`${isSignup ? 'Sign up' : 'Log in'} — findbyface`}
-  description={isSignup ? 'Create a free findbyface account.' : 'Log in to your findbyface account.'}
-  canonical={`https://findbyface.org/${mode}/`}
+  title={C.pageTitle}
+  description={C.pageDesc}
+  canonical={absUrl(`${langPrefix}/${mode}/`)}
   robots="noindex,follow"
 >
   <main class="auth-page">
@@ -38,35 +145,35 @@ const subtitle = isSignup
             )}
           </span>
           <div>
-            <h1 id="authTitle">{title}</h1>
-            <p id="authSubtitle">{subtitle}</p>
+            <h1 id="authTitle">{C.title}</h1>
+            <p id="authSubtitle">{C.subtitle}</p>
           </div>
         </header>
 
         <form class="auth-form" id="authForm" novalidate>
           <label>
-            <span>Email address</span>
+            <span>{C.email}</span>
             <span class="auth-input-wrap">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 5h16v14H4zM4 7l8 6 8-6" /></svg>
-              <input id="authEmail" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" required />
+              <input id="authEmail" name="email" type="email" inputmode="email" autocomplete="email" placeholder={C.emailPlaceholder} required />
             </span>
           </label>
 
           <label>
-            <span>Password</span>
+            <span>{C.password}</span>
             <span class="auth-input-wrap">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
-              <input id="authPassword" name="password" type="password" autocomplete={isSignup ? 'new-password' : 'current-password'} placeholder={isSignup ? 'At least 8 characters' : 'Enter your password'} minlength="8" required />
-              <button class="password-toggle" id="passwordToggle" type="button" aria-label="Show password">Show</button>
+              <input id="authPassword" name="password" type="password" autocomplete={isSignup ? 'new-password' : 'current-password'} placeholder={C.passwordPlaceholder} minlength="8" required />
+              <button class="password-toggle" id="passwordToggle" type="button" aria-label={C.showPassword}>{C.show}</button>
             </span>
           </label>
 
           {isSignup && (
             <label>
-              <span>Confirm password</span>
+              <span>{C.confirmPassword}</span>
               <span class="auth-input-wrap">
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
-                <input id="authConfirm" name="confirmPassword" type="password" autocomplete="new-password" placeholder="Repeat your password" minlength="8" required />
+                <input id="authConfirm" name="confirmPassword" type="password" autocomplete="new-password" placeholder={C.confirmPlaceholder} minlength="8" required />
               </span>
             </label>
           )}
@@ -74,7 +181,7 @@ const subtitle = isSignup
           <div class="auth-message" id="authMessage" role="alert" hidden></div>
 
           <button class="auth-submit" id="authSubmit" type="submit">
-            <span>{isSignup ? 'Create account' : 'Log in'}</span>
+            <span>{C.submit}</span>
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
           </button>
         </form>
@@ -84,42 +191,40 @@ const subtitle = isSignup
             <span class="confirmation-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none"><path d="M4 5h16v14H4zM4 7l8 6 8-6" /><path d="m8.5 15 2 2 4.5-5" /></svg>
             </span>
-            <h2>Verify your email address</h2>
-            <p>We sent a confirmation link to <strong id="confirmationEmail"></strong>.</p>
-            <p>Open that email and click the verification link to activate your account. If it is not in your inbox, check your spam or junk folder.</p>
-            <a class="confirmation-login" id="confirmationLogin" href="/login/?status=pending&next=/dashboard/">I&rsquo;ve verified my email &mdash; log in</a>
-            <a class="confirmation-restart" href="/signup/" id="confirmationRestart">Use a different email address</a>
+            <h2>{C.verifyTitle}</h2>
+            <p>{C.sentLinkTo} <strong id="confirmationEmail"></strong>.</p>
+            <p>{C.openEmail}</p>
+            <a class="confirmation-login" id="confirmationLogin" href={`${langPrefix}/login/?status=pending&next=${langPrefix}/dashboard/`}>{C.verifiedLogin}</a>
+            <a class="confirmation-restart" href={`${langPrefix}/signup/`} id="confirmationRestart">{C.useDifferentEmail}</a>
           </div>
         )}
 
         {isSignup && (
           <div class="verification-note">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 10v6M12 7h.01" /></svg>
-            <span>Email verification is required before your first login.</span>
+            <span>{C.verificationNote}</span>
           </div>
         )}
 
-        <div class="auth-divider"><span>or use Google (optional)</span></div>
+        <div class="auth-divider"><span>{C.orGoogle}</span></div>
 
         <a class="google-auth" id="googleAuth" href="#">
           <span class="google-g" aria-hidden="true">G</span>
-          Continue with Google
+          {C.continueGoogle}
         </a>
 
         <p class="auth-switch">
-          {isSignup ? 'Already have an account?' : 'New to findbyface?'}
-          <a id="authSwitchLink" href={isSignup ? '/login/' : '/signup/'}>{isSignup ? 'Log in' : 'Create one free'}</a>
+          {C.switchQuestion}
+          <a id="authSwitchLink" href={`${langPrefix}${isSignup ? '/login/' : '/signup/'}`}>{C.switchCta}</a>
         </p>
       </div>
 
-      <p class="auth-legal">
-        By continuing, you agree to our <a href="/terms-of-use/">Terms</a> and <a href="/privacy-policy/">Privacy Policy</a>.
-      </p>
+      <p class="auth-legal" set:html={C.legalHtml} />
     </section>
   </main>
 </Base>
 
-<script define:vars={{ mode }}>
+<script define:vars={{ mode, T: CLIENT, langPrefix }}>
   const form = document.getElementById('authForm');
   const email = document.getElementById('authEmail');
   const password = document.getElementById('authPassword');
@@ -137,7 +242,7 @@ const subtitle = isSignup
   const confirmationRestart = document.getElementById('confirmationRestart');
   const authSwitchLink = document.getElementById('authSwitchLink');
 
-  const safePath = value => value && value.startsWith('/') && !value.startsWith('//') ? value : '/dashboard/';
+  const safePath = value => value && value.startsWith('/') && !value.startsWith('//') ? value : `${langPrefix}/dashboard/`;
   const queryReturn = new URLSearchParams(window.location.search).get('next');
   let storedReturn = null;
   let pendingEmail = null;
@@ -149,9 +254,9 @@ const subtitle = isSignup
 
   try { localStorage.setItem('fbf_auth_return', returnTo); } catch { /* noop */ }
   const encodedReturn = encodeURIComponent(returnTo);
-  if (authSwitchLink) authSwitchLink.href = `${mode === 'signup' ? '/login/' : '/signup/'}?next=${encodedReturn}`;
-  if (confirmationLogin) confirmationLogin.href = `/login/?status=pending&next=${encodedReturn}`;
-  if (confirmationRestart) confirmationRestart.href = `/signup/?next=${encodedReturn}`;
+  if (authSwitchLink) authSwitchLink.href = `${langPrefix}${mode === 'signup' ? '/login/' : '/signup/'}?next=${encodedReturn}`;
+  if (confirmationLogin) confirmationLogin.href = `${langPrefix}/login/?status=pending&next=${encodedReturn}`;
+  if (confirmationRestart) confirmationRestart.href = `${langPrefix}/signup/?next=${encodedReturn}`;
   if (mode === 'login' && pendingEmail) email.value = pendingEmail;
   const callbackUrl = `${window.location.origin}/auth/callback`;
   google.href = `https://sirudrqheimbgpkchtwi.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(callbackUrl)}`;
@@ -159,9 +264,9 @@ const subtitle = isSignup
   function showPendingConfirmation(emailAddress) {
     if (mode !== 'signup' || !confirmationPanel) return;
     card.classList.add('confirmed');
-    title.textContent = 'Check your inbox';
-    subtitle.textContent = 'Confirm your email address to activate your FindByFace account.';
-    confirmationEmail.textContent = emailAddress || 'the email address you entered';
+    title.textContent = T.checkInbox;
+    subtitle.textContent = T.confirmToActivate;
+    confirmationEmail.textContent = emailAddress || T.emailYouEntered;
     confirmationPanel.hidden = false;
   }
 
@@ -178,8 +283,8 @@ const subtitle = isSignup
     const reveal = password.type === 'password';
     password.type = reveal ? 'text' : 'password';
     if (confirm) confirm.type = reveal ? 'text' : 'password';
-    toggle.textContent = reveal ? 'Hide' : 'Show';
-    toggle.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
+    toggle.textContent = reveal ? T.hide : T.show;
+    toggle.setAttribute('aria-label', reveal ? T.hidePassword : T.showPassword);
   });
 
   function showMessage(text, kind = 'error') {
@@ -203,11 +308,11 @@ const subtitle = isSignup
 
   const pageStatus = new URLSearchParams(window.location.search).get('status');
   if (mode === 'login' && pageStatus === 'verified') {
-    showMessage('Email verified. Log in with your email and password to finish.', 'success');
+    showMessage(T.verifiedFinish, 'success');
   } else if (mode === 'login' && pageStatus === 'pending') {
-    showMessage('Open the verification email first, then log in here.', 'success');
+    showMessage(T.openVerificationFirst, 'success');
   } else if (mode === 'login' && pageStatus === 'confirmation_failed') {
-    showMessage('That verification link could not be completed. Try logging in, or return to signup for a fresh link.');
+    showMessage(T.confirmationFailed);
   }
 
   form.addEventListener('submit', async event => {
@@ -217,21 +322,21 @@ const subtitle = isSignup
     const passwordValue = password.value;
 
     if (!emailValue || !passwordValue) {
-      showMessage('Enter your email and password.');
+      showMessage(T.enterBoth);
       return;
     }
     if (mode === 'signup' && passwordValue.length < 8) {
-      showMessage('Use at least 8 characters for your password.');
+      showMessage(T.passwordTooShort);
       return;
     }
     if (mode === 'signup' && confirm?.value !== passwordValue) {
-      showMessage('Your passwords do not match.');
+      showMessage(T.passwordsMismatch);
       return;
     }
 
     submit.disabled = true;
     submit.classList.add('loading');
-    submit.querySelector('span').textContent = mode === 'signup' ? 'Creating account…' : 'Logging in…';
+    submit.querySelector('span').textContent = mode === 'signup' ? T.creatingAccount : T.loggingIn;
     try {
       const response = await fetch(`/api/auth/${mode === 'signup' ? 'register' : 'login'}`, {
         method: 'POST',
@@ -241,18 +346,18 @@ const subtitle = isSignup
       const payload = await response.json();
       if (!response.ok) {
         if (payload.code === 'email_rate_limited') {
-          showMessage('Our confirmation-email service has reached its temporary sending limit. Use Google sign-in now, or try email signup again later.');
+          showMessage(T.rateLimited);
           google?.focus();
           return;
         }
-        throw new Error(payload.error || 'Authentication failed.');
+        throw new Error(payload.error || T.authFailed);
       }
 
       // Email/password registration always requires the user-facing verification step.
       // Do not treat a session-shaped signup response like a completed login.
       if (mode === 'signup') {
         try { localStorage.setItem('fbf_pending_email', emailValue); } catch { /* query status is the fallback */ }
-        history.replaceState(null, '', `/signup/?status=pending&next=${encodedReturn}`);
+        history.replaceState(null, '', `${langPrefix}/signup/?status=pending&next=${encodedReturn}`);
         showPendingConfirmation(emailValue);
         return;
       }
@@ -260,15 +365,15 @@ const subtitle = isSignup
       storeSession(payload);
       window.location.href = returnTo;
     } catch (error) {
-      const errorText = error instanceof Error ? error.message : 'Authentication failed.';
+      const errorText = error instanceof Error ? error.message : T.authFailed;
       showMessage(/email not confirmed/i.test(errorText)
-        ? 'Verify your email using the link we sent, then try logging in again.'
+        ? T.verifyThenLogin
         : errorText);
     } finally {
       submit.disabled = false;
       submit.classList.remove('loading');
       const text = submit.querySelector('span');
-      if (text) text.textContent = mode === 'signup' ? 'Create account' : 'Log in';
+      if (text) text.textContent = T.submit;
     }
   });
 </script>

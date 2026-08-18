@@ -1,13 +1,17 @@
 ---
+import { localeOf, localizePath } from '../i18n/routes';
+import { t } from '../i18n/ui';
+
 interface Props {
   placeholder?: string;
   action?: string;
 }
-const { placeholder = 'Search creators...', action = '/onlyfans-search/' } = Astro.props;
+const lang = localeOf(Astro.url.pathname);
+const { placeholder = t(lang, 'search.placeholder'), action = localizePath('/onlyfans-search/', lang) } = Astro.props;
 ---
 
 <div class="search-bar-wrap">
-  <span class="search-divider">— or search by name —</span>
+  <span class="search-divider">{t(lang, 'search.orByName')}</span>
   <form class="search-form" action={action} method="get">
     <input
       type="text"
@@ -16,7 +20,7 @@ const { placeholder = 'Search creators...', action = '/onlyfans-search/' } = Ast
       placeholder={placeholder}
       autocomplete="off"
     />
-    <button type="submit" class="search-btn">Search</button>
+    <button type="submit" class="search-btn">{t(lang, 'search.button')}</button>
   </form>
 </div>
 

@@ -3,23 +3,27 @@
 // search results): who built the list, what ranks it, and how fresh it is.
 // Date is computed at request time so it always reflects "today" on a live render;
 // on edge-cached routes it reflects the moment of the last cache revalidation.
+import { localeOf, localizePath } from '../i18n/routes';
+import { t } from '../i18n/ui';
+
 interface Props {
   // 'center' (default): standalone block under a heading, centered, own bottom margin.
   // 'left': inline item in a flex row (e.g. next to a Grid/Feed toggle) — no forced margin.
   align?: 'center' | 'left';
 }
 const { align = 'center' } = Astro.props;
-const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+const lang = localeOf(Astro.url.pathname);
+const today = new Date().toLocaleDateString(lang === 'es' ? 'es' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 ---
 
 <p class={`rank-attribution rank-attribution-${align}`}>
-  Created by <a href="/blog/author/nick/">Nick</a>
+  {t(lang, 'attribution.createdBy')} <a href={localizePath('/blog/author/nick/', lang)}>Nick</a>
   <span class="rank-attribution-sep" aria-hidden="true">·</span>
-  Ranked by <a href="/how-our-search-engine-works/">FindRank</a>
+  {t(lang, 'attribution.rankedBy')} <a href={localizePath('/how-our-search-engine-works/', lang)}>FindRank</a>
   <span class="rank-attribution-sep" aria-hidden="true">·</span>
-  no human review
+  {t(lang, 'attribution.noHumanReview')}
   <span class="rank-attribution-sep" aria-hidden="true">·</span>
-  Updated {today}
+  {t(lang, 'attribution.updated', { date: today })}
 </p>
 
 <style>

@@ -7,4 +7,12 @@ export default defineConfig({
     maxDuration: 30,
   }),
   site: 'https://findbyface.org',
+  i18n: {
+    defaultLocale: 'en',
+    locales: ['en', 'es'],
+    routing: {
+      prefixDefaultLocale: false,
+      redirectToDefaultLocale: false,
+    },
+  },
 });

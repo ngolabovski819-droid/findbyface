@@ -1,15 +1,19 @@
 ---
+import { localeOf } from '../../i18n/routes';
+import { t } from '../../i18n/ui';
+
 interface Props {
   url: string;
   title: string;
 }
 
 const { url, title } = Astro.props;
+const lang = localeOf(Astro.url.pathname);
 ---
 
-<button type="button" class="share-cta" data-share-url={url} data-share-title={title}>
+<button type="button" class="share-cta" data-share-url={url} data-share-title={title} data-copied-label={t(lang, 'blog.linkCopied')}>
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.6" x2="15.4" y2="6.4"/><line x1="8.6" y1="13.4" x2="15.4" y2="17.6"/></svg>
-  <span data-share-label>Share</span>
+  <span data-share-label>{t(lang, 'blog.share')}</span>
 </button>
 
 <script>
@@ -31,7 +35,7 @@ const { url, title } = Astro.props;
         await navigator.clipboard.writeText(url);
         if (label) {
           const original = label.textContent;
-          label.textContent = 'Link copied!';
+          label.textContent = btn.dataset.copiedLabel || 'Link copied!';
           setTimeout(() => { label.textContent = original; }, 1600);
         }
       } catch {
