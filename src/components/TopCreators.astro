@@ -1,0 +1,134 @@
+---
+import { slugToCategory } from '../config/categories';
+import { getCategoryContent } from '../config/categoryContent';
+import { fetchTopCreatorsForCategory } from '../lib/creatorFetch';
+import { describeCreator } from '../lib/creatorBlurb';
+import { proxyImg } from '../utils/image';
+
+interface Props {
+  slug: string; // always the ENGLISH slug
+  locale: 'en' | 'es';
+}
+
+const { slug, locale } = Astro.props;
+const category = slugToCategory(slug);
+const entry = getCategoryContent(slug, locale);
+
+const creators = category ? await fetchTopCreatorsForCategory(category.terms, 10) : [];
+
+const label = category ? (locale === 'es' ? category.labelEs : category.label) : '';
+const t = locale === 'es'
+  ? {
+      heading: `Las Mejores Creadoras ${label} de OnlyFans`,
+      viewProfile: 'Ver perfil en OnlyFans',
+    }
+  : {
+      heading: `Best ${label} OnlyFans Creators`,
+      viewProfile: 'View profile on OnlyFans',
+    };
+---
+
+{creators.length > 0 && (
+  <section class="top-creators">
+    <h2>{t.heading}</h2>
+    {entry?.topCreatorsIntro && <p class="top-creators-intro">{entry.topCreatorsIntro}</p>}
+
+    <ol class="top-creators-list">
+      {creators.map((creator, i) => {
+        const name = creator.name || creator.username;
+        const avatar = creator.avatar?.startsWith('http') ? proxyImg(creator.avatar, 100, 100) : '/no-image.png';
+        const profileUrl = `https://onlyfans.com/${encodeURIComponent(creator.username)}`;
+        const blurb = describeCreator(creator, i + 1, label, locale);
+        return (
+          <li class="top-creator-row">
+            <span class="tc-rank">{i + 1}</span>
+            <img class="tc-avatar" src={avatar} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+              onerror="this.onerror=null;this.src='/no-image.png';" />
+            <div class="tc-body">
+              <a href={profileUrl} target="_blank" rel="noopener nofollow" class="tc-name">
+                {name} <span class="tc-username">(@{creator.username})</span>
+              </a>
+              <p class="tc-blurb">{blurb}</p>
+              <a href={profileUrl} target="_blank" rel="noopener nofollow" class="tc-link">{t.viewProfile} →</a>
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  </section>
+)}
+
+<style>
+  .top-creators-intro { color: var(--text-muted); font-size: 0.98rem; line-height: 1.65; margin: -6px 0 20px; }
+
+  .top-creators-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .top-creator-row {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  .tc-rank {
+    display: grid; place-items: center;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-pink));
+    color: #fff;
+    font-size: 12px; font-weight: 800;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .tc-avatar {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--surface-raised);
+  }
+
+  .tc-body { min-width: 0; }
+
+  .tc-name {
+    display: inline-block;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .tc-name:hover { color: var(--accent-light); }
+  .tc-username { color: var(--text-muted); font-weight: 500; font-size: 13px; }
+
+  .tc-blurb {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    margin: 0 0 8px;
+  }
+
+  .tc-link {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent-light);
+  }
+  .tc-link:hover { text-decoration: underline; }
+
+  @media (max-width: 480px) {
+    .top-creator-row { grid-template-columns: auto 1fr; }
+    .tc-rank { grid-row: 1; }
+    .tc-avatar { grid-row: 1; }
+    .tc-body { grid-column: 1 / -1; }
+  }
+</style>

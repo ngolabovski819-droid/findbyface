@@ -126,6 +126,80 @@ export async function fetchOrganicCreators(params: FetchOrganicParams): Promise<
   }
 }
 
+// Cached count of $0-subscription creators, for the site-wide promo strip.
+// Base.astro renders on every page, so this must never be a per-request query —
+// one estimated-count call per TTL per server instance is the whole budget.
+let freeCountCache: { value: number; expires: number } | null = null;
+const FREE_COUNT_TTL_MS = 10 * 60 * 1000;
+
+export async function fetchFreeCreatorCount(): Promise<number | null> {
+  if (freeCountCache && freeCountCache.expires > Date.now()) return freeCountCache.value;
+
+  const { SUPABASE_URL, SUPABASE_KEY } = supabaseCreds();
+  if (!SUPABASE_URL || !SUPABASE_KEY) return null;
+
+  const qp = new URLSearchParams();
+  qp.set('select', 'id');
+  qp.set('subscribeprice', 'eq.0');
+  qp.set('limit', '1');
+
+  const ctrl = new AbortController();
+  const tId = setTimeout(() => ctrl.abort(), 3000);
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/onlyfans_profiles?${qp}`, {
+      headers: { ...SUPABASE_HEADERS(SUPABASE_KEY), Prefer: 'count=estimated' },
+      signal: ctrl.signal,
+    });
+    clearTimeout(tId);
+    if (!resp.ok) return freeCountCache?.value ?? null;
+    const total = parseInt((resp.headers.get('Content-Range') ?? '').split('/')[1] ?? '0') || 0;
+    if (!total) return freeCountCache?.value ?? null;
+    freeCountCache = { value: total, expires: Date.now() + FREE_COUNT_TTL_MS };
+    return total;
+  } catch {
+    clearTimeout(tId);
+    // Serve the last known good value rather than hiding the strip on a blip.
+    return freeCountCache?.value ?? null;
+  }
+}
+
+export interface TopCreatorRow extends MappedCreator {
+  about?: string | null;
+}
+
+// Dedicated query for the category-page "Best Creators" showcase: top N by real
+// favorite count, with the `about` bio column included (used to quote a short,
+// real excerpt in the creator's own words rather than inventing biographical
+// claims). Deliberately bypasses resolvePlacements/sponsored-slot logic — this
+// list must be pure organic ranking, matching the "ranked by real engagement,
+// not hand-picked" claim made in the copy that renders it.
+export async function fetchTopCreatorsForCategory(termsOr: string[], limit = 10): Promise<TopCreatorRow[]> {
+  const { SUPABASE_URL, SUPABASE_KEY } = supabaseCreds();
+  if (!SUPABASE_URL || !SUPABASE_KEY || !termsOr.length) return [];
+
+  const qp = new URLSearchParams();
+  qp.set('select', 'id,username,name,avatar,header,isverified,subscribeprice,favoritedcount,about');
+  qp.set('order', 'favoritedcount.desc');
+  qp.set('limit', String(limit));
+  const exprs = termsOr.flatMap(t => [
+    `username.ilike.*${t}*`,
+    `name.ilike.*${t}*`,
+    `about.ilike.*${t}*`,
+  ]);
+  qp.set('or', `(${exprs.join(',')})`);
+
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/onlyfans_profiles?${qp}`, {
+      headers: SUPABASE_HEADERS(SUPABASE_KEY),
+    });
+    if (!resp.ok) return [];
+    const raw: (RawCreatorRow & { about?: string | null })[] = await resp.json();
+    return raw.map(c => ({ ...mapRow(c), about: c.about }));
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchCreatorsByUsernames(usernames: string[]): Promise<MappedCreator[]> {
   if (!usernames.length) return [];
   const { SUPABASE_URL, SUPABASE_KEY } = supabaseCreds();

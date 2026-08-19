@@ -1,0 +1,149 @@
+---
+import { getCategoryContent } from '../config/categoryContent';
+import { slugToCategory } from '../config/categories';
+import { parseInlineCategoryLinks } from '../lib/inlineCategoryLinks';
+import TopCreators from './TopCreators.astro';
+
+interface Props {
+  slug: string; // always the ENGLISH slug
+  locale: 'en' | 'es';
+}
+
+const { slug, locale } = Astro.props;
+const entry = getCategoryContent(slug, locale);
+
+const relatedCategories = entry
+  ? entry.relatedSlugs.map(s => slugToCategory(s)).filter(c => c !== undefined)
+  : [];
+
+const category = slugToCategory(slug);
+const label = category ? (locale === 'es' ? category.labelEs : category.label) : '';
+
+const t = locale === 'es'
+  ? { aboutHeading: `Sobre ${label} en OnlyFans`, faqHeading: 'Preguntas frecuentes', relatedHeading: 'Categorías relacionadas' }
+  : { aboutHeading: `About ${label} OnlyFans`, faqHeading: 'Frequently asked questions', relatedHeading: 'Related categories' };
+---
+
+{entry && (
+  <div class="category-body">
+    <section class="category-section category-about">
+      <h2>{t.aboutHeading}</h2>
+      {entry.about.map(paragraph => (
+        <p>
+          {parseInlineCategoryLinks(paragraph).map(part => {
+            if (typeof part === 'string') return part;
+            const target = slugToCategory(part.slug);
+            if (!target) return part.label;
+            const href = locale === 'es' ? `/es/categorias/${target.slugEs ?? target.slug}/` : `/categories/${target.slug}/`;
+            return <a href={href}>{part.label}</a>;
+          })}
+        </p>
+      ))}
+    </section>
+
+    <TopCreators slug={slug} locale={locale} />
+
+    {entry.sections.map(section => (
+      <section class="category-section">
+        <h2>{section.heading}</h2>
+        {section.paragraphs.map(paragraph => <p>{paragraph}</p>)}
+      </section>
+    ))}
+
+    <section class="category-section category-faq">
+      <h2>{t.faqHeading}</h2>
+      <div class="faq-list">
+        {entry.faq.map(item => (
+          <details class="faq-item">
+            <summary>{item.question}</summary>
+            <p>{item.answer}</p>
+          </details>
+        ))}
+      </div>
+    </section>
+
+    {relatedCategories.length > 0 && (
+      <section class="category-section category-related">
+        <h2>{t.relatedHeading}</h2>
+        <div class="related-pills">
+          {relatedCategories.map(cat => (
+            <a
+              href={locale === 'es' ? `/es/categorias/${cat!.slugEs ?? cat!.slug}/` : `/categories/${cat!.slug}/`}
+              class="related-pill"
+            >
+              {cat!.emoji && <span aria-hidden="true">{cat!.emoji}</span>}
+              {locale === 'es' ? cat!.labelEs : cat!.label}
+            </a>
+          ))}
+        </div>
+      </section>
+    )}
+  </div>
+)}
+
+<style>
+  .category-body {
+    max-width: 780px;
+    margin: 56px auto 0;
+  }
+
+  .category-section { margin-bottom: 40px; }
+  .category-section:last-child { margin-bottom: 0; }
+
+  .category-section h2 {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 800;
+    margin-bottom: 14px;
+  }
+
+  .category-section p {
+    color: var(--text-muted);
+    font-size: 0.98rem;
+    line-height: 1.7;
+    margin: 0 0 14px;
+  }
+  .category-section p:last-child { margin-bottom: 0; }
+  .category-about a { color: var(--accent-light); font-weight: 600; }
+  .category-about a:hover { text-decoration: underline; }
+
+  /* ── FAQ — same visual pattern as the homepage FAQ (index.astro) ── */
+  .faq-list { display: flex; flex-direction: column; gap: 12px; }
+  .faq-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 4px 20px;
+  }
+  .faq-item summary {
+    cursor: pointer; padding: 16px 0; font-family: 'Manrope', sans-serif;
+    font-weight: 700; font-size: 1rem; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px;
+  }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item summary::after { content: '+'; color: var(--accent-light); font-size: 1.4rem; font-weight: 400; transition: transform 0.2s; flex-shrink: 0; }
+  .faq-item[open] summary::after { transform: rotate(45deg); }
+  .faq-item p { color: var(--text-muted); font-size: 0.93rem; line-height: 1.65; padding: 0 0 18px; margin: 0; }
+
+  /* ── Related categories ── */
+  .related-pills { display: flex; flex-wrap: wrap; gap: 10px; }
+  .related-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 13.5px; font-weight: 600;
+    color: var(--text-muted);
+    transition: color 0.2s, border-color 0.2s, transform 0.2s;
+  }
+  .related-pill:hover {
+    color: var(--text);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  @media (max-width: 640px) {
+    .category-body { margin-top: 40px; }
+    .category-section h2 { font-size: 1.15rem; }
+  }
+</style>

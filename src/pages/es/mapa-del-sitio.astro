@@ -1,6 +1,7 @@
 ---
 {/* i18n-twin: src/pages/sitemap.astro — mirror copy/structure changes */}
 import Base from '../../layouts/Base.astro';
+import { getCollection } from 'astro:content';
 import { categories } from '../../config/categories';
 import { staticRoutes } from '../../i18n/routes';
 import { absUrl } from '../../lib/site';
@@ -19,9 +20,21 @@ const primaryLinks = [
   { href: staticRoutes['/promote/'], label: 'Promociona tu OnlyFans' },
 ];
 
+// Enumerated from the blogEs collection (Spanish posts carry their own authored
+// titles, so no need to cross-reference the English collection). Hand-listing
+// went stale here exactly as it did on the English twin.
+const posts = (await getCollection('blogEs')).sort(
+  (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime(),
+);
+
 const resourceLinks = [
   { href: '/es/blog/', label: 'Blog' },
-  { href: '/es/blog/bienvenidos-a-findbyface/', label: 'Bienvenidos a findbyface' },
+  ...posts.map((post) => ({
+    href: `/es/blog/${post.id.replace(/\.md$/, '')}/`,
+    label: post.data.title,
+  })),
+  { href: '/es/blog/autor/nick/', label: 'Autor: Nick' },
+  { href: staticRoutes['/how-our-search-engine-works/'], label: 'Cómo funciona nuestro buscador' },
   { href: staticRoutes['/about/'], label: 'Sobre nosotros' },
   { href: staticRoutes['/contact/'], label: 'Contacto' },
 ];

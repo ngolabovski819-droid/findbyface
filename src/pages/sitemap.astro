@@ -1,6 +1,7 @@
 ---
 {/* i18n-twin: src/pages/es/mapa-del-sitio.astro — mirror copy/structure changes */}
 import Base from '../layouts/Base.astro';
+import { getCollection } from 'astro:content';
 import { categories } from '../config/categories';
 
 const canonical = 'https://findbyface.org/sitemap/';
@@ -17,9 +18,21 @@ const primaryLinks = [
   { href: '/promote/', label: 'Promote Your OnlyFans' },
 ];
 
+// Enumerated from the content collection, not hand-listed — a hardcoded list
+// silently goes stale the moment a post is added (this page listed only
+// /blog/welcome/ while a second post existed and was never linked here).
+const posts = (await getCollection('blog')).sort(
+  (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime(),
+);
+
 const resourceLinks = [
   { href: '/blog/', label: 'Blog' },
-  { href: '/blog/welcome/', label: 'Welcome to findbyface' },
+  ...posts.map((post) => ({
+    href: `/blog/${post.id.replace(/\.md$/, '')}/`,
+    label: post.data.title,
+  })),
+  { href: '/blog/author/nick/', label: 'Author: Nick' },
+  { href: '/how-our-search-engine-works/', label: 'How Our Search Engine Works' },
   { href: '/about/', label: 'About' },
   { href: '/contact/', label: 'Contact' },
 ];

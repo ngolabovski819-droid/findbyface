@@ -3,8 +3,11 @@ import Base from '../../layouts/Base.astro';
 import CreatorCard from '../../components/CreatorCard.astro';
 import CategoryChips from '../../components/CategoryChips.astro';
 import RankingAttributionBar from '../../components/RankingAttributionBar.astro';
+import CategoryIntro from '../../components/CategoryIntro.astro';
+import CategoryBody from '../../components/CategoryBody.astro';
 import { slugToCategory } from '../../config/categories';
-import { categorySeo } from '../../config/seo-meta';
+import { categorySeo, genericCategoryFaq } from '../../config/seo-meta';
+import { getCategoryContent } from '../../config/categoryContent';
 import { resolvePlacements } from '../../lib/creatorFetch';
 import { applySponsorOverrides } from '../../lib/sponsorOverrides';
 
@@ -33,34 +36,20 @@ const canonical = `https://findbyface.org/categories/${slug}/`;
 // i18n-twin: src/pages/es/categorias/[slug].astro — mirror copy/structure changes
 const alternate = `/es/categorias/${category.slugEs ?? category.slug}/`;
 
+// Pilot categories (src/config/categoryContent.ts) supply their own hand-written
+// FAQ; everything else falls back to the generic templated one. Either way, this
+// same array feeds both the JSON-LD below AND the visible FAQ in CategoryBody —
+// single source of truth, so they can't drift apart.
+const pilotContent = getCategoryContent(slug, 'en');
+const faqItems = pilotContent?.faq ?? genericCategoryFaq(category.label, 'en');
+
 const faqJsonLd = {
   '@type': 'FAQPage',
-  mainEntity: [
-    {
-      '@type': 'Question',
-      name: `How is the ${category.label} OnlyFans list ranked?`,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: `Creators are ranked by real fan engagement (favorited count and subscriber metrics) pulled live from OnlyFans. The list is refreshed daily, so newer popular ${category.label} accounts surface quickly.`,
-      },
-    },
-    {
-      '@type': 'Question',
-      name: `Are these ${category.label} OnlyFans accounts free?`,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: `Many are. Use the Free filter to show only ${category.label} OnlyFans creators with $0 subscriptions, or the Bundles filter to find paid creators currently running discount offers.`,
-      },
-    },
-    {
-      '@type': 'Question',
-      name: `How often is the ${category.label} OnlyFans list updated?`,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: `Daily. We track new ${category.label} accounts, profile changes, and pricing updates every 24 hours, with verification status refreshed weekly.`,
-      },
-    },
-  ],
+  mainEntity: faqItems.map(item => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: { '@type': 'Answer', text: item.answer },
+  })),
 };
 
 const jsonLd = JSON.stringify({
@@ -106,6 +95,8 @@ const jsonLd = JSON.stringify({
       </p>
     </div>
 
+    <CategoryIntro slug={slug} locale="en" />
+
     <CategoryChips activeSlug={slug} />
     <RankingAttributionBar />
 
@@ -128,6 +119,8 @@ const jsonLd = JSON.stringify({
         </div>
       )}
     </div>
+
+    <CategoryBody slug={slug} locale="en" />
   </div>
 </Base>
 

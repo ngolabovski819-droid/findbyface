@@ -1,9 +1,11 @@
 ---
 import Nav from '../components/Nav.astro';
+import PromoStrip from '../components/PromoStrip.astro';
 import CreatorCardEnhancements from '../components/CreatorCardEnhancements.astro';
 import { alternatePath, localeOf, localizePath, type Locale } from '../i18n/routes';
-import { t } from '../i18n/ui';
+import { t, type UIKey } from '../i18n/ui';
 import { absUrl } from '../lib/site';
+import { slugToCategory } from '../config/categories';
 
 interface Props {
   title: string;
@@ -57,7 +59,18 @@ const ogLocale = lang === 'es' ? 'es_LA' : 'en_US';
 const ogLocaleAlt = lang === 'es' ? 'en_US' : 'es_LA';
 
 const lp = (p: string) => localizePath(p, lang);
-const categoriesHref = lang === 'es' ? '/es/categorias/top/' : '/categories/top/';
+const footerCategoryHref = (slug: string, slugEs?: string) =>
+  lang === 'es' ? `/es/categorias/${slugEs ?? slug}/` : `/categories/${slug}/`;
+
+// Footer category columns — every one of the 38 categories in config/categories.ts
+// appears exactly once, grouped for scanability (screenshot-referenced layout).
+// English slugs are the stable key; group membership is an editorial call, not derived.
+const FOOTER_CATEGORY_GROUPS: { labelKey: UIKey; slugs: string[] }[] = [
+  { labelKey: 'footer.catPopular', slugs: ['top', 'free', 'milf', 'models', 'big-tits'] },
+  { labelKey: 'footer.catAppearance', slugs: ['blonde', 'redhead', 'petite', 'small-tits', 'white-girls', 'bbw', 'mature'] },
+  { labelKey: 'footer.catBackground', slugs: ['latina', 'asian', 'ebony', 'indian', 'korean', 'japanese', 'greek', 'serbian', 'italian', 'dutch', 'trans'] },
+  { labelKey: 'footer.catContentType', slugs: ['feet', 'blowjob', 'footjob', 'bondage', 'bbc', 'anal', 'hentai', 'old-young', 'threesome', 'bukkake', 'celebrity', 'strap-on', 'rough-sex', 'solo-male', 'pussy-licking'] },
+];
 
 // Footer language switcher targets: counterpart of the current page, falling
 // back to the other locale's homepage when no translation exists.
@@ -141,6 +154,7 @@ const enTarget = lang === 'en' ? Astro.url.pathname : (alt ?? '/');
 </head>
 <body>
   <Nav />
+  <PromoStrip />
   <CreatorCardEnhancements />
   <main>
     <slot />
@@ -151,6 +165,24 @@ const enTarget = lang === 'en' ? Astro.url.pathname : (alt ?? '/');
         <img class="footer-logo-mark" src="/findbyface-logo.png" alt="" width="40" height="40" loading="lazy" />
         <span><span style="color:#fff">find</span><span style="background:linear-gradient(135deg,#7c3aed,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">byface</span></span>
       </a>
+
+      <div class="footer-categories">
+        {FOOTER_CATEGORY_GROUPS.map(group => (
+          <div class="footer-cat-col">
+            <h4>{t(lang, group.labelKey)}</h4>
+            {group.slugs.map(slug => {
+              const cat = slugToCategory(slug);
+              if (!cat) return null;
+              return (
+                <a href={footerCategoryHref(cat.slug, cat.slugEs)}>
+                  {lang === 'es' ? cat.labelEs : cat.label}
+                </a>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
       <nav class="footer-links">
         <a href={lp('/about/')}>{t(lang, 'footer.about')}</a>
         <a href={lp('/how-our-search-engine-works/')}>{t(lang, 'footer.how')}</a>
@@ -159,7 +191,6 @@ const enTarget = lang === 'en' ? Astro.url.pathname : (alt ?? '/');
         <a href={lp('/onlyfans-finder-by-face/')}>{t(lang, 'footer.onlyfansFinder')}</a>
         <a href={lp('/pornstar-finder-by-face/')}>{t(lang, 'footer.pornstarFinder')}</a>
         <a href={lp('/battle/')}>{t(lang, 'footer.battle')}</a>
-        <a href={categoriesHref}>{t(lang, 'footer.categories')}</a>
         <a href={lp('/promote/')}>{t(lang, 'footer.promote')}</a>
         <a href={lp('/contact/')}>{t(lang, 'footer.contact')}</a>
         <a href={lp('/privacy-policy/')}>{t(lang, 'footer.privacy')}</a>
@@ -238,6 +269,13 @@ const enTarget = lang === 'en' ? Astro.url.pathname : (alt ?? '/');
     min-height: 100vh;
   }
 
+  /* The promo strip is fixed directly under the fixed nav, so it doesn't take up
+     flow space on its own — this shifts normal content down by its height so it
+     never covers the top of a page. Class is added by PromoStrip.astro only when
+     the strip is actually visible (i.e. not previously dismissed). */
+  body.has-promo-strip { padding-top: 26px; }
+  @media (max-width: 760px) { body.has-promo-strip { padding-top: 25px; } }
+
   h1, h2, h3, h4 { font-family: 'Manrope', sans-serif; font-weight: 800; }
   a { color: inherit; text-decoration: none; }
 
@@ -277,6 +315,45 @@ const enTarget = lang === 'en' ? Astro.url.pathname : (alt ?? '/');
     text-align: center;
   }
 
+  .footer-categories {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, max-content);
+    justify-content: center;
+    column-gap: 64px;
+    row-gap: 0;
+    text-align: left;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .footer-cat-col h4 {
+    font-family: 'Manrope', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+
+  .footer-cat-col {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 110px;
+  }
+
+  .footer-cat-col a {
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.3;
+    white-space: nowrap;
+    transition: color 0.2s;
+  }
+
+  .footer-cat-col a:hover { color: var(--text); }
+
   .footer-links {
     display: flex;
     gap: 28px;
@@ -291,6 +368,18 @@ const enTarget = lang === 'en' ? Astro.url.pathname : (alt ?? '/');
   }
 
   .footer-links a:hover { color: var(--text); }
+
+  @media (max-width: 860px) {
+    .footer-categories {
+      grid-template-columns: repeat(2, max-content);
+      justify-content: center;
+      justify-items: start;
+      column-gap: 48px;
+      row-gap: 26px;
+      text-align: left;
+    }
+    .footer-cat-col { align-items: flex-start; }
+  }
 
   /* Footer language switcher — compact globe pill with a drop-UP menu */
   .footer-lang { position: relative; }

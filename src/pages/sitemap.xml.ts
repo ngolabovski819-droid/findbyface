@@ -29,6 +29,8 @@ const CORE_PAIRS: Array<{ en: string; changefreq: string; priority: string }> = 
   { en: '/onlyfans-finder-by-face/', changefreq: 'daily',  priority: '0.9' },
   { en: '/pornstar-finder-by-face/', changefreq: 'daily',  priority: '0.9' },
   { en: '/blog/',                   changefreq: 'weekly',  priority: '0.7' },
+  { en: '/how-our-search-engine-works/', changefreq: 'monthly', priority: '0.6' },
+  { en: '/blog/author/nick/',       changefreq: 'monthly', priority: '0.5' },
   { en: '/sitemap/',                changefreq: 'monthly', priority: '0.5' },
   { en: '/about/',                  changefreq: 'monthly', priority: '0.4' },
   { en: '/promote/',                changefreq: 'monthly', priority: '0.4' },

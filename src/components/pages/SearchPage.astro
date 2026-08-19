@@ -5,6 +5,8 @@ import { SEARCH_SEO, SEARCH_SEO_ES } from '../../config/seo-meta';
 import RankingAttributionBar from '../RankingAttributionBar.astro';
 import { localeOf } from '../../i18n/routes';
 import { absUrl } from '../../lib/site';
+import { categories } from '../../config/categories';
+import { categoryContent } from '../../config/categoryContent';
 
 const q        = Astro.url.searchParams.get('q') ?? '';
 const verified = Astro.url.searchParams.get('verified') ?? '';
@@ -151,9 +153,146 @@ const esClient: typeof enClient = {
   wishlistFullSignup: 'Favoritos lleno ({limit}/{limit}) — regístrate gratis para espacio de {n}',
 };
 const CLIENT = lang === 'es' ? esClient : enClient;
+
+// Long-form SEO body content below the interactive search UI. Voice per
+// PROGRAMMATIC-SEO-VOICE.md. "Browse by category" pulls from the SAME
+// categoryContent.ts pilot set used by the Nav dropdown, so it grows on its
+// own as more categories get written — no separate list to maintain here.
+const browseCategories = Object.keys(categoryContent)
+  .map(slug => categories.find(c => c.slug === slug))
+  .filter((c): c is NonNullable<typeof c> => c !== undefined);
+
+const enSeo = {
+  aboutHeading: 'About OnlyFans Search',
+  about: [
+    "This is honestly the main search engine for the whole site, not one category, not one type, just search whatever you're actually looking for and let the results sort themselves out. Type a name, a username, or even just a category word and it'll pull matches instantly.",
+    "It pulls from the same live database every other page here uses, so results reflect real, current creators, not some cached list from months ago. If you'd rather browse by type instead of typing something specific, the categories below are a good shortcut.",
+  ],
+  browseHeading: 'Browse by category',
+  sections: [
+    {
+      heading: 'How results here get ranked',
+      paragraphs: [
+        "Same system as every category page on the site, real engagement, mostly favorites and subscriber activity pulled straight from OnlyFans. Nothing about the main search works differently, it's just the ungated version without a category filter already applied.",
+        'Sort by Newest instead of Popular if you want to see who\'s freshly added rather than who\'s already blown up, that\'s a real toggle up in the filters, not just cosmetic.',
+      ],
+    },
+    {
+      heading: 'What the filters actually mean',
+      paragraphs: [
+        "Verified just confirms the account is legit on OnlyFans, it's not a quality signal on its own, plenty of great unverified creators show up here too. Price filters are exactly what they say, Free for $0 accounts, or a price ceiling if you're working with a budget.",
+        "Bundles just means the creator's currently running some kind of discount package, worth checking if you're comparing a few accounts on price.",
+      ],
+    },
+  ],
+  faqHeading: 'Frequently asked questions',
+  faq: [
+    {
+      question: 'How many creators are actually searchable here?',
+      answer: "Millions honestly, the full catalog behind findbyface, not some trimmed-down sample. New profiles get added regularly too, so it's not a static snapshot.",
+    },
+    {
+      question: 'Is this search free to use?',
+      answer: "Yeah, completely. No signup needed to search, you only hit a wall if you're using face search past the free limit, plain text search here isn't capped.",
+    },
+    {
+      question: 'How are results sorted by default?',
+      answer: 'Popular, which is real engagement pulled from OnlyFans, not paid placement. Switch to Newest in the filters if you want to see recently added creators instead.',
+    },
+    {
+      question: 'What does the Verified filter actually mean?',
+      answer: "It confirms OnlyFans has verified the account is who it says it is. It's not a ranking or quality score, just an identity check, plenty of unverified creators are still worth checking out.",
+    },
+    {
+      question: 'Can I search by photo instead of typing?',
+      answer: "Yeah, there's a face-search shortcut right in the search bar. Upload a photo instead and it'll rank creators by how close they actually look, usually in under 2 seconds.",
+    },
+    {
+      question: 'Does it save my search history?',
+      answer: 'Locally yeah, your last searches show up for quick reuse. Sign in free if you want that synced across your devices instead of stuck on one browser.',
+    },
+    {
+      question: "What's the difference between this and browsing a category page?",
+      answer: "Category pages are pre-filtered to one niche, this is the full unfiltered search, type anything, name, category word, whatever, and it'll match across everything at once.",
+    },
+  ],
+};
+
+const esSeo: typeof enSeo = {
+  aboutHeading: 'Sobre la Búsqueda de OnlyFans',
+  about: [
+    'Este es honestamente el buscador principal de todo el sitio, no una categoría, no un tipo, solo busca lo que realmente estás buscando y deja que los resultados se acomoden solos. Escribe un nombre, un usuario, o hasta una palabra de categoría y va a mostrar coincidencias al instante.',
+    'Saca de la misma base de datos en vivo que usa cada otra página aquí, así que los resultados reflejan creadoras reales y actuales, no una lista guardada de hace meses. Si prefieres navegar por tipo en vez de escribir algo específico, las categorías de abajo son un buen atajo.',
+  ],
+  browseHeading: 'Explora por categoría',
+  sections: [
+    {
+      heading: 'Cómo se ordenan los resultados aquí',
+      paragraphs: [
+        'El mismo sistema que cada página de categoría del sitio, interacción real, sobre todo favoritos y actividad de suscriptores sacada directo de OnlyFans. Nada funciona diferente en la búsqueda principal, es solo la versión sin filtro de categoría ya aplicado.',
+        'Ordena por Más nuevas en vez de Populares si quieres ver quién se agregó recién en vez de quién ya explotó, eso es un toggle real en los filtros, no solo algo visual.',
+      ],
+    },
+    {
+      heading: 'Qué significan realmente los filtros',
+      paragraphs: [
+        'Verificada solo confirma que la cuenta es legítima en OnlyFans, no es una señal de calidad por sí sola, aquí también aparecen muy buenas creadoras sin verificar. Los filtros de precio son exactamente lo que dicen, Gratis para cuentas de $0, o un tope de precio si estás con presupuesto ajustado.',
+        'Packs solo significa que la creadora tiene activo algún tipo de oferta con descuento ahora mismo, vale la pena revisarlo si estás comparando precio entre varias cuentas.',
+      ],
+    },
+  ],
+  faqHeading: 'Preguntas frecuentes',
+  faq: [
+    {
+      question: '¿Cuántas creadoras se pueden buscar realmente aquí?',
+      answer: 'Millones honestamente, el catálogo completo detrás de findbyface, no una muestra recortada. También se agregan perfiles nuevos seguido, así que no es una foto estática.',
+    },
+    {
+      question: '¿Esta búsqueda es gratis?',
+      answer: 'Sí, completamente. No necesitas registrarte para buscar, solo topas con un límite si usas la búsqueda facial más allá del límite gratis, la búsqueda de texto aquí no tiene tope.',
+    },
+    {
+      question: '¿Cómo se ordenan los resultados por defecto?',
+      answer: 'Por Populares, que es interacción real sacada de OnlyFans, no colocación pagada. Cambia a Más nuevas en los filtros si quieres ver creadoras agregadas recientemente.',
+    },
+    {
+      question: '¿Qué significa realmente el filtro Verificada?',
+      answer: 'Confirma que OnlyFans verificó que la cuenta es quien dice ser. No es un puntaje de ranking ni de calidad, solo una verificación de identidad, muchas creadoras sin verificar igual valen la pena.',
+    },
+    {
+      question: '¿Puedo buscar por foto en vez de escribir?',
+      answer: 'Sí, hay un atajo de búsqueda facial justo en la barra de búsqueda. Sube una foto en su lugar y va a ordenar a las creadoras por qué tanto se parecen, normalmente en menos de 2 segundos.',
+    },
+    {
+      question: '¿Guarda mi historial de búsqueda?',
+      answer: 'Localmente sí, tus últimas búsquedas aparecen para reutilizarlas rápido. Inicia sesión gratis si quieres eso sincronizado en tus dispositivos en vez de quedarte atado a un solo navegador.',
+    },
+    {
+      question: '¿Cuál es la diferencia entre esto y navegar una página de categoría?',
+      answer: 'Las páginas de categoría ya vienen filtradas a un nicho, esto es la búsqueda completa sin filtrar, escribe lo que sea, nombre, palabra de categoría, lo que sea, y va a buscar coincidencias en todo a la vez.',
+    },
+  ],
+};
+
+const SEOC = lang === 'es' ? esSeo : enSeo;
+
+const seoFaqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  inLanguage: lang,
+  mainEntity: SEOC.faq.map(item => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: { '@type': 'Answer', text: item.answer },
+  })),
+};
 ---
 
 <Base title={SEO.title} description={SEO.description} canonical={absUrl(pagePath)}>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(seoFaqJsonLd)} />
+  </Fragment>
+
   <div class="search-page">
 
     <div class="search-header">
@@ -323,6 +462,49 @@ const CLIENT = lang === 'es' ? esClient : enClient;
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="seo-body">
+      <section class="seo-section seo-about">
+        <h2>{SEOC.aboutHeading}</h2>
+        {SEOC.about.map(p => <p>{p}</p>)}
+      </section>
+
+      {browseCategories.length > 0 && (
+        <section class="seo-section seo-browse">
+          <h2>{SEOC.browseHeading}</h2>
+          <div class="browse-grid">
+            {browseCategories.map(cat => (
+              <a
+                href={lang === 'es' ? `/es/categorias/${cat.slugEs ?? cat.slug}/` : `/categories/${cat.slug}/`}
+                class="browse-card"
+              >
+                {cat.emoji && <span aria-hidden="true">{cat.emoji}</span>}
+                {lang === 'es' ? cat.labelEs : cat.label}
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {SEOC.sections.map(s => (
+        <section class="seo-section">
+          <h2>{s.heading}</h2>
+          {s.paragraphs.map(p => <p>{p}</p>)}
+        </section>
+      ))}
+
+      <section class="seo-section seo-faq">
+        <h2>{SEOC.faqHeading}</h2>
+        <div class="faq-list">
+          {SEOC.faq.map(item => (
+            <details class="faq-item">
+              <summary>{item.question}</summary>
+              <p>{item.answer}</p>
+            </details>
+          ))}
+        </div>
+      </section>
     </div>
   </div>
 </Base>
@@ -1634,6 +1816,66 @@ const CLIENT = lang === 'es' ? esClient : enClient;
     .results-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
   }
   @media (max-width: 380px) { .results-grid { gap: 10px; } }
+
+  /* ── SEO body content, below the interactive search UI ── */
+  .seo-body {
+    max-width: 780px;
+    margin: 64px auto 0;
+    padding: 0 20px;
+  }
+
+  .seo-section { margin-bottom: 40px; }
+  .seo-section:last-child { margin-bottom: 0; }
+
+  .seo-section h2 {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 800;
+    margin-bottom: 14px;
+  }
+
+  .seo-section p {
+    color: var(--text-muted);
+    font-size: 0.98rem;
+    line-height: 1.7;
+    margin: 0 0 14px;
+  }
+  .seo-section p:last-child { margin-bottom: 0; }
+
+  .browse-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+  .browse-card {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 13.5px; font-weight: 600;
+    color: var(--text-muted);
+    transition: color 0.2s, border-color 0.2s, transform 0.2s;
+  }
+  .browse-card:hover { color: var(--text); border-color: var(--accent); transform: translateY(-2px); }
+
+  /* Same visual pattern as the homepage FAQ / category-page FAQ */
+  .faq-list { display: flex; flex-direction: column; gap: 12px; }
+  .faq-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 4px 20px;
+  }
+  .faq-item summary {
+    cursor: pointer; padding: 16px 0; font-family: 'Manrope', sans-serif;
+    font-weight: 700; font-size: 1rem; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px;
+  }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item summary::after { content: '+'; color: var(--accent-light); font-size: 1.4rem; font-weight: 400; transition: transform 0.2s; flex-shrink: 0; }
+  .faq-item[open] summary::after { transform: rotate(45deg); }
+  .faq-item p { color: var(--text-muted); font-size: 0.93rem; line-height: 1.65; padding: 0 0 18px; margin: 0; }
+
+  @media (max-width: 640px) {
+    .seo-body { margin-top: 44px; }
+    .seo-section h2 { font-size: 1.15rem; }
+  }
 </style>
 
 <style is:global>

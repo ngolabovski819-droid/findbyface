@@ -1,6 +1,7 @@
 ---
 import { localeOf, localizePath, routeKey } from '../i18n/routes';
 import { t } from '../i18n/ui';
+import { categories } from '../config/categories';
 
 const pathname = Astro.url.pathname;
 const lang = localeOf(pathname);
@@ -14,9 +15,11 @@ const isVideoSearch =
   key.startsWith('/video-search');
 const isDiscover = key.startsWith('/ai-discover');
 const isSearch = key.startsWith('/onlyfans-search');
-const isBattle = key.startsWith('/battle');
+const isCategories = key.startsWith('/categories');
 
 const lp = (p: string) => localizePath(p, lang);
+const categoryHref = (slug: string, slugEs?: string) =>
+  lang === 'es' ? `/es/categorias/${slugEs ?? slug}/` : `/categories/${slug}/`;
 ---
 
 <header class="nav">
@@ -35,9 +38,27 @@ const lp = (p: string) => localizePath(p, lang);
         <span>{t(lang, 'nav.pornstarFinder')}</span><small class="nav-new-badge">{t(lang, 'nav.new')}</small>
       </a>
       <a href={lp('/onlyfans-search/')} class={isSearch ? 'active' : ''}>{t(lang, 'nav.search')}</a>
-      <a href={lp('/battle/')} class={`nav-feature-link ${isBattle ? 'active' : ''}`}>
-        <span>{t(lang, 'nav.battle')}</span><small class="nav-new-badge">{t(lang, 'nav.new')}</small>
-      </a>
+      <div class="nav-dropdown" id="navCategoriesDropdown">
+        <button
+          type="button"
+          class={`nav-dropdown-trigger ${isCategories ? 'active' : ''}`}
+          id="categoriesTrigger"
+          aria-haspopup="true"
+          aria-expanded="false"
+          aria-controls="categoriesPanel"
+        >
+          <span>{t(lang, 'nav.categories')}</span>
+          <svg class="nav-dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="nav-dropdown-panel" id="categoriesPanel">
+          {categories.map(cat => (
+            <a href={categoryHref(cat.slug, cat.slugEs)}>
+              {cat.emoji && <span aria-hidden="true">{cat.emoji}</span>}
+              {lang === 'es' ? cat.labelEs : cat.label}
+            </a>
+          ))}
+        </div>
+      </div>
       <div class="mobile-auth-actions" id="mobileAuthActions">
         <a href={lp('/login/')} class="mobile-login">{t(lang, 'nav.login')}</a>
         <a href={lp('/signup/')} class="mobile-signup">{t(lang, 'nav.signupFree')}</a>
@@ -117,6 +138,28 @@ const lp = (p: string) => localizePath(p, lang);
     navLinks.classList.remove('open');
     hamburger?.setAttribute('aria-expanded', 'false');
   }));
+
+  // Categories dropdown — same click/outside-click/Escape pattern as the user-menu dropdown below.
+  const categoriesTrigger = document.getElementById('categoriesTrigger');
+  const categoriesDropdown = document.getElementById('navCategoriesDropdown');
+  const categoriesPanel = document.getElementById('categoriesPanel');
+
+  function closeCategoriesPanel(): void {
+    categoriesPanel?.classList.remove('open');
+    categoriesTrigger?.setAttribute('aria-expanded', 'false');
+  }
+
+  categoriesTrigger?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = categoriesPanel?.classList.toggle('open') ?? false;
+    categoriesTrigger.setAttribute('aria-expanded', String(open));
+  });
+  document.addEventListener('click', (e) => {
+    if (categoriesDropdown && !categoriesDropdown.contains(e.target as Node)) closeCategoriesPanel();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeCategoriesPanel();
+  });
 
   // Auth state hydration
   const authActions = document.getElementById('authActions')!;
@@ -373,6 +416,67 @@ const lp = (p: string) => localizePath(p, lang);
     box-shadow: 0 0 14px rgba(236,72,153,0.14);
   }
 
+  .nav-dropdown { position: relative; }
+
+  .nav-dropdown-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 16px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s;
+  }
+  .nav-dropdown-trigger:hover { color: var(--text); background: rgba(124,58,237,0.1); }
+  .nav-dropdown-trigger.active { color: var(--text); }
+  .nav-dropdown-chevron { transition: transform 0.2s; }
+  .nav-dropdown-trigger[aria-expanded="true"] .nav-dropdown-chevron { transform: rotate(180deg); }
+
+  .nav-dropdown-panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 50%;
+    transform: translate(-50%, -6px);
+    width: min(520px, 90vw);
+    max-height: 60vh;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px 12px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+    padding: 10px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
+    z-index: 200;
+  }
+  .nav-dropdown-panel.open { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+
+  .nav-dropdown-panel a {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background 0.15s, color 0.15s;
+  }
+  .nav-dropdown-panel a:hover { background: rgba(124,58,237,0.14); color: var(--text); }
+
   .nav-right {
     display: flex;
     align-items: center;
@@ -537,6 +641,15 @@ const lp = (p: string) => localizePath(p, lang);
       display: none;
       position: absolute;
       top: 64px; left: 0; right: 0;
+      /* .nav is position:fixed, which makes it the containing block for this
+         absolutely-positioned menu too — so the menu is effectively pinned to
+         the screen, not the page. Normal page scroll can never reveal content
+         that overflows it, so once the categories dropdown is open the menu
+         must scroll itself or the bottom (and the dropdown's own long tail)
+         becomes permanently unreachable. */
+      max-height: calc(100vh - 64px);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
       background: var(--surface);
       flex-direction: column;
       padding: 16px 20px;
@@ -545,6 +658,33 @@ const lp = (p: string) => localizePath(p, lang);
     }
     .nav-links.open { display: flex; }
     .nav-links .nav-feature-link { justify-content: flex-start; }
+    .nav-dropdown-trigger { width: 100%; justify-content: space-between; padding: 10px 16px; }
+    /* Both selectors must carry the .open class to out-specify the desktop
+       `.nav-dropdown-panel.open` rule above — otherwise its
+       `transform: translate(-50%, 0)` still applies here and drags the panel
+       ~175px off-screen left, which reads as "the dropdown shows nothing". */
+    .nav-dropdown-panel,
+    .nav-dropdown-panel.open {
+      position: static;
+      transform: none;
+      width: 100%;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px 8px;
+      max-height: 46vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      opacity: 1;
+      visibility: visible;
+      box-shadow: none;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin: 4px 0 2px;
+      padding: 8px;
+      background: rgba(255,255,255,0.03);
+    }
+    .nav-dropdown-panel { display: none; }
+    .nav-dropdown-panel.open { display: grid; }
+    .nav-dropdown-panel a { padding: 9px 8px; font-size: 13px; }
     .mobile-auth-actions {
       display: grid;
       grid-template-columns: 1fr 1fr;

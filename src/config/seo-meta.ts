@@ -202,6 +202,50 @@ const CAT_DESCS_ES: ((label: string, n: string, plus: boolean, niche: string) =>
   (l, n, p) => `${n}${p ? '+' : ''} creadoras ${l} de OnlyFans que seguir en ${Y}. Búsqueda facial con IA, filtros de cuentas gratis, verificación y precios de packs en vivo.`,
 ];
 
+// ---------- generic category FAQ (fallback for categories with no pilot content) ----------
+// Moved here verbatim from the two [slug].astro templates so both call one function
+// instead of duplicating the same 3-Q&A text. Feeds FAQPage JSON-LD only for
+// categories with no entry in src/config/categoryContent.ts — pilot categories use
+// their own hand-written FAQ instead (see getCategoryContent()).
+
+export interface GenericFaqItem {
+  question: string;
+  answer: string;
+}
+
+export function genericCategoryFaq(label: string, locale: 'en' | 'es' = 'en'): GenericFaqItem[] {
+  if (locale === 'es') {
+    return [
+      {
+        question: `¿Cómo se clasifica la lista de OnlyFans ${label}?`,
+        answer: `Las creadoras se clasifican por interacción real de fans (número de favoritos y métricas de suscriptores) extraída en vivo de OnlyFans. La lista se actualiza a diario, así que las cuentas ${label} recién populares aparecen rápido.`,
+      },
+      {
+        question: `¿Estas cuentas de OnlyFans ${label} son gratis?`,
+        answer: `Muchas lo son. Usa el filtro Gratis para mostrar solo creadoras ${label} de OnlyFans con suscripción de $0, o el filtro de Packs para encontrar creadoras de pago con ofertas de descuento activas.`,
+      },
+      {
+        question: `¿Con qué frecuencia se actualiza la lista de OnlyFans ${label}?`,
+        answer: `A diario. Rastreamos cuentas ${label} nuevas, cambios de perfil y actualizaciones de precios cada 24 horas, con el estado de verificación actualizado semanalmente.`,
+      },
+    ];
+  }
+  return [
+    {
+      question: `How is the ${label} OnlyFans list ranked?`,
+      answer: `Creators are ranked by real fan engagement (favorited count and subscriber metrics) pulled live from OnlyFans. The list is refreshed daily, so newer popular ${label} accounts surface quickly.`,
+    },
+    {
+      question: `Are these ${label} OnlyFans accounts free?`,
+      answer: `Many are. Use the Free filter to show only ${label} OnlyFans creators with $0 subscriptions, or the Bundles filter to find paid creators currently running discount offers.`,
+    },
+    {
+      question: `How often is the ${label} OnlyFans list updated?`,
+      answer: `Daily. We track new ${label} accounts, profile changes, and pricing updates every 24 hours, with verification status refreshed weekly.`,
+    },
+  ];
+}
+
 // ---------- public API ----------
 
 export interface CategorySeo {

@@ -6,8 +6,11 @@ import Base from '../../../layouts/Base.astro';
 import CreatorCard from '../../../components/CreatorCard.astro';
 import CategoryChips from '../../../components/CategoryChips.astro';
 import RankingAttributionBar from '../../../components/RankingAttributionBar.astro';
+import CategoryIntro from '../../../components/CategoryIntro.astro';
+import CategoryBody from '../../../components/CategoryBody.astro';
 import { esSlugToCategory } from '../../../config/categories';
-import { categorySeo } from '../../../config/seo-meta';
+import { categorySeo, genericCategoryFaq } from '../../../config/seo-meta';
+import { getCategoryContent } from '../../../config/categoryContent';
 import { resolvePlacements } from '../../../lib/creatorFetch';
 import { applySponsorOverrides } from '../../../lib/sponsorOverrides';
 import { absUrl } from '../../../lib/site';
@@ -34,35 +37,22 @@ const pageDesc  = seo.description;
 const canonical = absUrl(`/es/categorias/${slug}/`);
 const alternate = `/categories/${category.slug}/`;
 
+// Pilot categories (src/config/categoryContent.ts) supply their own hand-written
+// FAQ; everything else falls back to the generic templated one. Either way, this
+// same array feeds both the JSON-LD below AND the visible FAQ in CategoryBody —
+// single source of truth, so they can't drift apart. Lookup key is always the
+// ENGLISH slug (category.slug), matching how categoryContent.ts is keyed.
+const pilotContent = getCategoryContent(category.slug, 'es');
+const faqItems = pilotContent?.faq ?? genericCategoryFaq(category.labelEs, 'es');
+
 const faqJsonLd = {
   '@type': 'FAQPage',
   inLanguage: 'es',
-  mainEntity: [
-    {
-      '@type': 'Question',
-      name: `¿Cómo se clasifica la lista de OnlyFans ${category.labelEs}?`,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: `Las creadoras se clasifican por interacción real de fans (número de favoritos y métricas de suscriptores) extraída en vivo de OnlyFans. La lista se actualiza a diario, así que las cuentas ${category.labelEs} recién populares aparecen rápido.`,
-      },
-    },
-    {
-      '@type': 'Question',
-      name: `¿Estas cuentas de OnlyFans ${category.labelEs} son gratis?`,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: `Muchas lo son. Usa el filtro Gratis para mostrar solo creadoras ${category.labelEs} de OnlyFans con suscripción de $0, o el filtro de Packs para encontrar creadoras de pago con ofertas de descuento activas.`,
-      },
-    },
-    {
-      '@type': 'Question',
-      name: `¿Con qué frecuencia se actualiza la lista de OnlyFans ${category.labelEs}?`,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: `A diario. Rastreamos cuentas ${category.labelEs} nuevas, cambios de perfil y actualizaciones de precios cada 24 horas, con el estado de verificación actualizado semanalmente.`,
-      },
-    },
-  ],
+  mainEntity: faqItems.map(item => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: { '@type': 'Answer', text: item.answer },
+  })),
 };
 
 const jsonLd = JSON.stringify({
@@ -108,6 +98,8 @@ const jsonLd = JSON.stringify({
       </p>
     </div>
 
+    <CategoryIntro slug={category.slug} locale="es" />
+
     <CategoryChips activeSlug={category.slug} />
     <RankingAttributionBar />
 
@@ -130,6 +122,8 @@ const jsonLd = JSON.stringify({
         </div>
       )}
     </div>
+
+    <CategoryBody slug={category.slug} locale="es" />
   </div>
 </Base>
 

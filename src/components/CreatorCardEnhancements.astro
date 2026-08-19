@@ -148,7 +148,7 @@ const CLIENT = lang === 'es' ? esClient : enClient;
     img.removeAttribute('srcset');
     img.removeAttribute('sizes');
     img.src = imageUrl(images[index]);
-    card.dataset.cardSlide = String(index);
+    card.dataset.cardSlideIndex = String(index);
     renderDots(card, index, images.length);
   }
 
@@ -188,7 +188,7 @@ const CLIENT = lang === 'es' ? esClient : enClient;
         <button type="button" class="card-carousel-arrow card-carousel-arrow-next" data-card-direction="1" aria-label="${T.nextImage}">›</button>
         <div class="card-carousel-dots"></div>
       `);
-      card.dataset.cardSlide = '0';
+      card.dataset.cardSlideIndex = '0';
       renderDots(card, 0, images.length);
     }
 
@@ -265,6 +265,13 @@ const CLIENT = lang === 'es' ? esClient : enClient;
 
     document.addEventListener('click', event => {
       const target = event.target as HTMLElement;
+      // `[data-card-slide]` here must only ever match a carousel DOT button (its
+      // "jump to this index" marker) — never the `.creator-card` container itself.
+      // The container's own current-slide state lives in a differently-named
+      // `data-card-slide-index` attribute specifically so it can't collide with
+      // this selector; if it did, .closest() would match the container for any
+      // click anywhere on a multi-image card (including "View Profile"), since
+      // closest() walks up to and includes ancestors.
       const control = target.closest<HTMLElement>('[data-card-direction], [data-card-slide], [data-wishlist-username]');
       if (!control) return;
       event.preventDefault();
@@ -274,7 +281,7 @@ const CLIENT = lang === 'es' ? esClient : enClient;
       if (!card) return;
 
       if (control.dataset.cardDirection) {
-        const current = Number(card.dataset.cardSlide ?? 0);
+        const current = Number(card.dataset.cardSlideIndex ?? 0);
         setSlide(card, current + Number(control.dataset.cardDirection));
         return;
       }
