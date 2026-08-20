@@ -34,18 +34,20 @@ export const placements: Record<string, Placement> = {
   },
   'face-search': {
     pinned: [
-      { username: 'emilylopz', position: 1 },
+      { username: 'cosplaytsumiko', position: 1 },
       { username: 'rocketreynaxo', position: 2 },
-      { username: 'hannazuki', position: 3 },
+      { username: 'hannazuki', position: 4 },
+      { username: 'emilylopz', position: 6 },
     ],
     excluded: [],
   },
+  // Intentionally no sponsored row in the search-bar dropdown right now (owner's call,
+  // 2026-08-20). api/search-ad.ts returns an empty list for an empty pin array and
+  // searchDropdown.ts hides the ad slot on no ads — so this cleanly shows recent
+  // searches + popular categories with no "Sponsored" entry. Re-add { username, position }
+  // entries here to bring it back.
   'search-dropdown': {
-    pinned: [
-      { username: 'emilylopz', position: 1 },
-      { username: 'rocketreynaxo', position: 2 },
-      { username: 'hannazuki', position: 3 },
-    ],
+    pinned: [],
     excluded: [],
   },
   // No one's bought a Battle slot yet — add { username, position } entries here (position
@@ -59,9 +61,10 @@ export const placements: Record<string, Placement> = {
   // page's recent-searches dropdown, not its actual result cards.
   'onlyfans-search': {
     pinned: [
-      { username: 'emilylopz', position: 1 },
+      { username: 'cosplaytsumiko', position: 1 },
       { username: 'rocketreynaxo', position: 2 },
-      { username: 'hannazuki', position: 3 },
+      { username: 'hannazuki', position: 4 },
+      { username: 'emilylopz', position: 6 },
     ],
     excluded: [],
   },
@@ -85,6 +88,12 @@ export function pinAcrossCategories(username: string, position: number, slugs?: 
 }
 
 // Active paid placements — one call per order.
-pinAcrossCategories('emilylopz', 1);
+// Current order (onlyfans-search / categories / face-search): cosplaytsumiko 1,
+// rocketreynaxo 2, hannazuki 4, emilylopz 6. Positions 3 & 5 are left to organic
+// creators. In face-search these numbers count AD slots (pos 6 → grid card 11), so
+// emily sits further down there than her literal 6th-card spot on the search grid.
+// emilylopz still holds position 1 on the 'home' scope — untouched by these deals.
+pinAcrossCategories('cosplaytsumiko', 1);
 pinAcrossCategories('rocketreynaxo', 2);
-pinAcrossCategories('hannazuki', 3);
+pinAcrossCategories('hannazuki', 4);
+pinAcrossCategories('emilylopz', 6);

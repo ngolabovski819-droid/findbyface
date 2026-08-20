@@ -59,7 +59,9 @@ function supabaseCreds() {
 interface FetchOrganicParams {
   termsOr?: string[];
   excludeUsernames?: string[];
-  order?: string;
+  /** Omitted → 'favoritedcount.desc'. Pass `null` to send NO order clause at all —
+   * some category term sets only complete without one (see src/lib/categoryStatic.ts). */
+  order?: string | null;
   limit: number;
   offset: number;
   timeoutMs?: number;
@@ -86,7 +88,8 @@ export async function fetchOrganicCreators(params: FetchOrganicParams): Promise<
 
   const qp = new URLSearchParams();
   qp.set('select', 'id,username,name,avatar,header,isverified,subscribeprice,favoritedcount');
-  qp.set('order', order ?? 'favoritedcount.desc');
+  // `null` means "no order clause" — deliberately distinct from undefined (use the default).
+  if (order !== null) qp.set('order', order ?? 'favoritedcount.desc');
   qp.set('limit', String(limit));
   qp.set('offset', String(offset));
 

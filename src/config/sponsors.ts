@@ -31,7 +31,7 @@ export const sponsors: Record<string, SponsorOverride> = {
     ),
   },
   rocketreynaxo: {
-    linkOverride: 'https://onlyfans.com/rocketreynaxo/c58',
+    linkOverride: 'https://onlyfans.com/rocketreynaxo/trial/12v36e0ushqqqe1bdaqa4gramuus1m2d',
     imageOverride: '/uploads/sponsors/rocketreynaxo/rocket-01.jpg',
     clickTable: 'sponsor_clicks_rocketreynaxo_fbf',
     tags: ['asian milf', 'busty', 'curvy'],
@@ -40,8 +40,22 @@ export const sponsors: Record<string, SponsorOverride> = {
       (_, index) => `/uploads/sponsors/rocketreynaxo/rocket-${String(index + 1).padStart(2, '0')}.jpg`,
     ),
   },
+  cosplaytsumiko: {
+    linkOverride: 'https://onlyfans.com/cosplaytsumiko/c58',
+    imageOverride: '/uploads/sponsors/cosplaytsumiko/tsumiko-01.jpg',
+    clickTable: 'sponsor_clicks_cosplaytsumiko_fbf',
+    tags: ['cosplay', 'big tits', 'asian'],
+    additionalTagCount: 9,
+    // Client asked for images 1-5 in order, then the rest mixed — the files are already
+    // written to disk in exactly that sequence (see the onboarding note in git history),
+    // so a plain 01..29 run IS the requested order.
+    galleryImages: Array.from(
+      { length: 29 },
+      (_, index) => `/uploads/sponsors/cosplaytsumiko/tsumiko-${String(index + 1).padStart(2, '0')}.jpg`,
+    ),
+  },
   hannazuki: {
-    linkOverride: 'https://onlyfans.com/hannazuki/c1043',
+    linkOverride: 'https://onlyfans.com/hannazuki/trial/kqv4mhnqp9ifhpwin0vtfxnsscmlv9jy',
     imageOverride: '/uploads/sponsors/hannazuki/hanna-01.jpg',
     clickTable: 'sponsor_clicks_hannazuki_fbf',
     tags: ['asian', 'cosplay', 'egirl', 'GFE'],

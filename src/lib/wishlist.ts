@@ -88,15 +88,35 @@ export interface ToggleResult {
 export function readEntryFromCard(card: HTMLElement, username: string): WishlistEntry {
   const name = card.querySelector('.creator-name')?.textContent?.trim();
   const price = card.querySelector('.price')?.textContent?.trim();
-  const avatar = card.querySelector<HTMLImageElement>('.card-img-wrap img')?.src;
   return {
     username,
     name: name || username,
-    avatar: avatar || '',
+    avatar: readCardAvatar(card),
     price: price || '',
     profileUrl: card.dataset.href || `https://onlyfans.com/${encodeURIComponent(username)}`,
     addedAt: Date.now(),
   };
+}
+
+// The wishlist page re-proxies whatever avatar we store here, so we must store the RAW
+// source image, not the card's already-transformed `img.src`. Storing the rendered src
+// broke sponsored creators whose card image is a local `/uploads/sponsors/...` override:
+// in the DOM that reads back as an absolute same-origin URL (http://host/uploads/...),
+// which the wishlist page then hands to weserv — and weserv can't fetch the site's own
+// (or localhost's) upload path, so the image 404s. It also double-proxied normal creators
+// (weserv wrapping an already-weserv URL). `data-card-images[0]` is the un-proxied source:
+// a local path for sponsor overrides, the raw OnlyFans URL otherwise.
+function readCardAvatar(card: HTMLElement): string {
+  try {
+    const images = JSON.parse(card.dataset.cardImages ?? '[]');
+    if (Array.isArray(images) && typeof images[0] === 'string' && images[0]) return images[0];
+  } catch { /* fall through to the rendered src */ }
+
+  // Fallback: strip a same-origin prefix so a local path round-trips as `/uploads/...`
+  // instead of an absolute URL the wishlist page would try to proxy.
+  const src = card.querySelector<HTMLImageElement>('.card-img-wrap img')?.src ?? '';
+  if (src.startsWith(location.origin)) return src.slice(location.origin.length) || '';
+  return src;
 }
 
 export function toggleWishlist(username: string, entryIfAdding?: WishlistEntry): ToggleResult {

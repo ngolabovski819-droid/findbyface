@@ -50,15 +50,17 @@ export function alternatePath(pathname: string): string | undefined {
   const p = norm(pathname);
   if (staticRoutes[p]) return staticRoutes[p];
   if (esToEn[p]) return esToEn[p];
-  const en = p.match(/^\/categories\/([^/]+)\/$/);
+  // Category pages carry an optional page number: /categories/blonde/ and
+  // /categories/blonde/3/ both pair with the same-numbered page in the other locale.
+  const en = p.match(/^\/categories\/([^/]+)\/(?:(\d+)\/)?$/);
   if (en) {
     const c = categories.find(c => c.slug === en[1]);
-    return c && `/es/categorias/${c.slugEs ?? c.slug}/`;
+    return c && `/es/categorias/${c.slugEs ?? c.slug}/${en[2] ? `${en[2]}/` : ''}`;
   }
-  const es = p.match(/^\/es\/categorias\/([^/]+)\/$/);
+  const es = p.match(/^\/es\/categorias\/([^/]+)\/(?:(\d+)\/)?$/);
   if (es) {
     const c = categories.find(c => (c.slugEs ?? c.slug) === es[1]);
-    return c && `/categories/${c.slug}/`;
+    return c && `/categories/${c.slug}/${es[2] ? `${es[2]}/` : ''}`;
   }
   return undefined;
 }

@@ -1,0 +1,176 @@
+---
+// Fully prerendered category listing — page 1 at /categories/<slug>/, pages 2+ at
+// /categories/<slug>/<n>/. Replaces the old SSR src/pages/categories/[slug].astro:
+// every creator row is fetched once at build time (src/lib/categoryStatic.ts) and
+// baked into HTML, so a visitor request touches no database at all. /onlyfans-search
+// is now the only page that still queries Supabase per request.
+//
+// Pages are frozen until the next deploy. Redeploy to pick up new creators, and note
+// that placements/sponsors already worked that way (they're config, not data).
+//
+// i18n-twin: src/pages/es/categorias/[slug]/[...page].astro — mirror copy/structure changes.
+import Base from '../../../layouts/Base.astro';
+import CreatorCard from '../../../components/CreatorCard.astro';
+import CategoryChips from '../../../components/CategoryChips.astro';
+import RankingAttributionBar from '../../../components/RankingAttributionBar.astro';
+import CategoryIntro from '../../../components/CategoryIntro.astro';
+import CategoryBody from '../../../components/CategoryBody.astro';
+import CategoryPagination from '../../../components/CategoryPagination.astro';
+import { categorySeo, genericCategoryFaq } from '../../../config/seo-meta';
+import { getCategoryContent } from '../../../config/categoryContent';
+import { allCategoryStaticPaths } from '../../../lib/categoryStatic';
+import { applySponsorOverrides } from '../../../lib/sponsorOverrides';
+import { absUrl } from '../../../lib/site';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+  const paths = await allCategoryStaticPaths();
+  return paths.map(({ category, page, totalPages, creators, total }) => ({
+    // Rest param left undefined for page 1 so it keeps the existing /categories/<slug>/ URL.
+    params: { slug: category.slug, page: page === 1 ? undefined : String(page) },
+    props: { category, page, totalPages, creators, total },
+  }));
+}
+
+const { category, page, totalPages, creators: rawCreators, total } = Astro.props;
+
+const creators = applySponsorOverrides(rawCreators);
+const baseUrl = `/categories/${category.slug}`;
+const canonical = absUrl(page === 1 ? `${baseUrl}/` : `${baseUrl}/${page}/`);
+const esBase = `/es/categorias/${category.slugEs ?? category.slug}`;
+const alternate = page === 1 ? `${esBase}/` : `${esBase}/${page}/`;
+
+const seo = categorySeo(category.slug, category.label, total);
+const pageTitle = page === 1 ? seo.title : `${seo.title} — Page ${page}`;
+const pageDesc = page === 1
+  ? seo.description
+  : `More ${category.label} OnlyFans creators, page ${page} of ${totalPages}. ${seo.description}`;
+
+// The long-form intro, FAQ and "Best Creators" block are page-1 only — repeating them
+// across 50 paginated URLs would just be duplicate content competing with page 1.
+const isFirstPage = page === 1;
+
+// Pilot categories (src/config/categoryContent.ts) supply their own hand-written
+// FAQ; everything else falls back to the generic templated one. Either way, this
+// same array feeds both the JSON-LD below AND the visible FAQ in CategoryBody —
+// single source of truth, so they can't drift apart.
+const pilotContent = getCategoryContent(category.slug, 'en');
+const faqItems = pilotContent?.faq ?? genericCategoryFaq(category.label, 'en');
+
+const graph: Record<string, unknown>[] = [
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: absUrl('/') },
+      { '@type': 'ListItem', position: 2, name: category.label, item: absUrl(`${baseUrl}/`) },
+      ...(isFirstPage ? [] : [{ '@type': 'ListItem', position: 3, name: `Page ${page}`, item: canonical }]),
+    ],
+  },
+  {
+    '@type': 'ItemList',
+    name: pageTitle,
+    url: canonical,
+    numberOfItems: creators.length,
+    itemListElement: creators.slice(0, 10).map((c, i) => ({
+      '@type': 'ListItem',
+      position: (page - 1) * 20 + i + 1,
+      name: c.name || c.username,
+      url: `https://onlyfans.com/${c.username}`,
+    })),
+  },
+];
+if (isFirstPage) {
+  graph.push({
+    '@type': 'FAQPage',
+    mainEntity: faqItems.map(item => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: { '@type': 'Answer', text: item.answer },
+    })),
+  });
+}
+
+const jsonLd = JSON.stringify({ '@context': 'https://schema.org', '@graph': graph });
+---
+
+<Base title={pageTitle} description={pageDesc} canonical={canonical} alternate={alternate}>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={jsonLd} />
+    {page > 1 && <link rel="prev" href={absUrl(page === 2 ? `${baseUrl}/` : `${baseUrl}/${page - 1}/`)} />}
+    {page < totalPages && <link rel="next" href={absUrl(`${baseUrl}/${page + 1}/`)} />}
+  </Fragment>
+
+  <div class="category-page">
+    <div class="category-header">
+      <h1>
+        {category.emoji && <span class="cat-emoji">{category.emoji}</span>}
+        Best {category.label} OnlyFans Creators
+        {!isFirstPage && <span class="page-suffix"> — Page {page}</span>}
+      </h1>
+      <p class="category-sub">
+        {total ? `${total.toLocaleString()} creators found` : 'Browse top creators'}
+      </p>
+    </div>
+
+    {isFirstPage && <CategoryIntro slug={category.slug} locale="en" />}
+
+    <CategoryChips activeSlug={category.slug} />
+    {isFirstPage && <RankingAttributionBar />}
+
+    <div class="category-content">
+      {creators.length > 0 ? (
+        <>
+          <div class="creators-grid" id="creatorsGrid">
+            {creators.map((c, i) => <CreatorCard creator={c} index={i} />)}
+          </div>
+          <CategoryPagination baseUrl={baseUrl} page={page} totalPages={totalPages} lang="en" />
+        </>
+      ) : (
+        <div class="empty-state">
+          <p>No creators found for this category yet.</p>
+          <a href="/" class="back-link">← Back to home</a>
+        </div>
+      )}
+    </div>
+
+    {isFirstPage && <CategoryBody slug={category.slug} locale="en" />}
+  </div>
+</Base>
+
+<script>
+  import { initCardClickThrough } from '../../../lib/cardClickThrough';
+  initCardClickThrough();
+</script>
+
+<style>
+  .category-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 100px 20px 60px;
+  }
+
+  .category-header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .category-header h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); margin-bottom: 12px; }
+  .cat-emoji { margin-right: 8px; }
+  .page-suffix { color: var(--text-muted); font-weight: 400; }
+  .category-sub { color: var(--text-muted); }
+
+  .category-content { margin-top: 40px; }
+
+  .creators-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  @media (max-width: 900px) { .creators-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 640px) { .creators-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } }
+
+  .empty-state { text-align: center; padding: 80px 20px; color: var(--text-muted); }
+  .back-link { color: var(--accent); margin-top: 16px; display: inline-block; }
+</style>

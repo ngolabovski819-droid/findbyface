@@ -92,7 +92,8 @@ a { color: inherit; text-decoration: none; }
 │   │   ├── index.astro           ← homepage: upload hero + stats + chips + cards
 │   │   ├── onlyfans-search.astro ← dedicated search page with filters
 │   │   ├── categories/
-│   │   │   └── [slug].astro      ← SSR dynamic category page
+│   │   │   └── [slug]/
+│   │   │       └── [...page].astro ← PRERENDERED category page + pagination
 │   │   ├── blog/
 │   │   │   ├── index.astro       ← blog listing (Astro Content Collections)
 │   │   │   └── [slug].astro      ← blog post page
@@ -381,26 +382,94 @@ Numbers in large Syne font with purple/pink gradient. Labels in small uppercase 
 
 ---
 
-## /categories/[slug].astro — SSR Pattern
+## /categories/[slug]/[...page].astro — Prerendered Pattern
+
+Category pages are **fully static**, built at deploy time with zero database calls per
+visitor. `/onlyfans-search` is the only surface left that queries Supabase on a visitor
+request. Same treatment on the Spanish twin, `/es/categorias/[slug]/[...page].astro`.
+
 ```astro
 ---
-import Base from '../../layouts/Base.astro';
-import { slugToCategory } from '../../config/categories';
-import CreatorCard from '../../components/CreatorCard.astro';
+export const prerender = true;
 
-const { slug } = Astro.params;
-const category = slugToCategory(slug!);
-if (!category) return Astro.redirect('/');
-
-// Fetch from Supabase server-side
-const creators = await fetchCreatorsByTerms(category.terms, 50);
+export async function getStaticPaths() {
+  const paths = await allCategoryStaticPaths();   // src/lib/categoryStatic.ts
+  return paths.map(({ category, page, totalPages, creators, total }) => ({
+    // page 1 leaves the rest param undefined, keeping the /categories/<slug>/ URL
+    params: { slug: category.slug, page: page === 1 ? undefined : String(page) },
+    props: { category, page, totalPages, creators, total },
+  }));
+}
 ---
-<Base title={`Best ${category.label} OnlyFans Creators | findbyface`}>
-  <!-- JSON-LD ItemList + BreadcrumbList -->
-  <!-- pre-rendered cards grid -->
-  <!-- define:vars={{ __CATEGORY_SSR: { slug, count: creators.length, hasMore: creators.length === 50 } }} -->
-</Base>
 ```
+
+- **URLs**: page 1 stays at `/categories/<slug>/`; page 2+ at `/categories/<slug>/<n>/`.
+  Self-canonical on every page, `<link rel="prev|next">` in the head, real `<a>` links via
+  `CategoryPagination.astro` — the old "Load More" button (which re-hit `/api/search` on
+  click) is gone from these pages.
+- **Capped at `MAX_STATIC_RESULTS = 1000` per category** (`src/lib/categoryStatic.ts`),
+  20 per page → up to 50 pages per category, ~1,750 pages per locale. Deep pagination
+  past 1000 just has no further Next link, same trade-off as the search candidate cap.
+- **Page 1 only**: `CategoryIntro`, `CategoryBody`, `RankingAttributionBar` and the
+  `FAQPage` JSON-LD. Repeating those across 50 URLs is duplicate content competing with
+  page 1, and `CategoryBody` → `TopCreators` runs its own query per render.
+- **Sitemap lists page 1 only** — page 2+ is discovered by crawling the pagination links.
+- **Frozen until redeploy.** Placements/sponsors were already redeploy-gated (they're
+  config, not data), so this only extends that to the organic creator list. There is no
+  ISR/timer: redeploy to refresh.
+- **Two fetch strategies, and the second one is not optional.** `fetchOrdered()` pages
+  `order=favoritedcount.desc` 200 rows at a time; that's all most categories need. For the
+  rest, ordered requests die on Postgres' 8s statement timeout (`57014`) at any limit — the
+  planner walks the favoritedcount index looking for ILIKE matches. `fetchUnorderedSweep()`
+  reruns the same filter with **no order clause** (500/request, sorted by `favoritedCount`
+  in memory afterwards) and returns the full match set in ~150ms. `korean` is the standing
+  example: before this, `/categories/korean/` served live with nothing but its 3 pinned
+  sponsor cards. `fetchOrganicCreators({ order: null })` is what suppresses the order
+  clause; `undefined` still means "use the default".
+- **The sweep runs only when the ordered walk stopped short of 1000, and its rows are
+  merged into the ordered ones, not swapped for them.** The ordered rows are the exact top
+  of the ranking (nothing outside them can outrank them), so `mergeRanked()` sorts the
+  union and the ordered prefix stays put. Categories the ordered path handles cleanly never
+  pay for a sweep — sweeping `top`/`free`/`footjob` (40k+ matches each) is far costlier.
+- **Both strategies keep partial results.** These timeouts are transient — the same chunk
+  usually succeeds seconds later, which is why `attempt()` retries 4× with exponential
+  backoff. Discarding already-fetched rows on a late failure (an early version did) turns
+  one blipped request into a whole category losing its pages.
+- **The build only throws when the unfiltered popular query ALSO fails** — that means
+  Supabase is unreachable, not that one term set is pathological. Each build logs a
+  `[categoryStatic] <slug> N creators → M pages` line, flagged `SWEEP` / `PARTIAL` /
+  `FALLBACK` when degraded, so an under-generated deploy is visible in the build log
+  instead of only in production.
+- Per-category data is memoized in `categoryStatic.ts`, so building both locales costs one
+  set of queries, not two.
+
+---
+
+## /onlyfans-search — prerendered first paint, live everything else
+
+The page itself is prerendered (`export const prerender = true` in
+`src/pages/onlyfans-search.astro` + the ES twin), with the **default, unfiltered page 1**
+baked into `#resultsGrid` at build time by `src/lib/searchSeed.ts`. Before this, every
+single visit fired `/api/search?page=1` from the client before a creator appeared — the
+site's most-requested query, paid on every landing.
+
+Search itself is unchanged and still fully live: typing, filtering, sorting and Load More
+all query `/api/search` per request. Only the pre-interaction paint is static.
+
+- **`SEARCH_SEED_PAGE_SIZE` and `SEARCH_SEED_ORDER` must track `src/pages/api/search.ts`.**
+  The baked page 1 and the client's page 2 come from two different code paths; if their
+  ordering or page size diverge, Load More silently skips or repeats creators.
+- **The client must not re-fetch what it is already showing.** `#resultsGrid` carries
+  `data-seeded` / `data-seed-has-more`; on load the script adopts them and sets
+  `currentPage = 2` instead of calling `fetchCreators()`. Any active filter in the URL
+  takes the normal live path.
+- **Deep-link state is restored client-side, not server-side.** A prerendered page can't
+  read `?q=`/`&price=`, so the markup ships default control state and the script syncs the
+  input, toggles and pills from `window.location` before its first query. Don't reintroduce
+  `Astro.url.searchParams` reads in `SearchPage.astro` — they'd always be empty.
+- **Degrades gracefully**: if Supabase is down at build, `resolvePlacements` returns no
+  rows, `data-seeded` is `"false"`, and the client fetches on load exactly like it used to.
+  Unlike the category pages, this does NOT fail the build — the page works either way.
 
 ---
 
@@ -520,6 +589,9 @@ fulfilling an order should be a config edit, not a code change.
   pinned slot, since any organic exposure should still credit the campaign.
 
 ### How it fits together
+- `src/lib/categoryStatic.ts` — the **build-time** equivalent for category pages: applies
+  the same pinned/excluded contract across the whole capped 1000-creator list before
+  chunking it into pages. The category routes call this, not `resolvePlacements`.
 - `src/lib/creatorFetch.ts` — `resolvePlacements(scope, {page, pageSize, termsOr, order})`
   is the fetch orchestrator: excludes pinned+excluded usernames from the organic query
   (keeps pagination offsets aligned), fetches pinned records separately by exact username,
@@ -532,8 +604,8 @@ fulfilling an order should be a config edit, not a code change.
   heading, and never let a query failure render as just a lone sponsored card.
 - `src/lib/sponsorOverrides.ts` — `applySponsorOverrides(creators)` stamps a `profileUrl`
   (and swaps `avatar` if overridden) onto every creator object. Called at the end of every
-  creator-mapping site: `api/search.ts`, `api/face-search.ts`, and the SSR fetches in
-  `index.astro`/`categories/[slug].astro`. (`api/visual-search.ts` / `ai-discover.astro`
+  creator-mapping site: `api/search.ts`, `api/face-search.ts`, and the build-time fetch in
+  `categories/[slug]/[...page].astro`. (`api/visual-search.ts` / `ai-discover.astro`
   are intentionally skipped — that page is draft, not production.)
 - `src/pages/go/[username].ts` — the click-tracking redirect. Looks up the sponsor
   override, logs a click (only if `clickTable` is set and the UA isn't a bot) into
@@ -592,9 +664,11 @@ homepage.
    with Playwright (curl can't see this — it's a browser-only behavior).
 
 ### Render sites that must stay in sync
-Card markup is duplicated in 7 places, not centralized — if you change how a card renders
+Card markup is duplicated in 5 places, not centralized — if you change how a card renders
 (the sponsored badge, the `rel` logic, etc.), update all of them: `CreatorCard.astro`,
-`index.astro` (load-more), `categories/[slug].astro` (load-more), `onlyfans-search.astro`,
+`index.astro` (load-more), `src/lib/searchResultCard.ts` (the ONE renderer for
+/onlyfans-search, shared by the server's prerendered first page and the client's Load More
+batches — they land in the same grid, so they must not drift),
 `dashboard.astro` (cached "Latest Searches" mini-cards), `UploadBox.astro` (AI face-search
 results — also owns the sign-in blur logic above). `ai-discover.astro` is explicitly
 excluded — it's a draft page, leave it alone.

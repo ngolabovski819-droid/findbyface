@@ -86,9 +86,11 @@ export const GET: APIRoute = async ({ url }) => {
   }
 
   // Pinning only ever activates for the fixed 'home' / 'category:<slug>' / 'onlyfans-search'
-  // scopes that index.astro, categories/[slug].astro, and onlyfans-search.astro explicitly
-  // opt into — a bare free-text search (no scope param) always falls through to the plain
-  // query below untouched.
+  // scopes that index.astro and onlyfans-search.astro explicitly opt into — a bare free-text
+  // search (no scope param) always falls through to the plain query below untouched. The
+  // 'category:<slug>' branch has no caller left now that the category pages are prerendered
+  // (src/lib/categoryStatic.ts does that fetch at build time); it stays because it's the
+  // documented scope contract, not because anything on the site still hits it.
   if (scope === 'home' || scope.startsWith('category:') || scope === 'onlyfans-search') {
     let termsOr: string[] | undefined;
     if (scope.startsWith('category:')) {

@@ -1,5 +1,9 @@
 ---
+// i18n-twin: src/pages/onlyfans-search.astro — prerendered for the same reason; both
+// locales share the one build-time fetch inside SearchPage.astro.
 import SearchPage from '../../components/pages/SearchPage.astro';
+
+export const prerender = true;
 ---
 
 <SearchPage />

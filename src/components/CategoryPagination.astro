@@ -1,0 +1,122 @@
+---
+// Prev / numbered / Next links for the prerendered category pages. Real <a> hrefs to
+// real prebuilt URLs — deliberately not the old "Load More" button, which fetched
+// /api/search on click and put Supabase back in the visitor's critical path.
+import { t } from '../i18n/ui';
+import type { Locale } from '../i18n/routes';
+
+interface Props {
+  /** Category URL without a trailing slash, e.g. '/categories/blonde' or '/es/categorias/rubias'. */
+  baseUrl: string;
+  page: number;
+  totalPages: number;
+  lang: Locale;
+}
+
+const { baseUrl, page, totalPages, lang } = Astro.props;
+
+/** Page 1 lives at the bare category URL — /categories/blonde/2/ only from page 2 up. */
+const href = (n: number) => (n <= 1 ? `${baseUrl}/` : `${baseUrl}/${n}/`);
+
+// Window of numbers around the current page, with the first and last always reachable.
+const WINDOW = 2;
+const numbers: (number | '…')[] = [];
+let previous = 0;
+for (let n = 1; n <= totalPages; n++) {
+  const keep = n === 1 || n === totalPages || (n >= page - WINDOW && n <= page + WINDOW);
+  if (!keep) continue;
+  if (previous && n - previous > 1) numbers.push('…');
+  numbers.push(n);
+  previous = n;
+}
+---
+
+{totalPages > 1 && (
+  <nav class="cat-pagination" aria-label={t(lang, 'pagination.label')}>
+    {page > 1 ? (
+      <a class="pg-link pg-step" href={href(page - 1)} rel="prev">← {t(lang, 'pagination.prev')}</a>
+    ) : (
+      <span class="pg-link pg-step pg-disabled" aria-hidden="true">← {t(lang, 'pagination.prev')}</span>
+    )}
+
+    <ol class="pg-numbers">
+      {numbers.map(n => (
+        <li>
+          {n === '…' ? (
+            <span class="pg-gap" aria-hidden="true">…</span>
+          ) : n === page ? (
+            <span class="pg-link pg-current" aria-current="page">{n}</span>
+          ) : (
+            <a class="pg-link" href={href(n)} aria-label={t(lang, 'pagination.page', { page: n })}>{n}</a>
+          )}
+        </li>
+      ))}
+    </ol>
+
+    {page < totalPages ? (
+      <a class="pg-link pg-step" href={href(page + 1)} rel="next">{t(lang, 'pagination.next')} →</a>
+    ) : (
+      <span class="pg-link pg-step pg-disabled" aria-hidden="true">{t(lang, 'pagination.next')} →</span>
+    )}
+  </nav>
+)}
+
+<style>
+  .cat-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 40px;
+  }
+
+  .pg-numbers {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .pg-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  a.pg-link:hover { border-color: var(--accent); color: var(--accent); }
+
+  .pg-current {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .pg-disabled { opacity: 0.35; }
+
+  .pg-gap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 40px;
+    color: var(--text-muted);
+  }
+
+  @media (max-width: 640px) {
+    .pg-step { padding: 0 10px; font-size: 13px; }
+    .pg-link { min-width: 36px; height: 36px; }
+  }
+</style>

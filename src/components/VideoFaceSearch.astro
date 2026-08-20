@@ -62,6 +62,7 @@ const enC = {
   validationFoot: 'Beta note: ranking thresholds and index coverage are still being calibrated. Always review the source video before drawing conclusions.',
   retrievalEyebrow: 'Direct face-to-video retrieval',
   videoMatches: 'Video matches',
+  storiesNudge: 'Found who you were looking for? Share a quick word of thanks below — it helps other searchers too',
   crossTitle: 'Looking for similar OnlyFans creators?',
   crossSub: 'Run the same kind of face search across creator profiles.',
   crossAction: 'Try OnlyFans Finder',
@@ -127,6 +128,7 @@ const esC: typeof enC = {
   validationFoot: 'Nota de beta: los umbrales de clasificación y la cobertura del índice aún se están calibrando. Revisa siempre el video original antes de sacar conclusiones.',
   retrievalEyebrow: 'Recuperación directa de cara a video',
   videoMatches: 'Coincidencias de video',
+  storiesNudge: '¿Encontraste a quien buscabas? Deja unas palabras de agradecimiento abajo — también ayuda a otros buscadores',
   crossTitle: '¿Buscas creadoras de OnlyFans parecidas?',
   crossSub: 'Haz la misma búsqueda facial entre perfiles de creadoras.',
   crossAction: 'Probar Buscador OnlyFans',
@@ -460,6 +462,9 @@ const CLIENT = { ...(lang === 'es' ? esClient : enClient), langPrefix, pagePath 
       </div>
       <div class="search-meta" id="searchMeta"></div>
     </div>
+    <a id="psStoriesNudge" class="stories-nudge" href="#search-stories" hidden>
+      <span aria-hidden="true">💬</span>{C.storiesNudge}<b aria-hidden="true">→</b>
+    </a>
     <a class="cross-finder-cta" href={`${langPrefix}/#onlyfans-finder`}>
       <span class="cross-finder-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none"><circle cx="10" cy="10" r="5" /><path d="m14 14 5 5M8 8.5h4M10 6.5v4" /></svg>
@@ -578,6 +583,13 @@ const CLIENT = { ...(lang === 'es' ? esClient : enClient), langPrefix, pagePath 
   const scanningImg = document.querySelector<HTMLImageElement>('#scanningImg')!;
   const scanningSub = document.querySelector<HTMLElement>('#scanningSub')!;
   const resultsSection = document.querySelector<HTMLElement>('#resultsSection')!;
+  const storiesNudge = document.getElementById('psStoriesNudge');
+  storiesNudge?.addEventListener('click', (event) => {
+    const stories = document.querySelector('[data-search-stories]');
+    if (!stories) return;
+    event.preventDefault();
+    stories.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
   const resultsTitle = document.querySelector<HTMLElement>('#resultsTitle')!;
   const searchMeta = document.querySelector<HTMLElement>('#searchMeta')!;
   const resultsGrid = document.querySelector<HTMLElement>('#resultsGrid')!;
@@ -993,6 +1005,9 @@ const CLIENT = { ...(lang === 'es' ? esClient : enClient), langPrefix, pagePath 
       : fmtT(T.matchMany, { n: allResults.length });
     searchMeta.textContent = fmtT(T.searchMeta, { n: payload.indexedVideos ?? 0, s: (payload.elapsedSeconds ?? 0).toFixed(1) });
     renderNextResultsPage();
+    // Nudge toward the community stories section — only when this page renders one and
+    // the search actually surfaced matches worth talking about.
+    if (storiesNudge) storiesNudge.hidden = !(allResults.length > 0 && document.querySelector('[data-search-stories]'));
     resultsSection.hidden = false;
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -1170,6 +1185,24 @@ const CLIENT = { ...(lang === 'es' ? esClient : enClient), langPrefix, pagePath 
 </script>
 
 <style>
+  .stories-nudge {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 16px;
+    padding: 10px 16px;
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    border-radius: 999px;
+    background: rgba(124, 58, 237, 0.08);
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.45;
+    text-decoration: none;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+  }
+  .stories-nudge:hover { border-color: var(--accent); color: var(--text); background: rgba(124, 58, 237, 0.14); }
+  .stories-nudge b { margin-left: auto; color: var(--accent); font-weight: 700; }
+  .stories-nudge[hidden] { display: none; }
   .video-search {
     width: min(1180px, calc(100% - 40px));
     margin: 0 auto;

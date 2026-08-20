@@ -7,12 +7,14 @@ import { localeOf } from '../../i18n/routes';
 import { absUrl } from '../../lib/site';
 import { categories } from '../../config/categories';
 import { categoryContent } from '../../config/categoryContent';
+import { getSearchSeed } from '../../lib/searchSeed';
+import { renderSearchCard } from '../../lib/searchResultCard';
+import { fmt } from '../../i18n/ui';
 
-const q        = Astro.url.searchParams.get('q') ?? '';
-const verified = Astro.url.searchParams.get('verified') ?? '';
-const price    = Astro.url.searchParams.get('price') ?? '';
-const sort     = Astro.url.searchParams.get('sort') ?? '';
-const bundles  = Astro.url.searchParams.get('bundles') ?? '';
+// NOTE: this page is prerendered (see src/pages/onlyfans-search.astro), so it cannot read
+// ?q=/&price=/&sort= at render time — the markup below ships the *default* control state
+// and the client restores a deep link's filters from window.location on load. Don't
+// reintroduce Astro.url.searchParams reads here; they'd silently always be empty.
 
 const lang = localeOf(Astro.url.pathname);
 const langPrefix = lang === 'es' ? '/es' : '';
@@ -26,11 +28,16 @@ const enC = {
   loading: 'Loading...',
   howWorks: 'How search works',
   close: 'Close',
-  tip1t: 'Type to search', tip1p: 'Start typing a name, username, or category — matches appear instantly as you type.',
-  tip2t: 'Categories & creators', tip2p: 'Suggestions are split into matching categories and creator profiles, so you can jump straight to either one.',
-  tip3t: 'Recent searches', tip3p: 'Your last searches are saved for one-tap reuse. Sign in to keep them synced across every device.',
-  tip4t: 'Filters', tip4p: 'Narrow results by verified status, price, or bundles, and sort by popular or newest.',
-  tip5t: 'New tab, always', tip5p: 'Clicking any creator card opens their OnlyFans profile in a new tab, so your results stay right where you left them.',
+  howIntro: "More than a name lookup — search reads what creators actually wrote about themselves, across millions of live profiles.",
+  tip1t: 'Search in plain words', tip1p: "Type what you're into the way you'd say it — “petite goth”, “fitness mom”, “yoga”. Matches cover usernames, display names and full profile bios, so creators' own words about themselves are all searchable.",
+  tip2t: 'Stack terms with commas', tip2p: 'Widen any search by separating terms with commas — “blonde, latina” finds creators matching either one. Up to five terms in a single search.',
+  tip3t: 'Categories & creators, instantly', tip3p: 'As you type, suggestions split into matching categories and creator profiles. Categories answer to all their names — “kpop” finds Korean, “ginger” finds Redhead — so one tap can jump you straight to a curated page. Arrow keys navigate, Enter selects.',
+  tip4t: 'Ranked by real engagement', tip4p: 'Results are ordered by live fan-favorite counts pulled from OnlyFans — never hand-picked, never pay-to-rank. The few sponsored slots that exist are always labeled.',
+  tip5t: 'Filters that combine', tip5p: "Verified-only, price caps (free, under $5, under $10), active bundle discounts, and popular or newest sorting — every filter stacks with any search you've typed.",
+  tip6t: 'Instant, then live', tip6p: "The first page of creators is built into the page itself, so there's nothing to wait for. Every keystroke after that queries the same live database the whole site runs on.",
+  tip7t: 'Recent searches', tip7p: 'Your last searches are saved for one-tap reuse. Sign in to keep them synced across every device.',
+  tip8t: 'Feed view', tip8p: 'Switch to Feed for a full-screen, swipeable view — one creator per slide, tap the photo edges to flip through their pics, and share any profile as a direct link.',
+  tip9t: 'New tab, always', tip9p: 'Clicking any creator card opens their OnlyFans profile in a new tab, so your results stay right where you left them.',
   ctaHtml: '<strong>Sign up free</strong> to sync your search history across every device and unlock unlimited searches.',
   createAccount: 'Create free account',
   placeholder: 'Search by name, category, location...',
@@ -61,11 +68,16 @@ const esC: typeof enC = {
   loading: 'Cargando...',
   howWorks: 'Cómo funciona la búsqueda',
   close: 'Cerrar',
-  tip1t: 'Escribe para buscar', tip1p: 'Empieza a escribir un nombre, usuario o categoría — las coincidencias aparecen al instante mientras escribes.',
-  tip2t: 'Categorías y creadoras', tip2p: 'Las sugerencias se dividen en categorías coincidentes y perfiles de creadoras, para que saltes directo a cualquiera.',
-  tip3t: 'Búsquedas recientes', tip3p: 'Tus últimas búsquedas se guardan para reutilizarlas con un toque. Inicia sesión para sincronizarlas en todos tus dispositivos.',
-  tip4t: 'Filtros', tip4p: 'Acota los resultados por verificación, precio o packs, y ordena por populares o más nuevas.',
-  tip5t: 'Siempre en pestaña nueva', tip5p: 'Al hacer clic en cualquier tarjeta, el perfil de OnlyFans se abre en una pestaña nueva, así tus resultados quedan justo donde los dejaste.',
+  howIntro: 'Más que buscar nombres — la búsqueda lee lo que las creadoras escribieron sobre sí mismas, entre millones de perfiles en vivo.',
+  tip1t: 'Busca con tus palabras', tip1p: 'Escribe lo que buscas tal como lo dirías — “gótica petite”, “mamá fitness”, “yoga”. Las coincidencias cubren usuarios, nombres y biografías completas, así que las propias palabras de las creadoras son buscables.',
+  tip2t: 'Combina términos con comas', tip2p: 'Amplía cualquier búsqueda separando términos con comas — “blonde, latina” encuentra creadoras que coincidan con cualquiera. Hasta cinco términos en una sola búsqueda.',
+  tip3t: 'Categorías y creadoras, al instante', tip3p: 'Mientras escribes, las sugerencias se dividen en categorías coincidentes y perfiles de creadoras. Las categorías responden a todos sus nombres — “kpop” encuentra Coreanas, “blonde” encuentra Rubias — así saltas directo a una página curada. Las flechas navegan, Enter selecciona.',
+  tip4t: 'Clasificado por interacción real', tip4p: 'Los resultados se ordenan por número de favoritos reales extraídos de OnlyFans — nunca a dedo, nunca por pago. Los pocos espacios patrocinados que existen siempre van etiquetados.',
+  tip5t: 'Filtros que se combinan', tip5p: 'Solo verificadas, topes de precio (gratis, menos de $5, menos de $10), packs con descuento activo, y orden por populares o más nuevas — cada filtro se suma a cualquier búsqueda que escribas.',
+  tip6t: 'Instantáneo, y luego en vivo', tip6p: 'La primera página de creadoras viene integrada en la página misma, así que no hay nada que esperar. Cada tecla después consulta la misma base de datos en vivo que usa todo el sitio.',
+  tip7t: 'Búsquedas recientes', tip7p: 'Tus últimas búsquedas se guardan para reutilizarlas con un toque. Inicia sesión para sincronizarlas en todos tus dispositivos.',
+  tip8t: 'Vista Feed', tip8p: 'Cambia a Feed para una vista deslizable a pantalla completa — una creadora por slide, toca los bordes de la foto para pasar sus fotos, y comparte cualquier perfil con un enlace directo.',
+  tip9t: 'Siempre en pestaña nueva', tip9p: 'Al hacer clic en cualquier tarjeta, el perfil de OnlyFans se abre en una pestaña nueva, así tus resultados quedan justo donde los dejaste.',
   ctaHtml: '<strong>Regístrate gratis</strong> para sincronizar tu historial de búsqueda en todos tus dispositivos y desbloquear búsquedas ilimitadas.',
   createAccount: 'Crear cuenta gratis',
   placeholder: 'Busca por nombre, categoría, ubicación...',
@@ -153,6 +165,23 @@ const esClient: typeof enClient = {
   wishlistFullSignup: 'Favoritos lleno ({limit}/{limit}) — regístrate gratis para espacio de {n}',
 };
 const CLIENT = lang === 'es' ? esClient : enClient;
+
+// ── Prerendered first page ────────────────────────────────────────────────────────────
+// The default, unfiltered result grid is baked into this HTML at build time (see
+// src/lib/searchSeed.ts) instead of being fetched by the client on load. It used to cost
+// every visitor a round trip to /api/search before a single creator appeared — on the
+// site's most-requested query, since it's what everyone sees before typing anything.
+//
+// Only this first paint is static. The moment a visitor types, filters, sorts or clicks
+// Load More, the page queries /api/search live, so search itself is as fresh as ever.
+// These 20 cards are as old as the last deploy, same as the category pages.
+const seed = await getSearchSeed();
+const seedCreators = seed.creators;
+const seedCardsHtml = seedCreators.map((c, i) => renderSearchCard(c, i, CLIENT)).join('');
+const seedHasMore = seed.hasMore;
+const seedCountLabel = seed.total
+  ? fmt(CLIENT.creatorsFound, { n: seed.total.toLocaleString() })
+  : CLIENT.noCreators;
 
 // Long-form SEO body content below the interactive search UI. Voice per
 // PROGRAMMATIC-SEO-VOICE.md. "Browse by category" pulls from the SAME
@@ -298,7 +327,7 @@ const seoFaqJsonLd = {
     <div class="search-header">
       <h1>{C.h1}</h1>
       <p class="search-sub">{C.sub}</p>
-      <p class="results-meta" id="resultsCount">{C.loading}</p>
+      <p class="results-meta" id="resultsCount">{seedCreators.length ? seedCountLabel : C.loading}</p>
     </div>
 
     <!-- Compact "how it works" guide -->
@@ -308,12 +337,17 @@ const seoFaqJsonLd = {
         <h2 id="helpModalTitle">{C.howWorks}</h2>
         <button class="help-close-btn" id="helpCloseBtn" type="button" aria-label={C.close}>×</button>
       </div>
+      <p class="help-intro">{C.howIntro}</p>
       <ul class="help-tips">
-        <li><span class="help-ico">🔎</span><div><strong>{C.tip1t}</strong><p>{C.tip1p}</p></div></li>
-        <li><span class="help-ico">🏷️</span><div><strong>{C.tip2t}</strong><p>{C.tip2p}</p></div></li>
-        <li><span class="help-ico">⏱️</span><div><strong>{C.tip3t}</strong><p>{C.tip3p}</p></div></li>
-        <li><span class="help-ico">🎚️</span><div><strong>{C.tip4t}</strong><p>{C.tip4p}</p></div></li>
-        <li><span class="help-ico">↗️</span><div><strong>{C.tip5t}</strong><p>{C.tip5p}</p></div></li>
+        <li><span class="help-ico">🗣️</span><div><strong>{C.tip1t}</strong><p>{C.tip1p}</p></div></li>
+        <li><span class="help-ico">➕</span><div><strong>{C.tip2t}</strong><p>{C.tip2p}</p></div></li>
+        <li><span class="help-ico">🏷️</span><div><strong>{C.tip3t}</strong><p>{C.tip3p}</p></div></li>
+        <li><span class="help-ico">📈</span><div><strong>{C.tip4t}</strong><p>{C.tip4p}</p></div></li>
+        <li><span class="help-ico">🎚️</span><div><strong>{C.tip5t}</strong><p>{C.tip5p}</p></div></li>
+        <li><span class="help-ico">⚡</span><div><strong>{C.tip6t}</strong><p>{C.tip6p}</p></div></li>
+        <li><span class="help-ico">⏱️</span><div><strong>{C.tip7t}</strong><p>{C.tip7p}</p></div></li>
+        <li><span class="help-ico">📱</span><div><strong>{C.tip8t}</strong><p>{C.tip8p}</p></div></li>
+        <li><span class="help-ico">↗️</span><div><strong>{C.tip9t}</strong><p>{C.tip9p}</p></div></li>
       </ul>
       <div class="help-cta" id="helpCta" hidden>
         <p set:html={C.ctaHtml} />
@@ -330,7 +364,7 @@ const seoFaqJsonLd = {
           id="searchInput"
           class="search-main-input"
           placeholder={C.placeholder}
-          value={q}
+          value=""
           autocomplete="off"
           role="combobox"
           aria-label={C.searchCreatorsAria}
@@ -374,7 +408,7 @@ const seoFaqJsonLd = {
           <label class="filter-label toggle-label">
             <span>{C.verifiedOnly}</span>
             <label class="toggle">
-              <input type="checkbox" id="verifiedToggle" checked={verified === 'true'} />
+              <input type="checkbox" id="verifiedToggle" />
               <span class="toggle-slider"></span>
             </label>
           </label>
@@ -384,7 +418,7 @@ const seoFaqJsonLd = {
           <span class="filter-label">{C.price}</span>
           <div class="pill-group" id="priceOptions">
             {(['', '0', '5', '10'] as const).map(p => (
-              <button class={`pill ${price === p ? 'active' : ''}`} data-price={p}>
+              <button class={`pill ${p === '' ? 'active' : ''}`} data-price={p}>
                 {p === '' ? C.any : p === '0' ? C.free : C.underN.replace('{n}', p)}
               </button>
             ))}
@@ -394,8 +428,8 @@ const seoFaqJsonLd = {
         <div class="filter-group">
           <span class="filter-label">{C.sort}</span>
           <div class="pill-group" id="sortOptions">
-            <button class={`pill ${sort !== 'newest' ? 'active' : ''}`} data-sort="">{C.popular}</button>
-            <button class={`pill ${sort === 'newest' ? 'active' : ''}`} data-sort="newest">{C.newest}</button>
+            <button class="pill active" data-sort="">{C.popular}</button>
+            <button class="pill" data-sort="newest">{C.newest}</button>
           </div>
         </div>
 
@@ -403,7 +437,7 @@ const seoFaqJsonLd = {
           <label class="filter-label toggle-label">
             <span>{C.hasBundles}</span>
             <label class="toggle">
-              <input type="checkbox" id="bundlesToggle" checked={bundles === 'true'} />
+              <input type="checkbox" id="bundlesToggle" />
               <span class="toggle-slider"></span>
             </label>
           </label>
@@ -432,8 +466,14 @@ const seoFaqJsonLd = {
             </button>
           </div>
         </div>
-        <div class="results-grid" id="resultsGrid"></div>
-        <div class="load-more-wrap" id="loadMoreWrap" style="display:none">
+        <div
+          class="results-grid"
+          id="resultsGrid"
+          data-seeded={seedCreators.length ? 'true' : 'false'}
+          data-seed-has-more={seedHasMore ? 'true' : 'false'}
+          set:html={seedCardsHtml}
+        />
+        <div class="load-more-wrap" id="loadMoreWrap" style={seedHasMore ? 'display:flex' : 'display:none'}>
           <button class="load-more-btn" id="loadMoreBtn">{C.loadMore}</button>
         </div>
 
@@ -517,6 +557,7 @@ const seoFaqJsonLd = {
   import { initSearchDropdown } from '../../lib/searchDropdown';
   import { initCardClickThrough } from '../../lib/cardClickThrough';
   import { creatorCardDataAttributes } from '../../lib/creatorCardUi';
+  import { renderSearchCard, proxyImg, safeProfileHref, escapeHtml } from '../../lib/searchResultCard';
   import { WISHLIST_LIMIT_ACCOUNT, isInWishlist, toggleWishlist } from '../../lib/wishlist';
 
   const T = JSON.parse(document.getElementById('i18nSearchPage')!.textContent!) as Record<string, string>;
@@ -664,56 +705,10 @@ const seoFaqJsonLd = {
 
   loadMoreBtn.addEventListener('click', () => fetchCreators(true));
 
-  function proxyImg(url: string, w: number, h: number): string {
-    if (!url || (url.startsWith('/') && !url.startsWith('//'))) return url;
-    if (!/^https?:\/\//i.test(url)) return '/no-image.png';
-    return `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//i, ''))}&w=${w}&h=${h}&fit=cover&output=webp`;
-  }
-
-  function safeProfileHref(value: unknown, username: unknown): string {
-    const fallback = `https://onlyfans.com/${encodeURIComponent(String(username ?? ''))}`;
-    if (typeof value !== 'string') return fallback;
-    if (value.startsWith('/') && !value.startsWith('//')) return value;
-    try {
-      const url = new URL(value);
-      if (url.protocol === 'https:' || url.protocol === 'http:') return url.toString();
-    } catch { /* fall through */ }
-    return fallback;
-  }
-
-  function escapeHtml(value: unknown): string {
-    return String(value ?? '').replace(/[&<>"']/g, character => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-    }[character]!));
-  }
-
-  function renderCard(c: any, index: number): string {
-    const imgSrc = c.avatar?.startsWith('/') ? c.avatar : c.avatar?.startsWith('http') ? proxyImg(c.avatar, 320, 427) : '/no-image.png';
-    const price = c.subscribePrice ?? c.subscribeprice;
-    const priceIsFree = (!price || isNaN(price));
-    const priceLabel = priceIsFree ? T.free : `$${parseFloat(price).toFixed(2)}`;
-    const profileUrl = safeProfileHref(c.profileUrl, c.username);
-    const isSponsored = Boolean(c.sponsored) || profileUrl.startsWith('/go/');
-    const rel = isSponsored ? 'noopener nofollow sponsored' : 'noopener nofollow';
-    const cardData = creatorCardDataAttributes(c);
-    const safeProfileUrl = escapeHtml(profileUrl);
-    const safeName = escapeHtml(c.name || c.username);
-    const safeUsername = escapeHtml(c.username);
-    return `<div class="creator-card" data-href="${safeProfileUrl}" ${cardData}>
-      <div class="card-img-wrap">
-        ${isSponsored ? `<span class="sponsored-badge">${T.sponsored}</span>` : ''}
-        <img src="${escapeHtml(imgSrc)}" alt="${safeName}" loading="${index < 8 ? 'eager' : 'lazy'}"
-          decoding="async" referrerpolicy="no-referrer"
-          onerror="this.onerror=null;this.removeAttribute('srcset');this.src='/no-image.png';">
-      </div>
-      <div class="card-body">
-        <p class="creator-name">${safeName}</p>
-        <p class="username">@${safeUsername}</p>
-        <p class="price ${priceIsFree ? 'price-free' : ''}">${priceLabel}</p>
-        <a href="${safeProfileUrl}" class="view-btn" target="_blank" rel="${rel}">${T.viewProfile}</a>
-      </div>
-    </div>`;
-  }
+  // Markup lives in src/lib/searchResultCard.ts so these appended cards stay identical to
+  // the ones the server baked into the grid — they share the same grid, so any drift shows.
+  const renderCard = (c: any, index: number): string =>
+    renderSearchCard(c, index, T as unknown as { sponsored: string; free: string; viewProfile: string });
 
   async function fetchCreators(append = false, saveToAccountHistory = false) {
     const searchOwnerId = saveToAccountHistory ? currentAccountId() : null;
@@ -1276,8 +1271,42 @@ const seoFaqJsonLd = {
     }
   });
 
-  const shouldSaveDashboardRerun = qs.get('history') === '1' && Boolean(activeFilters.q);
-  fetchCreators(false, shouldSaveDashboardRerun);
+  // ── First paint ───────────────────────────────────────────────────────────
+  // The server bakes the default, unfiltered page 1 straight into #resultsGrid, so the
+  // common case (someone landing on /onlyfans-search with no query) has creators on
+  // screen already and must NOT re-fetch what it is looking at. Anything filtered still
+  // takes the normal live path.
+  const hasActiveFilters = Boolean(
+    activeFilters.q || activeFilters.verified || activeFilters.price
+    || activeFilters.sort || activeFilters.bundles,
+  );
+  const seeded = resultsGrid.dataset.seeded === 'true';
+
+  if (seeded && !hasActiveFilters) {
+    // Adopt what the server already rendered: page 1 is on screen, so Load More asks for 2.
+    currentPage = 2;
+    hasMoreResults = resultsGrid.dataset.seedHasMore === 'true';
+    loadMoreWrap.style.display = hasMoreResults ? 'flex' : 'none';
+  } else {
+    // This page is prerendered, so its markup can't carry ?q=/&price= state the way the
+    // SSR version did — restore the controls from the URL here before querying, or a
+    // shared/deep link would show filtered results next to empty-looking filter controls.
+    if (activeFilters.q) {
+      searchInput.value = activeFilters.q;
+      searchClearBtn.style.display = 'flex';
+    }
+    verifiedToggle.checked = activeFilters.verified === 'true';
+    bundlesToggle.checked  = activeFilters.bundles === 'true';
+    document.querySelectorAll<HTMLElement>('#priceOptions .pill').forEach(pill => {
+      pill.classList.toggle('active', (pill.dataset.price ?? '') === activeFilters.price);
+    });
+    document.querySelectorAll<HTMLElement>('#sortOptions .pill').forEach(pill => {
+      pill.classList.toggle('active', (pill.dataset.sort ?? '') === (activeFilters.sort === 'newest' ? 'newest' : ''));
+    });
+
+    const shouldSaveDashboardRerun = qs.get('history') === '1' && Boolean(activeFilters.q);
+    fetchCreators(false, shouldSaveDashboardRerun);
+  }
 
   // ?view=feed&u=<username> — a Feed share link. Land straight in Feed with that creator's
   // slide already in place (see loadFeedWithSharedTarget), instead of requiring a manual
@@ -1372,6 +1401,8 @@ const seoFaqJsonLd = {
   }
   .help-close-btn:hover { background: rgba(255,255,255,0.08); color: var(--text); }
 
+  .help-intro { font-size: 12.5px; color: var(--text-muted); line-height: 1.55; margin-bottom: 16px; }
+  .help-intro + .help-tips { border-top: 1px solid rgba(255,255,255,0.07); padding-top: 16px; }
   .help-tips { list-style: none; display: flex; flex-direction: column; gap: 14px; }
   .help-tips li { display: flex; align-items: flex-start; gap: 12px; }
   .help-ico { flex-shrink: 0; font-size: 18px; line-height: 1.3; }

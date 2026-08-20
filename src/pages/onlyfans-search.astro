@@ -1,5 +1,10 @@
 ---
+// Prerendered: the default result grid is baked in at build time by SearchPage.astro, so
+// landing here costs no database round trip. Typing, filtering or Load More still query
+// /api/search live — this page stays the site's one live-search surface.
 import SearchPage from '../components/pages/SearchPage.astro';
+
+export const prerender = true;
 ---
 
 <SearchPage />

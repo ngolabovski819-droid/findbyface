@@ -4,10 +4,11 @@
 // renders — not just their pinned slot.
 //
 // Deliberately does NOT mint a click-verification token here even though this looks like the
-// natural place for it — index.astro and categories/[slug].astro (the two biggest callers) are
-// both CDN-cached (`s-maxage=300, stale-while-revalidate=86400`), so anything baked in here
-// would be shared verbatim by every visitor hitting that cache for up to 24h, which defeats
-// the entire point of a per-visit token. See src/lib/clickToken.ts and
+// natural place for it — the biggest callers can't carry per-visit state at all: the category
+// pages AND /onlyfans-search's first page are prerendered at build time (one HTML file served
+// to everyone until the next deploy) and index.astro is CDN-cached (`s-maxage=300,
+// stale-while-revalidate=86400`), so anything baked in here would be shared verbatim by every
+// visitor, which defeats the entire point of a per-visit token. See src/lib/clickToken.ts and
 // src/pages/api/click-token.ts for where minting actually happens instead (a client-side,
 // always-uncached fetch after the page has loaded).
 import { getSponsorOverride } from '../config/sponsors';

@@ -102,6 +102,13 @@ const en = {
   'search.placeholder': 'Search creators...',
   'search.orByName': '— or search by name —',
   'search.button': 'Search',
+
+  // --- Pagination (static category pages) ---
+  'pagination.label': 'Pagination',
+  'pagination.prev': 'Previous',
+  'pagination.next': 'Next',
+  'pagination.page': 'Page {page}',
+  'pagination.status': 'Page {page} of {total}',
 } as const;
 
 export type UIKey = keyof typeof en;
@@ -202,6 +209,13 @@ const es: Dict = {
   'search.placeholder': 'Buscar creadoras...',
   'search.orByName': '— o busca por nombre —',
   'search.button': 'Buscar',
+
+  // --- Paginación (páginas de categoría estáticas) ---
+  'pagination.label': 'Paginación',
+  'pagination.prev': 'Anterior',
+  'pagination.next': 'Siguiente',
+  'pagination.page': 'Página {page}',
+  'pagination.status': 'Página {page} de {total}',
 };
 
 export const ui: Record<Locale, Dict> = { en, es };

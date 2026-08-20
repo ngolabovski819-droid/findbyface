@@ -635,7 +635,10 @@ const CLIENT = lang === 'es' ? esClient : enClient;
 
   function renderCreatorResults(results) {
     if (!results.length) return `<p class="preview-unavailable">${escapeHtml(T.noSavedPreview)}</p>`;
-    return `<div class="saved-result-grid creator-result-grid">${results.slice(0, 10).map((result, index) => {
+    // No display cap — creator_face history stores the FULL result set of a search (up
+    // to ~103 entries) and the whole point of keeping it is being able to revisit it.
+    // The grid only renders when a row is expanded and every img is loading=lazy.
+    return `<div class="saved-result-grid creator-result-grid">${results.map((result, index) => {
       const image = proxyImg(result.avatar, 220, 293);
       const priceValue = result.subscribePrice ?? result.subscribeprice;
       const isFree = !priceValue || Number.isNaN(Number(priceValue));

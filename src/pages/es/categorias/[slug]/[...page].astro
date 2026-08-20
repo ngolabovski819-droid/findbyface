@@ -1,0 +1,168 @@
+---
+// i18n-twin: src/pages/categories/[slug]/[...page].astro — mirror copy/structure changes.
+// Prerendered exactly like the English twin and off the same build-time fetch (the
+// per-category data is memoized in src/lib/categoryStatic.ts, so building both locales
+// costs one set of queries, not two). The search scope key and `terms` stay ENGLISH —
+// they feed the creator-text search index.
+import Base from '../../../../layouts/Base.astro';
+import CreatorCard from '../../../../components/CreatorCard.astro';
+import CategoryChips from '../../../../components/CategoryChips.astro';
+import RankingAttributionBar from '../../../../components/RankingAttributionBar.astro';
+import CategoryIntro from '../../../../components/CategoryIntro.astro';
+import CategoryBody from '../../../../components/CategoryBody.astro';
+import CategoryPagination from '../../../../components/CategoryPagination.astro';
+import { categorySeo, genericCategoryFaq } from '../../../../config/seo-meta';
+import { getCategoryContent } from '../../../../config/categoryContent';
+import { allCategoryStaticPaths } from '../../../../lib/categoryStatic';
+import { applySponsorOverrides } from '../../../../lib/sponsorOverrides';
+import { absUrl } from '../../../../lib/site';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+  const paths = await allCategoryStaticPaths();
+  return paths.map(({ category, page, totalPages, creators, total }) => ({
+    params: { slug: category.slugEs ?? category.slug, page: page === 1 ? undefined : String(page) },
+    props: { category, page, totalPages, creators, total },
+  }));
+}
+
+const { category, page, totalPages, creators: rawCreators, total } = Astro.props;
+
+const creators = applySponsorOverrides(rawCreators);
+const baseUrl = `/es/categorias/${category.slugEs ?? category.slug}`;
+const canonical = absUrl(page === 1 ? `${baseUrl}/` : `${baseUrl}/${page}/`);
+const enBase = `/categories/${category.slug}`;
+const alternate = page === 1 ? `${enBase}/` : `${enBase}/${page}/`;
+
+const seo = categorySeo(category.slug, category.labelEs, total, 'es');
+const pageTitle = page === 1 ? seo.title : `${seo.title} — Página ${page}`;
+const pageDesc = page === 1
+  ? seo.description
+  : `Más creadoras ${category.labelEs} de OnlyFans, página ${page} de ${totalPages}. ${seo.description}`;
+
+const isFirstPage = page === 1;
+
+// Lookup key is always the ENGLISH slug (category.slug), matching how categoryContent.ts
+// is keyed. This same array feeds both the JSON-LD below and the visible FAQ in
+// CategoryBody, so they can't drift apart.
+const pilotContent = getCategoryContent(category.slug, 'es');
+const faqItems = pilotContent?.faq ?? genericCategoryFaq(category.labelEs, 'es');
+
+const graph: Record<string, unknown>[] = [
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Inicio', item: absUrl('/es/') },
+      { '@type': 'ListItem', position: 2, name: category.labelEs, item: absUrl(`${baseUrl}/`) },
+      ...(isFirstPage ? [] : [{ '@type': 'ListItem', position: 3, name: `Página ${page}`, item: canonical }]),
+    ],
+  },
+  {
+    '@type': 'ItemList',
+    name: pageTitle,
+    url: canonical,
+    numberOfItems: creators.length,
+    itemListElement: creators.slice(0, 10).map((c, i) => ({
+      '@type': 'ListItem',
+      position: (page - 1) * 20 + i + 1,
+      name: c.name || c.username,
+      url: `https://onlyfans.com/${c.username}`,
+    })),
+  },
+];
+if (isFirstPage) {
+  graph.push({
+    '@type': 'FAQPage',
+    inLanguage: 'es',
+    mainEntity: faqItems.map(item => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: { '@type': 'Answer', text: item.answer },
+    })),
+  });
+}
+
+const jsonLd = JSON.stringify({ '@context': 'https://schema.org', '@graph': graph });
+---
+
+<Base title={pageTitle} description={pageDesc} canonical={canonical} alternate={alternate}>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={jsonLd} />
+    {page > 1 && <link rel="prev" href={absUrl(page === 2 ? `${baseUrl}/` : `${baseUrl}/${page - 1}/`)} />}
+    {page < totalPages && <link rel="next" href={absUrl(`${baseUrl}/${page + 1}/`)} />}
+  </Fragment>
+
+  <div class="category-page">
+    <div class="category-header">
+      <h1>
+        {category.emoji && <span class="cat-emoji">{category.emoji}</span>}
+        Las Mejores Creadoras {category.labelEs} de OnlyFans
+        {!isFirstPage && <span class="page-suffix"> — Página {page}</span>}
+      </h1>
+      <p class="category-sub">
+        {total ? `${total.toLocaleString()} creadoras encontradas` : 'Explorar creadoras top'}
+      </p>
+    </div>
+
+    {isFirstPage && <CategoryIntro slug={category.slug} locale="es" />}
+
+    <CategoryChips activeSlug={category.slug} />
+    {isFirstPage && <RankingAttributionBar />}
+
+    <div class="category-content">
+      {creators.length > 0 ? (
+        <>
+          <div class="creators-grid" id="creatorsGrid">
+            {creators.map((c, i) => <CreatorCard creator={c} index={i} />)}
+          </div>
+          <CategoryPagination baseUrl={baseUrl} page={page} totalPages={totalPages} lang="es" />
+        </>
+      ) : (
+        <div class="empty-state">
+          <p>Todavía no hay creadoras en esta categoría.</p>
+          <a href="/es/" class="back-link">← Volver al inicio</a>
+        </div>
+      )}
+    </div>
+
+    {isFirstPage && <CategoryBody slug={category.slug} locale="es" />}
+  </div>
+</Base>
+
+<script>
+  import { initCardClickThrough } from '../../../../lib/cardClickThrough';
+  initCardClickThrough();
+</script>
+
+<style>
+  .category-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 100px 20px 60px;
+  }
+
+  .category-header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .category-header h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); margin-bottom: 12px; }
+  .cat-emoji { margin-right: 8px; }
+  .page-suffix { color: var(--text-muted); font-weight: 400; }
+  .category-sub { color: var(--text-muted); }
+
+  .category-content { margin-top: 40px; }
+
+  .creators-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  @media (max-width: 900px) { .creators-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 640px) { .creators-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } }
+
+  .empty-state { text-align: center; padding: 80px 20px; color: var(--text-muted); }
+  .back-link { color: var(--accent); margin-top: 16px; display: inline-block; }
+</style>

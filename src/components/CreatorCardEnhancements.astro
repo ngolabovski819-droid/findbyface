@@ -208,9 +208,9 @@ const CLIENT = lang === 'es' ? esClient : enClient;
 
   // Patches a short-lived, signed proof-of-real-page-load onto every /go/ link, fetched from an
   // always-uncached endpoint (src/pages/api/click-token.ts) — see src/lib/clickToken.ts for the
-  // full reasoning. Deliberately NOT done at page-render time: index.astro and
-  // categories/[slug].astro are CDN-cached, so anything baked into that HTML would be shared
-  // identically by every visitor hitting the cache for up to 24h. Running this from a plain
+  // full reasoning. Deliberately NOT done at page-render time: the category pages are
+  // prerendered at build time and index.astro is CDN-cached, so anything baked into that HTML
+  // would be shared identically by every visitor until the next deploy. Running this from a plain
   // HTTP client (curl/requests/aiohttp/Go/Java — exactly what shows up in real bot traffic)
   // simply never happens, since none of them execute page JavaScript at all.
   function extractGoUsername(href: string): string | null {

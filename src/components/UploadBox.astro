@@ -75,6 +75,7 @@ const enCopy = {
   sourceLabelOnlyfans: 'OnlyFans face search',
   sourceLabelAll: 'All-source face search',
   yourMatches: 'Your matches',
+  storiesNudge: 'Found who you were looking for? Share a quick word of thanks below — it helps other searchers too',
   copyTitle: 'Copy your top 10 closest matches',
   copyTop10: 'Copy top 10',
   pornstarsHeading: 'Pornstars',
@@ -145,6 +146,7 @@ const esCopy: typeof enCopy = {
   sourceLabelOnlyfans: 'Búsqueda facial OnlyFans',
   sourceLabelAll: 'Búsqueda facial en todas las fuentes',
   yourMatches: 'Tus coincidencias',
+  storiesNudge: '¿Encontraste a quien buscabas? Deja unas palabras de agradecimiento abajo — también ayuda a otros buscadores',
   copyTitle: 'Copia tus 10 coincidencias más cercanas',
   copyTop10: 'Copiar top 10',
   pornstarsHeading: 'Actrices',
@@ -449,6 +451,9 @@ const CLIENT = lang === 'es' ? esClient : enClient;
       <span class="copy-label">{C.copyTop10}</span>
     </button>
   </div>
+  <a id="ofStoriesNudge" class="stories-nudge" href="#search-stories" hidden>
+    <span aria-hidden="true">💬</span>{C.storiesNudge}<b aria-hidden="true">→</b>
+  </a>
   <div id="onlyfansResultsPanel" class="result-source-panel">
     <h3 class="result-panel-heading">♡ OnlyFans <span id="onlyfansResultCount"></span></h3>
     <div id="onlyfansPanelNotice" class="result-panel-notice" style="display:none"></div>
@@ -538,6 +543,13 @@ const CLIENT = lang === 'es' ? esClient : enClient;
 
   const uploadError     = document.getElementById('uploadError')!;
   const faceResults     = document.getElementById('faceResults')!;
+  const storiesNudge    = document.getElementById('ofStoriesNudge');
+  storiesNudge?.addEventListener('click', (event) => {
+    const stories = document.querySelector('[data-search-stories]');
+    if (!stories) return;
+    event.preventDefault();
+    stories.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
   const faceResultsGrid = document.getElementById('faceResultsGrid')!;
   const newSearchBtn    = document.getElementById('newSearchBtn')!;
   const authModal       = document.getElementById('authModal')!;
@@ -700,8 +712,10 @@ const CLIENT = lang === 'es' ? esClient : enClient;
   ): void {
     if (!ownerAccountId || currentAccountId() !== ownerAccountId) return;
     const clientSearchId = newSearchHistoryId('creator_face');
-    // Store only compact match references; the uploaded query photo is never retained.
-    const saved = results.slice(0, 18).map(c => ({
+    // Store compact references for EVERY match in the search (the API returns at most
+    // ~103: 100 organic + pinned sponsors; 120 mirrors the server's cap). The uploaded
+    // query photo is never retained.
+    const saved = results.slice(0, 120).map(c => ({
       username: c.username,
       name: c.name || c.username,
       avatar: c.avatar,
@@ -1322,6 +1336,10 @@ const CLIENT = lang === 'es' ? esClient : enClient;
     }
     faceResults.style.display = 'block';
     faceResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Nudge toward the community stories section — only on pages that render one
+    // (the finder pages), never on the homepage, and only when there's a result the
+    // visitor could plausibly be thankful for.
+    if (storiesNudge) storiesNudge.hidden = !(results.length > 0 && document.querySelector('[data-search-stories]'));
   }
 
   function restorePendingFaceResults(): void {
@@ -1491,6 +1509,24 @@ const CLIENT = lang === 'es' ? esClient : enClient;
 </script>
 
 <style>
+  .stories-nudge {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 18px;
+    padding: 10px 16px;
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    border-radius: 999px;
+    background: rgba(124, 58, 237, 0.08);
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.45;
+    text-decoration: none;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+  }
+  .stories-nudge:hover { border-color: var(--accent); color: var(--text); background: rgba(124, 58, 237, 0.14); }
+  .stories-nudge b { margin-left: auto; color: var(--accent); font-weight: 700; }
+  .stories-nudge[hidden] { display: none; }
   .auth-modal {
     position: fixed; inset: 0; z-index: 9999;
     display: flex; align-items: center; justify-content: center;

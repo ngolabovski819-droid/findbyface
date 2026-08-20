@@ -287,6 +287,32 @@ async function flushAccountOutbox(accountId: string): Promise<FlushResult> {
         method: 'POST',
         body: JSON.stringify({ entries: batch }),
       }, accountId);
+      // 400 = the server permanently rejects something in this batch. Retrying the
+      // same batch would fail identically forever, wedging every later entry behind
+      // it (this is exactly how creator_face saves silently vanished for weeks: one
+      // invalid result in one entry poisoned the whole account's queue). Isolate the
+      // poison: retry each entry alone, drop only the individually-rejected ones.
+      if (response && !response.ok && response.status === 400 && batch.length > 0) {
+        for (const entry of batch) {
+          if (!isCurrentAccount(accountId)) return { ok: false, items: savedItems };
+          const single = await accountRequest('/api/search-history', {
+            method: 'POST',
+            body: JSON.stringify(entry),
+          }, accountId);
+          if (single?.ok) {
+            try {
+              const payload = await single.json() as { items?: AccountSearchHistoryItem[] };
+              if (Array.isArray(payload.items)) savedItems.push(...payload.items);
+            } catch { /* HTTP success is authoritative, same as the batch path */ }
+            removeQueuedClientId(accountId, entry.clientSearchId);
+          } else if (single && single.status === 400) {
+            removeQueuedClientId(accountId, entry.clientSearchId); // permanently invalid — discard
+          } else {
+            return { ok: false, items: savedItems }; // transient (network/5xx/auth) — keep and retry later
+          }
+        }
+        continue;
+      }
       if (!response?.ok) return { ok: false, items: savedItems };
 
       try {

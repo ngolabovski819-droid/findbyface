@@ -11,8 +11,15 @@ const MAX_REQUEST_BYTES = 512 * 1024;
 const MAX_FILTER_BYTES = 2 * 1024;
 const MAX_INCOMING_RESULTS_BYTES = 64 * 1024;
 const MAX_RESULTS_BYTES = 32 * 1024;
-const MAX_INCOMING_RESULTS = 25;
-const MAX_SAVED_RESULTS = 10;
+// creator_face keeps every match a search produced (up to 100 organic + pinned
+// sponsors — per project owner, the full result set of an OnlyFans face search is the
+// record worth keeping). directory/video history stays a compact preview.
+const MAX_INCOMING_RESULTS = 120;
+const MAX_SAVED_RESULTS: Record<SearchType, number> = {
+  creator_face: 120,
+  directory: 10,
+  video_face: 10,
+};
 const MAX_RESULT_COUNT = 10_000_000;
 const MAX_URL_LENGTH = 2_048;
 const RATE_WINDOW_MS = 60_000;
@@ -214,6 +221,16 @@ function optionalHttpUrl(value: unknown, field: string): string | null {
     throw new Error(`${field} uses an unsupported URL scheme`);
   }
 
+  // Site-root-relative paths are first-class citizens here: sponsored creators' card
+  // images are local `/uploads/sponsors/...` overrides (src/config/sponsors.ts), and
+  // face-search results always contain the pinned sponsors. Rejecting these used to
+  // 400 the whole batch and silently kill creator_face history saves. `//host` stays
+  // banned — that's protocol-relative, i.e. an absolute URL in disguise.
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) {
+    if (/[\r\n\t<>"'\\]/.test(trimmed)) throw new Error(`${field} contains invalid characters`);
+    return trimmed.split('#')[0];
+  }
+
   let url: URL;
   try {
     url = new URL(trimmed);
@@ -315,7 +332,7 @@ function sanitizeResults(searchType: SearchType, raw: unknown): Record<string, u
     throw new Error(`results must contain objects and be no larger than ${MAX_INCOMING_RESULTS_BYTES / 1024} KB`);
   }
 
-  const sanitized = results.slice(0, MAX_SAVED_RESULTS).map(result => (
+  const sanitized = results.slice(0, MAX_SAVED_RESULTS[searchType]).map(result => (
     searchType === 'video_face'
       ? sanitizeVideoResult(result)
       : sanitizeCreatorResult(result, searchType)
@@ -505,6 +522,15 @@ export const POST: APIRoute = async ({ request }) => {
       }),
       body: JSON.stringify(entries),
     });
+    // A PostgREST 400 means the database itself rejected the rows (a CHECK constraint —
+    // see scripts/migrations/025). Surface it as a 400, not a 500: clients treat 400 as
+    // permanent and drop the entry, while a 500 makes them requeue and retry the same
+    // doomed payload forever — which is how creator_face saves silently wedged when the
+    // app-level caps and migration 023's results cap disagreed.
+    if (response.status === 400) {
+      console.error('[search-history] database rejected rows', (await response.text().catch(() => '')).slice(0, 300));
+      return json({ error: 'History entry was rejected by storage constraints' }, 400);
+    }
     if (!response.ok) throw new Error(`history POST failed: ${response.status}`);
     const rows = await response.json() as SearchHistoryRow[];
     const trimResponse = await fetch(`${context.supabaseUrl}/rest/v1/rpc/trim_user_search_history`, {
