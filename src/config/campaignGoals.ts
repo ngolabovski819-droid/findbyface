@@ -32,6 +32,13 @@ export const campaignGoals: Record<string, CampaignGoal> = {
     clickTarget: 225,
     ratePerClick: 1,
   },
+  cosplaytsumiko: {
+    label: '30-Day Trial',
+    startDate: '2026-08-20', // launched with the 2026-08-20 deploy
+    trialDays: 30,
+    clickTarget: 300,
+    ratePerClick: 1,
+  },
 };
 
 export function getCampaignGoal(slug: string): CampaignGoal | undefined {
