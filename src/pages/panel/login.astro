@@ -70,10 +70,15 @@ import PanelLayout from '../../layouts/PanelLayout.astro';
     message.hidden = false;
   }
 
-  function panelDestination(): string {
+  // Where to land after a successful login. Admins go to comment moderation (their main
+  // job); a client (guest) goes to their own stats dashboard — the comments page is
+  // admin-only and 403s a guest, so sending everyone there gave clients a "Forbidden"
+  // blank screen. Unknown/missing role falls back to the dashboard, which is safe for both.
+  function panelDestination(role?: string): string {
     const host = window.location.hostname;
     const onPanelHost = host === 'panel.findbyface.org' || host === 'panel.localhost';
-    return onPanelHost ? '/comments/' : '/panel/comments/';
+    const sub = role === 'admin' ? 'comments/' : '';
+    return onPanelHost ? `/${sub}` : `/panel/${sub}`;
   }
 
   function beginGoogleLogin(): void {
@@ -126,7 +131,7 @@ import PanelLayout from '../../layouts/PanelLayout.astro';
           }));
         } catch { /* panel cookies are already set; consumer storage is best-effort */ }
       }
-      window.location.href = panelDestination();
+      window.location.href = panelDestination(payload.role);
     } catch {
       showError('Something went wrong. Try again.');
     } finally {
@@ -151,7 +156,7 @@ import PanelLayout from '../../layouts/PanelLayout.astro';
         showError(payload.error || 'Could not open the local admin panel.');
         return;
       }
-      window.location.href = panelDestination();
+      window.location.href = panelDestination(payload.role ?? 'admin');
     } catch {
       showError('Something went wrong. Try again.');
     } finally {
@@ -193,7 +198,7 @@ import PanelLayout from '../../layouts/PanelLayout.astro';
         if (turnstileWidgetId) (window as typeof window & { turnstile?: any }).turnstile?.reset(turnstileWidgetId);
         return;
       }
-      window.location.href = panelDestination();
+      window.location.href = panelDestination(payload.role);
     } catch {
       showError('Something went wrong. Try again.');
     } finally {
