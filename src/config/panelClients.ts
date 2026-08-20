@@ -10,6 +10,7 @@ export const panelClients: Record<string, PanelClient> = {
   emilylopz: { displayName: 'Emily' },
   rocketreynaxo: { displayName: 'Rocket' },
   hannazuki: { displayName: 'Hanna' },
+  cosplaytsumiko: { displayName: 'Micaela' },
 };
 
 // Used when an admin session's token has no client_slug (e.g. a future all-access admin
