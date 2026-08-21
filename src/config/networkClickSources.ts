@@ -16,7 +16,8 @@
 // template. Entries here are copied by hand from each site's own sponsors config +
 // migrations, and need to be updated by hand if a campaign is added/removed/renamed on that
 // site. Verified live against each site's repo on 2026-08-05 (emilylopz) and 2026-08-06
-// (rocketreynaxo, hannazuki).
+// (rocketreynaxo, hannazuki), and 2026-08-21 (cosplaytsumiko — fanspedia + onlyaussiefans only;
+// onlyamericanfans has no cosplaytsumiko placement, so there is no _oaf table to read).
 export interface NetworkClickSource {
   site: string;
   table: string;
@@ -38,5 +39,9 @@ export const networkClickSources: Record<string, NetworkClickSource[]> = {
     { site: 'fanspedia.net', table: 'sponsor_clicks_hannazuki', timestampColumn: 'clicked_at' },
     { site: 'onlyamericanfans.com', table: 'sponsor_clicks_hannazuki_oaf', timestampColumn: 'clicked_at' },
     { site: 'onlyaussiefans.com', table: 'sponsor_clicks_oaussief_hannazuki', timestampColumn: 'clicked_at' },
+  ],
+  cosplaytsumiko: [
+    { site: 'fanspedia.net', table: 'sponsor_clicks_cosplaytsumiko', timestampColumn: 'clicked_at' },
+    { site: 'onlyaussiefans.com', table: 'sponsor_clicks_oaussief_cosplaytsumiko', timestampColumn: 'clicked_at' },
   ],
 };
