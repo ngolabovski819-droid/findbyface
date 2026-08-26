@@ -36,6 +36,7 @@ export const placements: Record<string, Placement> = {
     pinned: [
       { username: 'cosplaytsumiko', position: 1 },
       { username: 'rocketreynaxo', position: 2 },
+      { username: 'rinayanami', position: 3 },
       { username: 'hannazuki', position: 4 },
       { username: 'emilylopz', position: 6 },
     ],
@@ -63,7 +64,8 @@ export const placements: Record<string, Placement> = {
     pinned: [
       { username: 'cosplaytsumiko', position: 1 },
       { username: 'rocketreynaxo', position: 2 },
-      { username: 'hannazuki', position: 4 },
+      { username: 'rinayanami', position: 4 },
+      { username: 'hannazuki', position: 5 },
       { username: 'emilylopz', position: 6 },
     ],
     excluded: [],
@@ -88,12 +90,17 @@ export function pinAcrossCategories(username: string, position: number, slugs?: 
 }
 
 // Active paid placements — one call per order.
-// Current order (onlyfans-search / categories / face-search): cosplaytsumiko 1,
-// rocketreynaxo 2, hannazuki 4, emilylopz 6. Positions 3 & 5 are left to organic
-// creators. In face-search these numbers count AD slots (pos 6 → grid card 11), so
-// emily sits further down there than her literal 6th-card spot on the search grid.
+// Current order (onlyfans-search / categories): cosplaytsumiko 1, rocketreynaxo 2,
+// rinayanami 4, hannazuki 5, emilylopz 6. Position 3 is left to organic creators.
+// rinayanami (added 2026-08-26) bought onlyfans-search + all categories + face-search, which
+// bumped hannazuki 4 → 5 on the first two. face-search is pinned separately above and its
+// numbers count AD slots (pos N → grid card 2N-1): tsumiko 1, rocket 2, rinayanami 3,
+// hannazuki 4, emily 6 → cards 1/3/5/7/11, i.e. ad, match, ad, match, ad, match, ad —
+// hannazuki didn't move there, rinayanami just filled the empty slot 3. Home keeps its own
+// pins (hannazuki 3).
 // emilylopz still holds position 1 on the 'home' scope — untouched by these deals.
 pinAcrossCategories('cosplaytsumiko', 1);
 pinAcrossCategories('rocketreynaxo', 2);
-pinAcrossCategories('hannazuki', 4);
+pinAcrossCategories('rinayanami', 4);
+pinAcrossCategories('hannazuki', 5);
 pinAcrossCategories('emilylopz', 6);

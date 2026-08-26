@@ -54,6 +54,20 @@ export const sponsors: Record<string, SponsorOverride> = {
       (_, index) => `/uploads/sponsors/cosplaytsumiko/tsumiko-${String(index + 1).padStart(2, '0')}.jpg`,
     ),
   },
+  rinayanami: {
+    linkOverride: 'https://onlyfans.com/rinayanami/c31',
+    imageOverride: '/uploads/sponsors/rinayanami/rina-01.jpg',
+    clickTable: 'sponsor_clicks_rinayanami_fbf',
+    tags: ['petite', 'asian', 'nerdy', 'GFE'],
+    additionalTagCount: 5,
+    // Client's set was numbered 1, 3-9, 13-16 (their numbering had gaps, and 15 was a
+    // byte-identical copy of 9, so it was dropped). Written to disk in that numeric order
+    // as a plain 01..11 run, so this array IS the client's "starting from 1" order.
+    galleryImages: Array.from(
+      { length: 11 },
+      (_, index) => `/uploads/sponsors/rinayanami/rina-${String(index + 1).padStart(2, '0')}.jpg`,
+    ),
+  },
   hannazuki: {
     linkOverride: 'https://onlyfans.com/hannazuki/trial/kqv4mhnqp9ifhpwin0vtfxnsscmlv9jy',
     imageOverride: '/uploads/sponsors/hannazuki/hanna-01.jpg',
