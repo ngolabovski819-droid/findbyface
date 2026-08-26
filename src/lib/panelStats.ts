@@ -235,6 +235,10 @@ export interface ActivityEntry {
 
 export interface ActivityLog {
   entries: ActivityEntry[];
+  /** Sites whose click table couldn't be read at all (table missing on that site, network
+   * failure, an unexpected schema error selectTolerant() couldn't recover from) — their rows
+   * are absent from `entries`. Surfaced on the page so a gap is visible instead of silent. */
+  unavailableSites: string[];
   hasClickTable: boolean;
   /** True if at least one source may have older rows beyond what was fetched — see the cap note below. */
   truncated: boolean;
@@ -247,16 +251,50 @@ export interface ActivityLog {
 // silently assumed complete.
 const ACTIVITY_LOG_CAP = 2000;
 
+// Columns bolted onto the sponsor_clicks_* tables AFTER the 007 template (migrations 013-015
+// plus the per-site botid_flagged backfills). Every findbyface _fbf table has all of them, but
+// a sibling site's table can lag behind — e.g. fanspedia's and onlyaussiefans' cosplaytsumiko
+// tables were created after 015 ran network-wide and never got botid_flagged. PostgREST
+// rejects the WHOLE request when any selected column is missing (42703 "column x does not
+// exist"), which used to silently drop that entire site from the activity log while the
+// dashboard (narrower select) kept counting it. selectTolerant() strips the missing column
+// and retries instead — that field just reads null for that site's rows.
+const OPTIONAL_CLICK_COLUMNS = new Set(['country', 'city', 'ip_address', 'is_datacenter_ip', 'link_verified', 'botid_flagged']);
+const MISSING_COLUMN_RE = /column\s+(?:[\w"]+\.)?"?(\w+)"?\s+does not exist/i;
+
+async function selectTolerant(
+  supabaseUrl: string,
+  supabaseKey: string,
+  table: string,
+  columns: string[],
+  extraParams: Record<string, string>,
+): Promise<Record<string, unknown>[] | null> {
+  let remaining = [...columns];
+  // Each retry removes exactly one optional column, so this is bounded by how many there are.
+  for (let attempt = 0; attempt <= OPTIONAL_CLICK_COLUMNS.size; attempt++) {
+    const params = new URLSearchParams({ select: remaining.join(','), ...extraParams });
+    const resp = await fetch(`${supabaseUrl}/rest/v1/${table}?${params}`, { headers: supabaseHeaders(supabaseKey) });
+    if (resp.ok) return await resp.json();
+    if (resp.status !== 400) return null;
+    const body = await resp.json().catch(() => null) as { code?: string; message?: string } | null;
+    const missing = body?.code === '42703' ? body.message?.match(MISSING_COLUMN_RE)?.[1] : undefined;
+    if (!missing || !OPTIONAL_CLICK_COLUMNS.has(missing) || !remaining.includes(missing)) return null;
+    console.warn(`[panelStats] ${table} has no "${missing}" column — retrying without it (run the pending click-table migration to add it)`);
+    remaining = remaining.filter(c => c !== missing);
+  }
+  return null;
+}
+
 async function fetchAllRows(supabaseUrl: string, supabaseKey: string, source: NetworkClickSource, cap: number) {
-  const params = new URLSearchParams({
-    select: `${source.timestampColumn},placement,referrer,user_agent,country,city,ip_address,is_datacenter_ip,link_verified,botid_flagged`,
-    order: `${source.timestampColumn}.desc`,
-    limit: String(cap),
-  });
   try {
-    const resp = await fetch(`${supabaseUrl}/rest/v1/${source.table}?${params}`, { headers: supabaseHeaders(supabaseKey) });
-    if (!resp.ok) return null;
-    const rawRows: Record<string, unknown>[] = await resp.json();
+    const rawRows = await selectTolerant(
+      supabaseUrl,
+      supabaseKey,
+      source.table,
+      [source.timestampColumn, 'placement', 'referrer', 'user_agent', 'country', 'city', 'ip_address', 'is_datacenter_ip', 'link_verified', 'botid_flagged'],
+      { order: `${source.timestampColumn}.desc`, limit: String(cap) },
+    );
+    if (!rawRows) return null;
     const rows = rawRows.map(row => ({
       createdAt: String(row[source.timestampColumn]),
       placement: (row.placement as string | null | undefined) ?? null,
@@ -297,19 +335,20 @@ export async function getActivityLog(
   limit = ACTIVITY_LOG_CAP,
 ): Promise<ActivityLog> {
   const sources = resolveSourcesForSlugs(Array.isArray(clientSlug) ? clientSlug : [clientSlug]);
-  if (!sources.length) return { entries: [], hasClickTable: false, truncated: false };
+  if (!sources.length) return { entries: [], unavailableSites: [], hasClickTable: false, truncated: false };
 
   const SUPABASE_URL = import.meta.env.SUPABASE_URL?.replace(/\/+$/, '');
   const SUPABASE_KEY = import.meta.env.SUPABASE_KEY;
-  if (!SUPABASE_URL || !SUPABASE_KEY) return { entries: [], hasClickTable: true, truncated: false };
+  if (!SUPABASE_URL || !SUPABASE_KEY) return { entries: [], unavailableSites: [], hasClickTable: true, truncated: false };
 
   const perSourceCap = Math.max(limit, ACTIVITY_LOG_CAP);
   const settled = await Promise.all(sources.map(source => fetchAllRows(SUPABASE_URL, SUPABASE_KEY, source, perSourceCap)));
 
   let anySourceHitCap = false;
   const all: ActivityEntry[] = [];
+  const unavailable = new Set<string>();
   settled.forEach((result, i) => {
-    if (!result) return;
+    if (!result) { unavailable.add(sources[i].site); return; }
     if (result.hitCap) anySourceHitCap = true;
     const { site, clientSlug: model } = sources[i];
     for (const row of result.rows) {
@@ -332,7 +371,7 @@ export async function getActivityLog(
 
   all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   const entries = all.slice(0, limit);
-  return { entries, hasClickTable: true, truncated: anySourceHitCap && all.length > limit };
+  return { entries, unavailableSites: [...unavailable], hasClickTable: true, truncated: anySourceHitCap && all.length > limit };
 }
 
 // --- Goal progress: the commercial deal agreed for a campaign (src/config/campaignGoals.ts),

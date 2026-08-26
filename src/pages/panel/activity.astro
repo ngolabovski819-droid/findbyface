@@ -93,6 +93,9 @@ function parseUserAgent(ua: string | null): string {
           : "Nothing recorded yet — this fills in once your link starts getting traffic."}
         {log.truncated && ' Showing the most recent history; a very high-volume source may have older rows beyond this.'}
       </p>
+      {log.unavailableSites.length > 0 && (
+        <p class="source-warn">Couldn't load the click history from {log.unavailableSites.join(', ')} just now — those clicks are missing from this list.</p>
+      )}
     </header>
 
     {log.entries.length > 0 && (
@@ -188,4 +191,5 @@ function parseUserAgent(ua: string | null): string {
   .log-search input { flex: 1; height: 100%; border: 0; outline: 0; background: transparent; color: var(--text); font: 500 0.82rem 'Inter', sans-serif; }
   .log-search input::placeholder { color: var(--text-muted); }
   .log-search #logFilterCount { color: var(--text-muted); font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
+  .source-warn { margin-top: 10px; padding: 10px 14px; border: 1px solid rgba(255, 176, 32, 0.35); border-radius: 10px; background: rgba(255, 176, 32, 0.08); color: #ffb020; font-size: 0.8rem; }
 </style>
