@@ -44,9 +44,14 @@ export const networkClickSources: Record<string, NetworkClickSource[]> = {
     { site: 'fanspedia.net', table: 'sponsor_clicks_cosplaytsumiko', timestampColumn: 'clicked_at' },
     { site: 'onlyaussiefans.com', table: 'sponsor_clicks_oaussief_cosplaytsumiko', timestampColumn: 'clicked_at' },
   ],
-  // 2026-08-27: fanspedia only so far (scripts/migrations/010_sponsor_clicks_rinayanami.sql
-  // in that repo) — add _oaf / oaussief_ legs here if/when the sister sites get the placement.
+  // 2026-08-28: all three sister-site legs live. Each table was probed via REST before being
+  // added here (fanspedia 6 rows, onlyamericanfans 13, onlyaussiefans 1 at the time); names
+  // copied from each sibling repo's sponsor config (onlyamericanfans:
+  // src/config/sponsor-overrides.ts, onlyaussiefans: src/config/sponsors.ts). findbyface's own
+  // sponsor_clicks_rinayanami_fbf still comes from sponsors.ts, as for every client.
   rinayanami: [
     { site: 'fanspedia.net', table: 'sponsor_clicks_rinayanami', timestampColumn: 'clicked_at' },
+    { site: 'onlyamericanfans.com', table: 'sponsor_clicks_rinayanami_oaf', timestampColumn: 'clicked_at' },
+    { site: 'onlyaussiefans.com', table: 'sponsor_clicks_oaussief_rinayanami', timestampColumn: 'clicked_at' },
   ],
 };

@@ -39,6 +39,13 @@ export const campaignGoals: Record<string, CampaignGoal> = {
     clickTarget: 300,
     ratePerClick: 1,
   },
+  rinayanami: {
+    label: '30-Day Trial',
+    startDate: '2026-08-27', // deal start per the owner (set 2026-08-28: "300 clicks, 30 days, started yesterday")
+    trialDays: 30,
+    clickTarget: 300,
+    ratePerClick: 1,
+  },
 };
 
 export function getCampaignGoal(slug: string): CampaignGoal | undefined {
