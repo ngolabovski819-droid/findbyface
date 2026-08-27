@@ -6,10 +6,11 @@
 // either way. Route every sponsored card/CTA link through this — never link straight to the
 // destination for a creator with a linkOverride or clickTable configured.
 //
-// The raw ip_address column exists only for admin-panel fraud investigation ("did the same
-// visitor click this repeatedly") — src/lib/panelStats.ts gates it on session.role === 'admin'
-// and it must never be exposed to a guest/client login. country/city come free from Vercel's
-// edge geolocation headers (no third-party service) and are shown to every panel role.
+// The raw ip_address column was originally admin-only (fraud investigation — "did the same
+// visitor click this repeatedly"); since 2026-08-28 the owner shows it to guest/client logins
+// too, alongside country/city, on the panel activity tables (src/lib/panelStats.ts
+// getActivityLog includeIp/includeLocation). country/city come free from Vercel's edge
+// geolocation headers (no third-party service) and are shown to every panel role.
 //
 // GOTCHA: never link here with rel="noreferrer" — it stops the browser from sending a
 // Referer to this route, silently zeroing placement data even for internal traffic. Use

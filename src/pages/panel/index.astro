@@ -4,7 +4,8 @@
 import PanelLayout from '../../layouts/PanelLayout.astro';
 import PanelCampaignGrid from '../../components/PanelCampaignGrid.astro';
 import PanelGoalCard from '../../components/PanelGoalCard.astro';
-import { getPanelStats, getGoalProgress } from '../../lib/panelStats';
+import { getPanelStats, getGoalProgress, getActivityLog, type ActivityEntry } from '../../lib/panelStats';
+import { formatLocation, parseUserAgent } from '../../lib/panelFormat';
 import { resolveClientSlug } from '../../lib/panelAuth';
 import { panelBase } from '../../lib/panelHost';
 import { getPanelClient, panelClients, DEFAULT_CLIENT_SLUG } from '../../config/panelClients';
@@ -31,6 +32,12 @@ let delta7: { pct: number | null; direction: 'up' | 'down' | 'flat' } = { pct: n
 let delta30: { pct: number | null; direction: 'up' | 'down' | 'flat' } = { pct: null, direction: 'flat' };
 let goal;
 let goalProgress = null;
+// Guest-only: the dashboard's "Recent activity" shows the same six columns as the guest
+// activity log (when/site/location/referrer/user agent/IP — owner decision 2026-08-28), which
+// need the full row shape getActivityLog() returns rather than getPanelStats().recent's
+// narrow when/site/placement rows. Admin keeps the original when/site/placement table.
+const GUEST_RECENT_ROWS = 12;
+let guestRecent: ActivityEntry[] = [];
 
 if (!showOverview) {
   // A guest can only ever land on a slug from their own session.clientSlugs; admin can view
@@ -52,6 +59,9 @@ if (!showOverview) {
 
   goal = getCampaignGoal(clientSlug);
   goalProgress = goal ? await getGoalProgress(clientSlug, goal) : null;
+  if (!isAdmin) {
+    guestRecent = (await getActivityLog(clientSlug, { includeIp: true, includeLocation: true }, GUEST_RECENT_ROWS)).entries;
+  }
 }
 ---
 <PanelLayout
@@ -190,21 +200,45 @@ if (!showOverview) {
 
         <article class="panel-card">
           <h2>Recent activity</h2>
-          {stats!.recent.length ? (
-            <table class="recent-table">
-              <thead><tr><th>When</th><th>Site</th><th>Placement</th></tr></thead>
-              <tbody>
-                {stats!.recent.slice(0, 12).map((r) => (
-                  <tr>
-                    <td>{new Date(r.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
-                    <td>{r.site}</td>
-                    <td>{r.placementLabel}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {isAdmin ? (
+            stats!.recent.length ? (
+              <table class="recent-table">
+                <thead><tr><th>When</th><th>Site</th><th>Placement</th></tr></thead>
+                <tbody>
+                  {stats!.recent.slice(0, 12).map((r) => (
+                    <tr>
+                      <td>{new Date(r.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
+                      <td>{r.site}</td>
+                      <td>{r.placementLabel}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p class="empty-note">Nothing to show yet — check back after your link starts getting traffic.</p>
+            )
           ) : (
-            <p class="empty-note">Nothing to show yet — check back after your link starts getting traffic.</p>
+            guestRecent.length ? (
+              <div class="recent-scroll">
+                <table class="recent-table">
+                  <thead><tr><th>When</th><th>Site</th><th>Location</th><th>Referrer</th><th>User agent</th><th>IP</th></tr></thead>
+                  <tbody>
+                    {guestRecent.map((r) => (
+                      <tr>
+                        <td>{new Date(r.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
+                        <td>{r.site}</td>
+                        <td>{formatLocation(r.city, r.country)}</td>
+                        <td class="referrer-cell">{r.referrer || '—'}</td>
+                        <td class="ua-cell" title={r.userAgent || ''}>{parseUserAgent(r.userAgent)}</td>
+                        <td class="ip-cell">{r.ipAddress || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p class="empty-note">Nothing to show yet — check back after your link starts getting traffic.</p>
+            )
           )}
         </article>
       </section>
@@ -573,6 +607,16 @@ if (!showOverview) {
   .recent-table tbody tr { transition: background-color 0.15s; }
   .recent-table tbody tr:hover { background-color: rgba(255,255,255,0.035); }
   .recent-table tbody tr:hover td { color: var(--text); }
+  /* Guest six-column variant: wider than the card on narrow viewports, so it scrolls inside
+     its own box instead of pushing the page sideways. Cell styles mirror activity.astro. */
+  .recent-scroll { overflow-x: auto; }
+  .referrer-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+  .ua-cell {
+    max-width: 190px; overflow: hidden; text-overflow: ellipsis;
+    color: var(--text-muted); font-size: 0.74rem; cursor: help;
+    border-bottom: 1px dotted var(--border);
+  }
+  .ip-cell { font: 500 0.78rem 'SF Mono', 'Consolas', monospace; color: var(--text-muted); }
 
   .empty-note { color: var(--text-muted); font-size: 0.78rem; margin-top: 14px; }
 

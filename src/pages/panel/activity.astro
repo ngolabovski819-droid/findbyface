@@ -1,6 +1,7 @@
 ---
 import PanelLayout from '../../layouts/PanelLayout.astro';
 import { getActivityLog } from '../../lib/panelStats';
+import { formatLocation, parseUserAgent } from '../../lib/panelFormat';
 import { resolveClientSlug } from '../../lib/panelAuth';
 import { getPanelClient, panelClients, DEFAULT_CLIENT_SLUG, type ModelOption } from '../../config/panelClients';
 
@@ -19,68 +20,18 @@ const adminSwitcherOptions: ModelOption[] | undefined = isAdmin
   ? [{ slug: 'all', displayName: 'All models' }, ...Object.entries(panelClients).map(([slug, c]) => ({ slug, displayName: c.displayName }))]
   : undefined;
 
+// Location + IP are shown to every role since 2026-08-28 (owner decision: guests get a fixed
+// when/site/location/referrer/user agent/IP table); the bot-management signal columns and the
+// placement column stay admin-only.
 const log = await getActivityLog(
   isAllModels ? Object.keys(panelClients) : clientSlug,
-  { includeIp: isAdmin, includeLocation: isAdmin, includeSignals: isAdmin },
+  { includeIp: true, includeLocation: true, includeSignals: isAdmin },
 );
-
-function formatLocation(city: string | null, country: string | null): string {
-  if (city && country) return `${city}, ${country}`;
-  return city || country || '—';
-}
 
 function modelDisplayName(slug: string): string {
   return getPanelClient(slug)?.displayName ?? slug;
 }
 
-// A raw UA string is 100-150+ characters — never going to fit a table cell. Parses out just
-// "Browser X on OS Y" for the visible cell; the full raw string stays available via the title
-// attribute (native hover tooltip) for when the exact detail matters — e.g. spotting a
-// specific outdated-OS pattern repeating suspiciously across many rows, the way the
-// iPhone-OS-13_2_3 bot cluster got caught. Best-effort, not exhaustive — falls back to
-// "Browser" / "OS" rather than guessing wrong on an unrecognized string.
-function parseUserAgent(ua: string | null): string {
-  if (!ua) return '—';
-
-  let os = 'OS';
-  const ios = ua.match(/(?:iPhone|iPad|iPod).*?OS (\d+[_.]\d+)/);
-  const android = ua.match(/Android (\d+(?:\.\d+)?)/);
-  const mac = ua.match(/Mac OS X (\d+[_.]\d+)/);
-  if (ios) os = `iOS ${ios[1].replace('_', '.')}`;
-  else if (android) os = `Android ${android[1]}`;
-  else if (/Windows NT 10\.0/.test(ua)) os = 'Windows 10/11';
-  else if (/Windows NT/.test(ua)) os = 'Windows';
-  else if (mac) os = `macOS ${mac[1].replace('_', '.')}`;
-  else if (/Linux/.test(ua)) os = 'Linux';
-
-  let browser = 'Browser';
-  const crIos = ua.match(/CriOS\/(\d+)/);
-  const fxIos = ua.match(/FxiOS\/(\d+)/);
-  const edgIos = ua.match(/EdgiOS\/(\d+)/);
-  const gsa = ua.match(/GSA\/([\d.]+)/);
-  const edg = ua.match(/Edg\/(\d+)/);
-  const opr = ua.match(/OPR\/(\d+)/);
-  const samsung = ua.match(/SamsungBrowser\/(\d+)/);
-  const oem = ua.match(/(HeyTapBrowser|MiuiBrowser|YaBrowser)\/(\d+)/);
-  const firefox = ua.match(/Firefox\/(\d+)/);
-  const chrome = ua.match(/Chrome\/(\d+)/);
-  const safari = ua.match(/Version\/(\d+).*Safari/);
-
-  if (crIos) browser = `Chrome ${crIos[1]}`;
-  else if (fxIos) browser = `Firefox ${fxIos[1]}`;
-  else if (edgIos) browser = `Edge ${edgIos[1]}`;
-  else if (gsa) browser = `Google App ${gsa[1]}`;
-  else if (edg) browser = `Edge ${edg[1]}`;
-  else if (opr) browser = `Opera ${opr[1]}`;
-  else if (samsung) browser = `Samsung Internet ${samsung[1]}`;
-  else if (oem) browser = `${oem[1]} ${oem[2]}`;
-  else if (firefox) browser = `Firefox ${firefox[1]}`;
-  else if (safari && !chrome) browser = `Safari ${safari[1]}`;
-  else if (chrome) browser = `Chrome ${chrome[1]}`;
-  else if (/Safari/.test(ua)) browser = 'Safari';
-
-  return `${browser} on ${os}`;
-}
 ---
 <PanelLayout title={`Activity log — ${isAllModels ? 'All models' : (client?.displayName ?? 'Client')} — findbyface Panel`} accountName={session.name} role={session.role} clientSlugs={session.clientSlugs} activeModelSlug={clientSlug} modelSwitcherOptions={adminSwitcherOptions} nav>
   <div class="activity-page">
@@ -101,7 +52,7 @@ function parseUserAgent(ua: string | null): string {
     {log.entries.length > 0 && (
       <label class="log-search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m15.5 15.5 5 5"></path></svg>
-        <input type="search" id="logFilter" placeholder={isAdmin ? "Filter by site, placement, or location" : "Filter by site or placement"} autocomplete="off" />
+        <input type="search" id="logFilter" placeholder={isAdmin ? "Filter by site, placement, or location" : "Filter by site or location"} autocomplete="off" />
         <span id="logFilterCount"></span>
       </label>
     )}
@@ -111,21 +62,21 @@ function parseUserAgent(ua: string | null): string {
         <table class="recent-table" id="logTable">
           <thead>
             <tr>
-              <th>When</th>{isAllModels && <th>Model</th>}<th>Site</th><th>Placement</th>{isAdmin && <th>Location</th>}<th>Referrer</th><th>User agent</th>
-              {isAdmin && <><th>Datacenter</th><th>Link verified</th><th>BotID</th><th>IP</th></>}
+              <th>When</th>{isAllModels && <th>Model</th>}<th>Site</th>{isAdmin && <th>Placement</th>}<th>Location</th><th>Referrer</th><th>User agent</th>
+              {isAdmin ? <><th>Datacenter</th><th>Link verified</th><th>BotID</th><th>IP</th></> : <th>IP</th>}
             </tr>
           </thead>
           <tbody>
             {log.entries.map((entry) => (
-              <tr data-filter-text={`${entry.site} ${modelDisplayName(entry.model)} ${entry.placementLabel} ${entry.city ?? ''} ${entry.country ?? ''}`.toLowerCase()}>
+              <tr data-filter-text={`${entry.site} ${modelDisplayName(entry.model)} ${isAdmin ? entry.placementLabel : ''} ${entry.city ?? ''} ${entry.country ?? ''}`.toLowerCase()}>
                 <td>{new Date(entry.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
                 {isAllModels && <td>{modelDisplayName(entry.model)}</td>}
                 <td>{entry.site}</td>
-                <td>{entry.placementLabel}</td>
-                {isAdmin && <td>{formatLocation(entry.city, entry.country)}</td>}
+                {isAdmin && <td>{entry.placementLabel}</td>}
+                <td>{formatLocation(entry.city, entry.country)}</td>
                 <td class="referrer-cell">{entry.referrer || '—'}</td>
                 <td class="ua-cell" title={entry.userAgent || ''}>{parseUserAgent(entry.userAgent)}</td>
-                {isAdmin && (
+                {isAdmin ? (
                   <>
                     <td>{entry.isDatacenterIp ? <span class="flag-warn">Datacenter</span> : '—'}</td>
                     <td>
@@ -136,6 +87,8 @@ function parseUserAgent(ua: string | null): string {
                     <td>{entry.botIdFlagged ? <span class="flag-warn">Bot flagged</span> : '—'}</td>
                     <td class="ip-cell">{entry.ipAddress || '—'}</td>
                   </>
+                ) : (
+                  <td class="ip-cell">{entry.ipAddress || '—'}</td>
                 )}
               </tr>
             ))}

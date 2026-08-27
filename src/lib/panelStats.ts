@@ -213,18 +213,18 @@ export interface ActivityEntry {
   placementLabel: string;
   referrer: string | null;
   userAgent: string | null;
-  /** Only populated when getActivityLog() is called with includeLocation: true (admin sessions
-   * only, see src/pages/panel/activity.astro). null for every guest/client session, regardless
-   * of what's actually stored in the table. */
+  /** Only populated when getActivityLog() is called with includeLocation: true. Since
+   * 2026-08-28 every panel session (guest included) passes that — the owner's call: clients
+   * see when/site/location/referrer/user agent/IP on their activity tables. */
   country: string | null;
   city: string | null;
-  /** Raw client IP — only ever populated when getActivityLog() is called with includeIp:
-   * true (admin sessions only, see src/pages/panel/activity.astro). null for every guest/
-   * client session, regardless of what's actually stored in the table. */
+  /** Raw client IP — only populated when getActivityLog() is called with includeIp: true.
+   * Also passed for guest sessions since 2026-08-28 (owner decision, same as location above);
+   * before that it was admin-only. */
   ipAddress: string | null;
   /** Bot-management signals — only populated when getActivityLog() is called with
-   * includeSignals: true (admin sessions only). null both for non-admin sessions AND for rows
-   * logged before these columns existed (a genuinely missing value, not a false negative). */
+   * includeSignals: true (STILL admin sessions only). null both for non-admin sessions AND for
+   * rows logged before these columns existed (a genuinely missing value, not a false negative). */
   isDatacenterIp: boolean | null;
   linkVerified: boolean | null;
   /** Vercel BotID's verdict at click-token mint time (src/pages/api/click-token.ts), carried
@@ -315,21 +315,23 @@ async function fetchAllRows(supabaseUrl: string, supabaseKey: string, source: Ne
 }
 
 // No date filter at all — every row, from whenever tracking started for this client on each
-// site. `limit` caps how many are RETURNED to the caller (for a sane page size); the fetch
-// itself still pulls up to ACTIVITY_LOG_CAP per source so a global sort+slice down to `limit`
-// is correct (fetching each source's own top-K guarantees the true global top-K is among
-// them — a row outside its own source's top-K can't be in the global top-K either, since that
-// source alone already supplies K rows newer than it).
+// site. `limit` caps how many are RETURNED to the caller (for a sane page size) and is also
+// the per-source fetch cap: fetching each source's own top-`limit` guarantees the true global
+// top-`limit` is among them (a row outside its own source's top-K can't be in the global top-K
+// either, since that source alone already supplies K rows newer than it). So the dashboard's
+// "recent 12" costs 12 rows per source, while the activity page's default limit
+// (ACTIVITY_LOG_CAP) still pulls the full history.
 // clientSlug accepts either one slug (the normal guest/single-model case) or an array (an
 // admin's "all models" view) — sources from every requested slug are fetched in parallel and
 // merged into one globally-sorted log, each entry tagged with which model it came from.
 //
-// includeIp/includeLocation/includeSignals: true only for admin sessions
-// (src/pages/panel/activity.astro) — a guest/client login always gets ipAddress/country/city/
-// isDatacenterIp/linkVerified: null on every entry, regardless of what's in the table. Fetched
-// from the DB either way (cheap, same query) but deliberately stripped right here rather than
-// left to the page template to remember not to render it, so none of it ever leaves this
-// function in a non-admin response.
+// includeIp/includeLocation: passed as true for EVERY panel session since 2026-08-28 (owner
+// decision — guests see when/site/location/referrer/user agent/IP; see
+// src/pages/panel/activity.astro and index.astro). includeSignals stays admin-only: a guest
+// login always gets isDatacenterIp/linkVerified/botIdFlagged: null on every entry, regardless
+// of what's in the table. Fetched from the DB either way (cheap, same query) but deliberately
+// stripped right here rather than left to the page template to remember not to render it, so
+// none of it ever leaves this function in a non-admin response.
 export async function getActivityLog(
   clientSlug: string | string[],
   options: { includeIp?: boolean; includeLocation?: boolean; includeSignals?: boolean } = {},
@@ -342,7 +344,7 @@ export async function getActivityLog(
   const SUPABASE_KEY = import.meta.env.SUPABASE_KEY;
   if (!SUPABASE_URL || !SUPABASE_KEY) return { entries: [], unavailableSites: [], hasClickTable: true, truncated: false };
 
-  const perSourceCap = Math.max(limit, ACTIVITY_LOG_CAP);
+  const perSourceCap = Math.max(1, limit);
   const settled = await Promise.all(sources.map(source => fetchAllRows(SUPABASE_URL, SUPABASE_KEY, source, perSourceCap)));
 
   let anySourceHitCap = false;
