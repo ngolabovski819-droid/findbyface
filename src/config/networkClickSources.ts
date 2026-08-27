@@ -44,4 +44,9 @@ export const networkClickSources: Record<string, NetworkClickSource[]> = {
     { site: 'fanspedia.net', table: 'sponsor_clicks_cosplaytsumiko', timestampColumn: 'clicked_at' },
     { site: 'onlyaussiefans.com', table: 'sponsor_clicks_oaussief_cosplaytsumiko', timestampColumn: 'clicked_at' },
   ],
+  // 2026-08-27: fanspedia only so far (scripts/migrations/010_sponsor_clicks_rinayanami.sql
+  // in that repo) — add _oaf / oaussief_ legs here if/when the sister sites get the placement.
+  rinayanami: [
+    { site: 'fanspedia.net', table: 'sponsor_clicks_rinayanami', timestampColumn: 'clicked_at' },
+  ],
 };
