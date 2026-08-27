@@ -43,6 +43,7 @@ function humanizePlacement(placement: string | null): string {
   if (placement === 'ai-discover') return 'AI Discover';
   if (placement.startsWith('category:')) return `Category — ${placement.slice('category:'.length)}`;
   if (placement.startsWith('external:')) return `Referral — ${placement.slice('external:'.length)}`;
+  if (placement.startsWith('vanity:')) return `Vanity link — /go/${placement.slice('vanity:'.length)}`;
   if (placement.startsWith('internal:')) return 'Other internal page';
   return placement;
 }
