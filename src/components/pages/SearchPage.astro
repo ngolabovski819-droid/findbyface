@@ -2207,9 +2207,9 @@ const seoFaqJsonLd = {
 
   .feed-photo { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-  /* No external file dependency (a literal /no-image.png doesn't exist in this project —
-     see cardClickThrough-adjacent fixes elsewhere) and no risk of the classic onerror
-     infinite-loop, since this never re-assigns .src at all, just swaps in a CSS look. */
+  /* No file dependency (public/no-image.png exists, but this look needs no request at all)
+     and no risk of the classic onerror infinite-loop, since this never re-assigns .src,
+     just swaps in a CSS look. */
   .feed-slide-media.feed-img-fallback {
     display: grid;
     place-items: center;

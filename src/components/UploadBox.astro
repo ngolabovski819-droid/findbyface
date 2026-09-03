@@ -491,6 +491,7 @@ const CLIENT = lang === 'es' ? esClient : enClient;
 <script>
   import { currentAccountId, newSearchHistoryId, saveAccountSearchHistoryForOwner, scopedSearchHistoryKey } from '../lib/accountSearchHistory';
   import { initCardClickThrough } from '../lib/cardClickThrough';
+  import { IMG_ONERROR, proxyImg } from '../utils/image';
 
   // Locale strings server-rendered into the JSON block above (see frontmatter CLIENT).
   const T = JSON.parse(document.getElementById('i18nUploadBox')!.textContent!) as Record<string, string>;
@@ -1141,11 +1142,6 @@ const CLIENT = lang === 'es' ? esClient : enClient;
     }
   }
 
-  function proxyImg(url: string, w: number, h: number): string {
-    if (!url || url.startsWith('/')) return url;
-    return `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//, ''))}&w=${w}&h=${h}&fit=cover&output=webp`;
-  }
-
   function renderCard(
     c: Record<string, unknown>,
     index: number,
@@ -1193,8 +1189,8 @@ const CLIENT = lang === 'es' ? esClient : enClient;
     return `<div class="creator-card" data-href="${profileUrl}" ${cardData}>
       <div class="card-img-wrap">
         <img src="${imgSrc}" alt="${(c.name || c.username) as string}" loading="${index === 0 ? 'eager' : 'lazy'}"
-          decoding="async" referrerpolicy="no-referrer"
-          onerror="this.onerror=null;this.src='/no-image.png';">
+          decoding="async" referrerpolicy="no-referrer"${avatar?.startsWith('http') ? ` data-raw="${avatar.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}"` : ''}
+          onerror="${IMG_ONERROR}">
         ${matchBadge}
       </div>
       <div class="card-body">

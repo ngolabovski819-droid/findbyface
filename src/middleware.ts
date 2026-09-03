@@ -11,9 +11,31 @@
 import { defineMiddleware } from 'astro:middleware';
 import { verifyPanelSession, loginPathFor, dashboardPathFor } from './lib/panelAuth';
 import { isPanelHost } from './lib/panelHost';
+import { isAllowedImageRequest } from './utils/image';
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { request, url, cookies, locals } = context;
+
+  // Creator photos come through Astro's `/_image` sharp endpoint (src/utils/image.ts).
+  // Two jobs here, handled first so the panel-host rewrite below never turns the path
+  // into /panel/_image (Astro also answers `/_image/`, hence the trailing-slash trim):
+  //   1. Only accept the exact URL shape `proxyImg` emits — an allowlisted OnlyFans host
+  //      and one of the site's own sizes. Astro's endpoint would otherwise also proxy
+  //      same-origin paths and resize to any dimensions anyone asks for.
+  //   2. Astro only sets a browser `Cache-Control: max-age`, and Vercel's CDN caches
+  //      function responses solely on an `s-maxage`, so without this header every image
+  //      request would run the Frankfurt function again.
+  if (url.pathname.replace(/\/+$/, '') === '/_image') {
+    if (!isAllowedImageRequest(url.searchParams)) {
+      return new Response('Bad Request', { status: 400 });
+    }
+    const response = await next();
+    if (response.ok) {
+      response.headers.set('CDN-Cache-Control', 'public, s-maxage=31536000, immutable');
+    }
+    return response;
+  }
+
   const onPanelHost = isPanelHost(request.headers.get('host') || '');
 
   // Rewrite bare paths on the panel host into /panel/* — but never /api/* (those routes

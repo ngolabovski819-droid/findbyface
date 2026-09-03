@@ -84,9 +84,10 @@ function downloadBuffer(url) {
   });
 }
 
+// Fetch the source image directly: images.weserv.nl policy-blocks *.onlyfans.com
+// (since 2026-09), and face-api copes with full-size avatars fine.
 function proxyUrl(avatar) {
-  const clean = avatar.replace(/^https?:\/\//, '');
-  return `https://images.weserv.nl/?url=${encodeURIComponent(clean)}&w=320&h=427&fit=cover&output=jpg`;
+  return avatar;
 }
 
 async function bufferToFaceApiInput(buffer, faceapi) {

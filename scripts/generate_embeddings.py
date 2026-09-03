@@ -72,9 +72,8 @@ def fetch_creators_without_embeddings(page: int) -> list[dict]:
 
 
 def proxy_url(avatar_url: str) -> str:
-    """Route avatar through images.weserv.nl for resizing (faster detection)."""
-    clean = avatar_url.lstrip("https://").lstrip("http://")
-    return f"https://images.weserv.nl/?url={clean}&w=320&h=427&fit=cover&output=jpg"
+    """Fetch the source image directly: images.weserv.nl policy-blocks *.onlyfans.com (since 2026-09)."""
+    return avatar_url
 
 
 def download_image(url: str) -> np.ndarray | None:

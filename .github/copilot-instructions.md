@@ -16,7 +16,7 @@
 - Database: Supabase via raw `fetch()` REST only — NEVER import `@supabase/supabase-js`
 - Hosting: Vercel via `@astrojs/vercel` adapter
 - Fonts: Syne (headings, weight 700/800) + Inter (body) — both via Google Fonts
-- Images: Proxied via `images.weserv.nl` as WebP
+- Images: creator photos resized same-origin by Astro's built-in `/_image` (sharp) endpoint as WebP — hosts allowlisted in `astro.config.mjs` `image.remotePatterns`. (`images.weserv.nl` was dropped 2026-09-03 after it policy-blocked every `*.onlyfans.com` host.)
 
 ## Logo
 - Text: "findbyface" — all lowercase, no spaces
@@ -329,7 +329,7 @@ interface Props {
 }
 ---
 ```
-- Image: proxied via `images.weserv.nl` at 320×427 (3:4 ratio)
+- Image: resized via `/_image` (`proxyImg`) at 320×427 (3:4 ratio)
 - LCP: first card (`index === 0`) gets `loading="eager" fetchpriority="high"`
 - Others: `loading="lazy"`
 - Match badge: top-right purple pill if `matchPct` present
@@ -481,12 +481,24 @@ all query `/api/search` per request. Only the pre-interaction paint is static.
 
 ---
 
-## Image Proxy Helper (put in src/utils/image.ts)
+## Image Proxy Helper (src/utils/image.ts — the ONLY place that builds an image URL)
+Creator photos are resized by Astro's built-in `/_image` endpoint (sharp, same origin,
+`fit=cover` crop, WebP). It only fetches hosts allowlisted in `astro.config.mjs`
+`image.remotePatterns` (`**.onlyfans.com`); `src/middleware.ts` adds the
+`CDN-Cache-Control: s-maxage` header Vercel needs to cache it. Never inline a copy of this
+builder in a component `<script>` — import it; server frontmatter and browser bundles must
+emit byte-identical URLs. History: `images.weserv.nl` was the proxy until 2026-09-03, when it
+policy-blocked every `*.onlyfans.com` host and blanked every card on every sister site.
+Never propose weserv/wsrv (or another public proxy such as Photon) for OnlyFans images again.
+`IMG_ONERROR` is the shared inline `onerror`: retry the raw source from `data-raw`, then
+`/no-image.png` (a real file in `public/`).
 ```ts
-export function proxyImg(url: string, w: number, h: number): string {
-  if (!url || url.startsWith('/')) return url;
-  const noScheme = url.replace(/^https?:\/\//, '');
-  return `https://images.weserv.nl/?url=${encodeURIComponent(noScheme)}&w=${w}&h=${h}&fit=cover&output=webp`;
+export const IMAGE_PLACEHOLDER = '/no-image.png';
+export function proxyImg(url: string | null | undefined, w: number, h: number): string {
+  if (!url) return IMAGE_PLACEHOLDER;
+  if (url.startsWith('/') && !url.startsWith('//')) return url;   // local paths pass through
+  if (!/^https?:\/\//i.test(url)) return IMAGE_PLACEHOLDER;
+  return `/_image?href=${encodeURIComponent(url)}&w=${w}&h=${h}&fit=cover&f=webp`;
 }
 
 export function buildSrcset(url: string): { src: string; srcset: string; sizes: string } {

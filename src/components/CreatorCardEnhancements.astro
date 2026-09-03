@@ -52,6 +52,7 @@ const CLIENT = lang === 'es' ? esClient : enClient;
 
 <script>
   import { initCardClickThrough } from '../lib/cardClickThrough';
+  import { proxyImg } from '../utils/image';
   import { currentAccountId } from '../lib/accountSearchHistory';
   import { WISHLIST_LIMIT_ACCOUNT, isInWishlist, readEntryFromCard, toggleWishlist } from '../lib/wishlist';
 
@@ -119,9 +120,7 @@ const CLIENT = lang === 'es' ? esClient : enClient;
   }
 
   function imageUrl(url: string): string {
-    if (!url || url.startsWith('/')) return url || '/no-image.png';
-    const clean = url.replace(/^https?:\/\//, '');
-    return `https://images.weserv.nl/?url=${encodeURIComponent(clean)}&w=480&h=640&fit=cover&output=webp`;
+    return proxyImg(url, 480, 640);
   }
 
   function renderDots(card: HTMLElement, activeIndex: number, total: number): void {

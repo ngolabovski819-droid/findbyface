@@ -1,5 +1,5 @@
 ---
-import { proxyImg } from '../utils/image';
+import { IMG_ONERROR, proxyImg } from '../utils/image';
 import { creatorCardImages } from '../lib/creatorCardUi';
 import { localeOf } from '../i18n/routes';
 import { t } from '../i18n/ui';
@@ -74,7 +74,8 @@ const rel = profileUrl.startsWith('/go/') ? 'noopener nofollow sponsored' : 'noo
       fetchpriority={index === 0 ? 'high' : undefined}
       decoding="async"
       referrerpolicy="no-referrer"
-      onerror="this.onerror=null;this.removeAttribute('srcset');this.src='/no-image.png';"
+      data-raw={avatar?.startsWith('http') ? avatar : undefined}
+      onerror={IMG_ONERROR}
     />
     {matchPct && <span class="match-badge"><strong>{matchPct}%</strong><span>match</span></span>}
   </div>

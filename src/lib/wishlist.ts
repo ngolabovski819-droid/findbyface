@@ -102,9 +102,10 @@ export function readEntryFromCard(card: HTMLElement, username: string): Wishlist
 // source image, not the card's already-transformed `img.src`. Storing the rendered src
 // broke sponsored creators whose card image is a local `/uploads/sponsors/...` override:
 // in the DOM that reads back as an absolute same-origin URL (http://host/uploads/...),
-// which the wishlist page then hands to weserv — and weserv can't fetch the site's own
-// (or localhost's) upload path, so the image 404s. It also double-proxied normal creators
-// (weserv wrapping an already-weserv URL). `data-card-images[0]` is the un-proxied source:
+// which the wishlist page then hands to the image resizer — which only fetches allowlisted
+// remote hosts, never the site's own (or localhost's) upload path, so the image 404s. It also
+// double-proxied normal creators (a resize URL wrapping a resize URL). `data-card-images[0]`
+// is the un-proxied source:
 // a local path for sponsor overrides, the raw OnlyFans URL otherwise.
 function readCardAvatar(card: HTMLElement): string {
   try {

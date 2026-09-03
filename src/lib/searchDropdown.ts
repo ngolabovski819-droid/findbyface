@@ -15,6 +15,7 @@ import {
   pushHistoryForOwner,
   removeHistoryForOwner,
 } from './searchHistory';
+import { IMAGE_PLACEHOLDER, proxyImg as sharedProxyImg } from '../utils/image';
 
 export interface SearchDropdownRefs {
   wrapper: HTMLElement;
@@ -90,10 +91,12 @@ const categoryHref = (category: Category): string => IS_ES
   ? `/es/categorias/${encodeURIComponent(category.slugEs ?? category.slug)}/`
   : `/categories/${encodeURIComponent(category.slug)}/`;
 
+// Dropdown rows skip the <img> entirely when there is nothing to show, so unlike the
+// shared helper this returns '' (not the placeholder) for a missing or garbage avatar.
 function proxyImg(url: string | null | undefined, w: number, h: number): string {
-  if (url?.startsWith('/')) return url;
-  if (!url || !/^https?:\/\//i.test(url)) return '';
-  return `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//i, ''))}&w=${w}&h=${h}&fit=cover&output=webp`;
+  if (!url) return '';
+  const src = sharedProxyImg(url, w, h);
+  return src === IMAGE_PLACEHOLDER ? '' : src;
 }
 
 function safeHref(value: string | null | undefined, fallback: string): string {

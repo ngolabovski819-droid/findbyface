@@ -461,6 +461,7 @@ const CLIENT = lang === 'es' ? esClient : enClient;
 <script type="application/json" id="i18nDashboardPage" set:html={JSON.stringify(CLIENT)} />
 
 <script>
+  import { proxyImg } from '../../utils/image';
   import {
     clearAccountSearchHistoryForOwner,
     currentAccountId,
@@ -492,16 +493,6 @@ const CLIENT = lang === 'es' ? esClient : enClient;
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
-  }
-
-  function proxyImg(url, width, height) {
-    if (!url) return '/no-image.png';
-    const value = String(url);
-    if (value.startsWith('/') && !value.startsWith('//')) return value;
-    const safe = safeHttpUrl(value);
-    return safe
-      ? `https://images.weserv.nl/?url=${encodeURIComponent(safe.replace(/^https?:\/\//, ''))}&w=${width}&h=${height}&fit=cover&output=webp`
-      : '/no-image.png';
   }
 
   function safeHttpUrl(value) {

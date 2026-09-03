@@ -8,6 +8,10 @@
 // in the same grid, so any divergence is visible on screen the moment someone clicks
 // Load More.
 import { creatorCardDataAttributes, type CreatorCardUiData } from './creatorCardUi';
+import { IMG_ONERROR, proxyImg } from '../utils/image';
+
+// Re-exported so SearchPage's <script> keeps importing it from here.
+export { proxyImg };
 
 /** Only the label keys this renderer needs — the page's full dictionary is a superset. */
 export interface SearchCardLabels {
@@ -22,12 +26,6 @@ export interface SearchCardCreator extends CreatorCardUiData {
   subscribePrice?: number | string | null;
   /** Raw column name — present when a row comes straight from PostgREST. */
   subscribeprice?: number | string | null;
-}
-
-export function proxyImg(url: string, w: number, h: number): string {
-  if (!url || (url.startsWith('/') && !url.startsWith('//'))) return url;
-  if (!/^https?:\/\//i.test(url)) return '/no-image.png';
-  return `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//i, ''))}&w=${w}&h=${h}&fit=cover&output=webp`;
 }
 
 export function safeProfileHref(value: unknown, username: unknown): string {
@@ -54,6 +52,7 @@ export function renderSearchCard(c: SearchCardCreator, index: number, T: SearchC
   const imgSrc = avatar?.startsWith('/')
     ? avatar
     : avatar?.startsWith('http') ? proxyImg(avatar, 320, 427) : '/no-image.png';
+  const rawAvatar = avatar?.startsWith('http') ? avatar : '';
   const price = c.subscribePrice ?? c.subscribeprice;
   const priceIsFree = (!price || isNaN(Number(price)));
   const priceLabel = priceIsFree ? T.free : `$${parseFloat(String(price)).toFixed(2)}`;
@@ -69,8 +68,8 @@ export function renderSearchCard(c: SearchCardCreator, index: number, T: SearchC
       <div class="card-img-wrap">
         ${isSponsored ? `<span class="sponsored-badge">${T.sponsored}</span>` : ''}
         <img src="${escapeHtml(imgSrc)}" alt="${safeName}" loading="${index < 8 ? 'eager' : 'lazy'}"
-          decoding="async" referrerpolicy="no-referrer"
-          onerror="this.onerror=null;this.removeAttribute('srcset');this.src='/no-image.png';">
+          decoding="async" referrerpolicy="no-referrer"${rawAvatar ? ` data-raw="${escapeHtml(rawAvatar)}"` : ''}
+          onerror="${IMG_ONERROR}">
       </div>
       <div class="card-body">
         <p class="creator-name">${safeName}</p>

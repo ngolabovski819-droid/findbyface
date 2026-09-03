@@ -576,6 +576,7 @@ const structuredData = JSON.stringify([
 
 <script>
   import { scopedSearchHistoryKey } from '../../lib/accountSearchHistory';
+  import { proxyImg } from '../../utils/image';
 
   const T = JSON.parse(document.getElementById('i18nBattlePage')!.textContent!) as Record<string, string>;
   const fmtT = (s: string, v: Record<string, string | number> = {}) =>
@@ -660,12 +661,6 @@ const structuredData = JSON.stringify([
       '"': '&quot;',
       "'": '&#39;',
     }[character] as string));
-  }
-
-  function proxyImg(url: string | null | undefined, width: number, height: number): string {
-    if (!url) return '/no-image.png';
-    if (url.startsWith('/')) return url;
-    return `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//, ''))}&w=${width}&h=${height}&fit=cover&output=webp`;
   }
 
   function defaultPlayerAvatarStyle(seed: string): number {

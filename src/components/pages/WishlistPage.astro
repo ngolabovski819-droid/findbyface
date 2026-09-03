@@ -69,6 +69,7 @@ const C = lang === 'es' ? esC : enC;
 <script>
   import { getWishlist, type WishlistEntry } from '../../lib/wishlist';
   import { creatorCardDataAttributes } from '../../lib/creatorCardUi';
+  import { IMG_ONERROR, proxyImg } from '../../utils/image';
 
   const T = JSON.parse(document.getElementById('i18nWishlistPage')!.textContent!) as Record<string, string>;
   const grid = document.getElementById('wishlistGrid')!;
@@ -78,13 +79,6 @@ const C = lang === 'es' ? esC : enC;
     return String(value ?? '').replace(/[&<>"']/g, character => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
     }[character]!));
-  }
-
-  function proxyImg(url: string, w: number, h: number): string {
-    if (!url) return '/no-image.png';
-    if (url.startsWith('/')) return url;
-    if (!/^https?:\/\//i.test(url)) return '/no-image.png';
-    return `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//i, ''))}&w=${w}&h=${h}&fit=cover&output=webp`;
   }
 
   function safeProfileHref(value: string, username: string): string {
@@ -107,8 +101,8 @@ const C = lang === 'es' ? esC : enC;
     const cardData = creatorCardDataAttributes({ username: entry.username, avatar: entry.avatar });
     return `<div class="creator-card" data-href="${safeUrl}" ${cardData}>
       <div class="card-img-wrap">
-        <img src="${escapeHtml(proxyImg(entry.avatar, 320, 427))}" alt="${safeName}" loading="lazy" decoding="async" referrerpolicy="no-referrer"
-          onerror="this.onerror=null;this.removeAttribute('srcset');this.src='/no-image.png';">
+        <img src="${escapeHtml(proxyImg(entry.avatar, 320, 427))}" alt="${safeName}" loading="lazy" decoding="async" referrerpolicy="no-referrer"${entry.avatar?.startsWith('http') ? ` data-raw="${escapeHtml(entry.avatar)}"` : ''}
+          onerror="${IMG_ONERROR}">
       </div>
       <div class="card-body">
         <p class="creator-name">${safeName}</p>
