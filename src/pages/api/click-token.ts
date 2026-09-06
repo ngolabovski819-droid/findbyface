@@ -40,20 +40,30 @@ export const GET: APIRoute = async ({ url, request }) => {
 
   const tokens: Record<string, string> = {};
 
+  // Which of the requested usernames are actually sponsored. The client sends EVERY /go/
+  // username on the page (src/components/CreatorCardEnhancements.astro), not just sponsored
+  // ones, so on a normal category page this matches nothing at all.
+  const sponsored = !isBotUserAgent(userAgent) && CLICK_TOKEN_SECRET
+    ? usernames.filter((username) => {
+        const override = getSponsorOverride(username);
+        return Boolean(override?.clickTable || override?.linkOverride);
+      })
+    : [];
+
   // BotID classifies this exact fetch (initBotId in src/layouts/Base.astro protects this
-  // path) — a stronger signal than the UA regex below, since it catches scripts that spoof a
+  // path) — a stronger signal than the UA regex above, since it catches scripts that spoof a
   // real browser UA. Doesn't withhold the token itself (Basic-tier BotID can false-positive on
   // things like corporate proxies/VPNs — a real click still deserves to work) — instead the
   // verdict rides along inside the token (src/lib/clickToken.ts) so it shows up as its own
   // signal on the click row (botid_flagged) rather than silently suppressing minting.
-  const botIdVerification = await checkBotId();
-
-  if (!isBotUserAgent(userAgent) && CLICK_TOKEN_SECRET) {
-    for (const username of usernames) {
-      const override = getSponsorOverride(username);
-      if (override?.clickTable || override?.linkOverride) {
-        tokens[username.toLowerCase()] = mintClickToken(username, CLICK_TOKEN_SECRET, botIdVerification.isBot);
-      }
+  //
+  // Called BELOW the sponsor match, not above it: the verdict is only ever read at mint time,
+  // so calling it when nothing matches bought a paid BotID check on essentially every page
+  // view of the site for a value that was then discarded. Output is unchanged either way.
+  if (sponsored.length && CLICK_TOKEN_SECRET) {
+    const botIdVerification = await checkBotId();
+    for (const username of sponsored) {
+      tokens[username.toLowerCase()] = mintClickToken(username, CLICK_TOKEN_SECRET, botIdVerification.isBot);
     }
   }
 
