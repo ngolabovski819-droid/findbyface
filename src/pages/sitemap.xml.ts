@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getCollection } from 'astro:content';
-import { categories } from '../config/categories';
+import { allCategoryStaticPaths } from '../lib/categoryStatic';
 import { staticRoutes } from '../i18n/routes';
 import { SITE } from '../lib/site';
 
@@ -8,8 +8,14 @@ import { SITE } from '../lib/site';
 // that had to be kept in sync with src/config/categories.ts by hand. Category
 // and blog-post URLs are now derived from their actual source of truth, so a
 // new category or post can never silently go missing from here again.
-// Every EN/ES pair emits two <url> entries, each carrying the same
-// xhtml:link hreflang cluster (en + es + x-default → English).
+// Every EN/ES pair emits two <url> entries. Deliberately NO xhtml:link hreflang
+// cluster here: Base.astro already emits <link rel="alternate" hreflang> on every
+// page, derived from src/i18n/routes.ts so new pages get it automatically, and
+// Google wants hreflang declared via ONE of HTML tags / HTTP headers / sitemap,
+// not all three. Duplicating it here bought no extra signal, quadrupled the file,
+// and put XHTML-namespace elements in the document — which makes Chrome suppress
+// its XML tree viewer and render the sitemap as unreadable running text.
+// Verified 2026-09-06: all sitemap URLs carry 3 on-page hreflang tags. Don't re-add.
 export const prerender = true;
 
 interface UrlEntry {
@@ -17,7 +23,6 @@ interface UrlEntry {
   lastmod?: string;
   changefreq?: string;
   priority?: string;
-  alternates?: { en: string; es: string };
 }
 
 // Indexable EN/ES page pairs with their sitemap metadata. Paths must exist in
@@ -44,9 +49,8 @@ const CORE_PAIRS: Array<{ en: string; changefreq: string; priority: string }> = 
 export const GET: APIRoute = async () => {
   const corePages: UrlEntry[] = CORE_PAIRS.flatMap(({ en, changefreq, priority }) => {
     const es = staticRoutes[en];
-    const alternates = es ? { en: `${SITE}${en}`, es: `${SITE}${es}` } : undefined;
-    const entries: UrlEntry[] = [{ loc: `${SITE}${en}`, changefreq, priority, alternates }];
-    if (es) entries.push({ loc: `${SITE}${es}`, changefreq, priority, alternates });
+    const entries: UrlEntry[] = [{ loc: `${SITE}${en}`, changefreq, priority }];
+    if (es) entries.push({ loc: `${SITE}${es}`, changefreq, priority });
     return entries;
   });
 
@@ -59,15 +63,11 @@ export const GET: APIRoute = async () => {
   const postPages: UrlEntry[] = posts.flatMap((post) => {
     const slug = post.id.replace(/\.md$/, '');
     const esSlug = esByTranslationOf.get(slug);
-    const alternates = esSlug
-      ? { en: `${SITE}/blog/${slug}/`, es: `${SITE}/es/blog/${esSlug}/` }
-      : undefined;
     const entries: UrlEntry[] = [{
       loc: `${SITE}/blog/${slug}/`,
       lastmod: post.data.date,
       changefreq: 'monthly',
       priority: '0.6',
-      alternates,
     }];
     if (esSlug) {
       entries.push({
@@ -75,38 +75,44 @@ export const GET: APIRoute = async () => {
         lastmod: post.data.date,
         changefreq: 'monthly',
         priority: '0.6',
-        alternates,
       });
     }
     return entries;
   });
 
-  const categoryPages: UrlEntry[] = categories.flatMap((c) => {
-    const alternates = {
-      en: `${SITE}/categories/${c.slug}/`,
-      es: `${SITE}/es/categorias/${c.slugEs ?? c.slug}/`,
+  // Every prerendered (category, page) pair, not just page 1. The paginated pages at
+  // /categories/<slug>/<n>/ are self-canonical and carry no noindex, so they are a real
+  // indexable surface (~1,745 per locale) — listing only page 1 left ~97% of this site's
+  // URLs discoverable by crawl alone. allCategoryStaticPaths() is memoized per category
+  // inside categoryStatic.ts, so this reuses the fetches the two category routes already
+  // made in the same build instead of paying for them a third time.
+  const categoryPaths = await allCategoryStaticPaths();
+  const categoryPages: UrlEntry[] = categoryPaths.flatMap(({ category: c, page }) => {
+    const suffix = page === 1 ? '' : `${page}/`;
+    const href = {
+      en: `${SITE}/categories/${c.slug}/${suffix}`,
+      es: `${SITE}/es/categorias/${c.slugEs ?? c.slug}/${suffix}`,
     };
+    // Page 1 is the ranking target; deeper pages exist to be crawled through, not to
+    // compete with it — hence the lower priority and slower changefreq.
+    const changefreq = page === 1 ? 'daily' : 'weekly';
+    const priority = page === 1 ? '0.8' : '0.4';
     return [
-      { loc: alternates.en, changefreq: 'daily', priority: '0.8', alternates },
-      { loc: alternates.es, changefreq: 'daily', priority: '0.8', alternates },
+      { loc: href.en, changefreq, priority },
+      { loc: href.es, changefreq, priority },
     ];
   });
 
   const urls = [...corePages, ...postPages, ...categoryPages];
 
-  const altXml = (a?: { en: string; es: string }) => a ? `
-    <xhtml:link rel="alternate" hreflang="en" href="${a.en}"/>
-    <xhtml:link rel="alternate" hreflang="es" href="${a.es}"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="${a.en}"/>` : '';
-
   const body = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls
   .map((u) => {
     const lastmod = u.lastmod ? `\n    <lastmod>${u.lastmod}</lastmod>` : '';
     const changefreq = u.changefreq ? `\n    <changefreq>${u.changefreq}</changefreq>` : '';
     const priority = u.priority ? `\n    <priority>${u.priority}</priority>` : '';
-    return `  <url>\n    <loc>${u.loc}</loc>${altXml(u.alternates)}${lastmod}${changefreq}${priority}\n  </url>`;
+    return `  <url>\n    <loc>${u.loc}</loc>${lastmod}${changefreq}${priority}\n  </url>`;
   })
   .join('\n')}
 </urlset>
