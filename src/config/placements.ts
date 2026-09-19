@@ -34,11 +34,11 @@ export const placements: Record<string, Placement> = {
   },
   'face-search': {
     pinned: [
-      { username: 'cosplaytsumiko', position: 1 },
+      { username: 'emilylopz', position: 1 },
       { username: 'rocketreynaxo', position: 2 },
       { username: 'rinayanami', position: 3 },
       { username: 'hannazuki', position: 4 },
-      { username: 'emilylopz', position: 6 },
+      { username: 'sophiescrts', position: 5 },
     ],
     excluded: [],
   },
@@ -62,11 +62,11 @@ export const placements: Record<string, Placement> = {
   // page's recent-searches dropdown, not its actual result cards.
   'onlyfans-search': {
     pinned: [
-      { username: 'cosplaytsumiko', position: 1 },
+      { username: 'emilylopz', position: 1 },
       { username: 'rocketreynaxo', position: 2 },
       { username: 'rinayanami', position: 4 },
       { username: 'hannazuki', position: 5 },
-      { username: 'emilylopz', position: 6 },
+      { username: 'sophiescrts', position: 7 },
     ],
     excluded: [],
   },
@@ -90,17 +90,20 @@ export function pinAcrossCategories(username: string, position: number, slugs?: 
 }
 
 // Active paid placements — one call per order.
-// Current order (onlyfans-search / categories): cosplaytsumiko 1, rocketreynaxo 2,
-// rinayanami 4, hannazuki 5, emilylopz 6. Position 3 is left to organic creators.
+// Current order (onlyfans-search / categories): emilylopz 1, rocketreynaxo 2,
+// rinayanami 4, hannazuki 5, sophiescrts 7. Positions 3 and 6 are left to organic creators.
 // rinayanami (added 2026-08-26) bought onlyfans-search + all categories + face-search, which
 // bumped hannazuki 4 → 5 on the first two. face-search is pinned separately above and its
-// numbers count AD slots (pos N → grid card 2N-1): tsumiko 1, rocket 2, rinayanami 3,
-// hannazuki 4, emily 6 → cards 1/3/5/7/11, i.e. ad, match, ad, match, ad, match, ad —
-// hannazuki didn't move there, rinayanami just filled the empty slot 3. Home keeps its own
-// pins (hannazuki 3).
-// emilylopz still holds position 1 on the 'home' scope — untouched by these deals.
-pinAcrossCategories('cosplaytsumiko', 1);
+// numbers count AD slots (pos N → grid card 2N-1): emily 1, rocket 2, rinayanami 3,
+// hannazuki 4, sophiescrts 5 → cards 1/3/5/7/9, i.e. ad, match, ad, match, … ad.
+// sophiescrts (added 2026-09-19): face-search slot 5 right after hannazuki, plus position 7 on
+// onlyfans-search and every category.
+// 2026-09-19: cosplaytsumiko's campaign was removed and emilylopz took her position 1 on
+// face-search, onlyfans-search and every category (owner's call); Emily's old position 6 on
+// those scopes is gone rather than left as a second pin. Home keeps its own pins (emilylopz 1,
+// hannazuki 3) — cosplaytsumiko was never on it.
+pinAcrossCategories('emilylopz', 1);
 pinAcrossCategories('rocketreynaxo', 2);
 pinAcrossCategories('rinayanami', 4);
 pinAcrossCategories('hannazuki', 5);
-pinAcrossCategories('emilylopz', 6);
+pinAcrossCategories('sophiescrts', 7);

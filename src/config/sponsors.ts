@@ -40,20 +40,6 @@ export const sponsors: Record<string, SponsorOverride> = {
       (_, index) => `/uploads/sponsors/rocketreynaxo/rocket-${String(index + 1).padStart(2, '0')}.jpg`,
     ),
   },
-  cosplaytsumiko: {
-    linkOverride: 'https://onlyfans.com/cosplaytsumiko/c58',
-    imageOverride: '/uploads/sponsors/cosplaytsumiko/tsumiko-01.jpg',
-    clickTable: 'sponsor_clicks_cosplaytsumiko_fbf',
-    tags: ['cosplay', 'big tits', 'asian'],
-    additionalTagCount: 9,
-    // Client asked for images 1-5 in order, then the rest mixed — the files are already
-    // written to disk in exactly that sequence (see the onboarding note in git history),
-    // so a plain 01..29 run IS the requested order.
-    galleryImages: Array.from(
-      { length: 29 },
-      (_, index) => `/uploads/sponsors/cosplaytsumiko/tsumiko-${String(index + 1).padStart(2, '0')}.jpg`,
-    ),
-  },
   rinayanami: {
     linkOverride: 'https://onlyfans.com/rinayanami/c31',
     imageOverride: '/uploads/sponsors/rinayanami/rina-01.jpg',
@@ -76,6 +62,21 @@ export const sponsors: Record<string, SponsorOverride> = {
     galleryImages: Array.from(
       { length: 7 },
       (_, index) => `/uploads/sponsors/hannazuki/hanna-${String(index + 1).padStart(2, '0')}.jpg`,
+    ),
+  },
+  // Added 2026-09-19: face-search slot 5, #7 on onlyfans-search and every category (see
+  // placements.ts). Same tracking link, tags and 50 processed
+  // images as her fanspedia.net campaign — the files are byte-identical copies of fanspedia's
+  // public/uploads/sponsors/sophiescrts/, already in the client's order.
+  sophiescrts: {
+    linkOverride: 'https://onlyfans.com/sophiescrts/c7',
+    imageOverride: '/uploads/sponsors/sophiescrts/sophie-01.jpg',
+    clickTable: 'sponsor_clicks_sophiescrts_fbf', // scripts/migrations/029_*.sql
+    tags: ['natural big tits', 'brunette'],
+    additionalTagCount: 9,
+    galleryImages: Array.from(
+      { length: 50 },
+      (_, index) => `/uploads/sponsors/sophiescrts/sophie-${String(index + 1).padStart(2, '0')}.jpg`,
     ),
   },
 };

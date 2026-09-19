@@ -16,8 +16,9 @@
 // template. Entries here are copied by hand from each site's own sponsors config +
 // migrations, and need to be updated by hand if a campaign is added/removed/renamed on that
 // site. Verified live against each site's repo on 2026-08-05 (emilylopz) and 2026-08-06
-// (rocketreynaxo, hannazuki), and 2026-08-21 (cosplaytsumiko — fanspedia + onlyaussiefans only;
-// onlyamericanfans has no cosplaytsumiko placement, so there is no _oaf table to read).
+// (rocketreynaxo, hannazuki), and 2026-08-21 (cosplaytsumiko — fanspedia + onlyaussiefans; her
+// onlyamericanfans leg, live from 2026-08-27, was added on 2026-09-19 after it had been missing
+// from the panel: 142 rows in sponsor_clicks_cosplaytsumiko_oaf at the time).
 export interface NetworkClickSource {
   site: string;
   table: string;
@@ -40,8 +41,13 @@ export const networkClickSources: Record<string, NetworkClickSource[]> = {
     { site: 'onlyamericanfans.com', table: 'sponsor_clicks_hannazuki_oaf', timestampColumn: 'clicked_at' },
     { site: 'onlyaussiefans.com', table: 'sponsor_clicks_oaussief_hannazuki', timestampColumn: 'clicked_at' },
   ],
+  // Campaign removed 2026-09-19, so she no longer has an entry in sponsors.ts — which is where
+  // panelStats normally reads findbyface's own table from. Her findbyface leg is listed here
+  // instead so her panel keeps reporting it alongside the sister sites.
   cosplaytsumiko: [
+    { site: 'findbyface.org', table: 'sponsor_clicks_cosplaytsumiko_fbf', timestampColumn: 'created_at' },
     { site: 'fanspedia.net', table: 'sponsor_clicks_cosplaytsumiko', timestampColumn: 'clicked_at' },
+    { site: 'onlyamericanfans.com', table: 'sponsor_clicks_cosplaytsumiko_oaf', timestampColumn: 'clicked_at' },
     { site: 'onlyaussiefans.com', table: 'sponsor_clicks_oaussief_cosplaytsumiko', timestampColumn: 'clicked_at' },
   ],
   // 2026-08-28: all three sister-site legs live. Each table was probed via REST before being
