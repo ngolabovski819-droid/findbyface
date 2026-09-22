@@ -583,17 +583,49 @@ const CLIENT = lang === 'es' ? esClient : enClient;
   // sourceTabAll/Pornstars/Onlyfans. Defaults to both, matching the previous fixed behavior.
   // Irrelevant on the dedicated OnlyFans page (searchMode === 'onlyfans'), which only ever
   // searches its own index and has no tab UI at all.
-  const selectedSources = new Set<'pornstars' | 'onlyfans'>(['pornstars', 'onlyfans']);
+  type SourceName = 'pornstars' | 'onlyfans';
+  type ResultPriority = 'all' | SourceName;
+
+  const selectedSources = new Set<SourceName>(['pornstars', 'onlyfans']);
+  const lastResultSources = new Set<SourceName>();
+  let resultsAreVisible = false;
+  let resultPriority: ResultPriority = 'all';
+
+  function hasVisibleResults(): boolean {
+    return searchMode === 'all' && resultsAreVisible && faceResults.style.display !== 'none';
+  }
 
   function updateSourceTabsUI(): void {
     if (!sourceTabAll || !sourceTabPornstars || !sourceTabOnlyfans) return;
+    if (hasVisibleResults()) {
+      sourceTabAll.setAttribute('aria-pressed', String(resultPriority === 'all'));
+      sourceTabPornstars.setAttribute('aria-pressed', String(resultPriority === 'pornstars'));
+      sourceTabOnlyfans.setAttribute('aria-pressed', String(resultPriority === 'onlyfans'));
+      return;
+    }
     const allSelected = selectedSources.has('pornstars') && selectedSources.has('onlyfans');
     sourceTabAll.setAttribute('aria-pressed', String(allSelected));
     sourceTabPornstars.setAttribute('aria-pressed', String(selectedSources.has('pornstars')));
     sourceTabOnlyfans.setAttribute('aria-pressed', String(selectedSources.has('onlyfans')));
   }
 
-  function toggleSource(source: 'pornstars' | 'onlyfans'): void {
+  function applyResultPriority(priority: ResultPriority, scroll = false): void {
+    if (!hasVisibleResults()) return;
+    if (priority !== 'all' && !lastResultSources.has(priority)) return;
+
+    resultPriority = priority;
+
+    if (priority === 'pornstars' && !pornstarResultsPanel.hidden) {
+      faceResults.insertBefore(pornstarResultsPanel, onlyfansResultsPanel);
+    } else {
+      faceResults.insertBefore(onlyfansResultsPanel, pornstarResultsPanel);
+    }
+
+    updateSourceTabsUI();
+    if (scroll) faceResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function toggleSource(source: SourceName): void {
     if (selectedSources.has(source)) {
       // Never allow deselecting down to zero sources — a search always needs somewhere to go.
       if (selectedSources.size > 1) selectedSources.delete(source);
@@ -604,12 +636,28 @@ const CLIENT = lang === 'es' ? esClient : enClient;
   }
 
   sourceTabAll?.addEventListener('click', () => {
+    if (hasVisibleResults()) {
+      applyResultPriority('all', true);
+      return;
+    }
     selectedSources.add('pornstars');
     selectedSources.add('onlyfans');
     updateSourceTabsUI();
   });
-  sourceTabPornstars?.addEventListener('click', () => toggleSource('pornstars'));
-  sourceTabOnlyfans?.addEventListener('click', () => toggleSource('onlyfans'));
+  sourceTabPornstars?.addEventListener('click', () => {
+    if (hasVisibleResults()) {
+      applyResultPriority('pornstars', true);
+      return;
+    }
+    toggleSource('pornstars');
+  });
+  sourceTabOnlyfans?.addEventListener('click', () => {
+    if (hasVisibleResults()) {
+      applyResultPriority('onlyfans', true);
+      return;
+    }
+    toggleSource('onlyfans');
+  });
   updateSourceTabsUI();
 
   // Only the 'all' mode (homepage) calls /api/video-face-search — see searchPornstarIndex().
@@ -852,6 +900,10 @@ const CLIENT = lang === 'es' ? esClient : enClient;
     uploadDone.style.display = 'none';
     uploadIdle.style.display = 'flex';
     faceResults.style.display = 'none';
+    resultsAreVisible = false;
+    lastResultSources.clear();
+    resultPriority = 'all';
+    updateSourceTabsUI();
     uploadError.style.display = 'none';
     fileInput.value = '';
   });
@@ -1022,6 +1074,11 @@ const CLIENT = lang === 'es' ? esClient : enClient;
     const searchOwnerId = currentAccountId();
     if (!isSignedIn() && getSearchCount() >= 2) { showAuthModal(); return; }
     uploadError.style.display = 'none';
+    faceResults.style.display = 'none';
+    resultsAreVisible = false;
+    lastResultSources.clear();
+    resultPriority = 'all';
+    updateSourceTabsUI();
 
     const dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -1330,7 +1387,19 @@ const CLIENT = lang === 'es' ? esClient : enClient;
     } else {
       pornstarResultsPanel.hidden = true;
     }
+    lastResultSources.clear();
+    if (wantsOnlyfans) lastResultSources.add('onlyfans');
+    if (wantsPornstars) lastResultSources.add('pornstars');
+    if (wantsPornstars && !wantsOnlyfans) {
+      resultPriority = 'pornstars';
+    } else if (wantsOnlyfans && !wantsPornstars) {
+      resultPriority = 'onlyfans';
+    } else {
+      resultPriority = 'all';
+    }
+    resultsAreVisible = true;
     faceResults.style.display = 'block';
+    applyResultPriority(resultPriority);
     faceResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
     // Nudge toward the community stories section — only on pages that render one
     // (the finder pages), never on the homepage, and only when there's a result the
@@ -2478,4 +2547,3 @@ const CLIENT = lang === 'es' ? esClient : enClient;
     color: #fff; border-radius: 8px; padding: 8px; font-size: 13px; font-weight: 600;
   }
 </style>
-
