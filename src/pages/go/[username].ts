@@ -25,7 +25,7 @@
 // so each placement's performance can be measured separately even though the Referer is
 // identical for both.
 import type { APIRoute } from 'astro';
-import { getSponsorOverride } from '../../config/sponsors';
+import { getSponsorOverride, resolveGoAlias } from '../../config/sponsors';
 import { isBotUserAgent } from '../../lib/botDetection';
 import { extractClientIp, hashIp, isDatacenterIp, isRateLimited, extractGeo } from '../../lib/clickIntegrity';
 import { verifyClickToken } from '../../lib/clickToken';
@@ -51,8 +51,14 @@ function derivePlacement(referer: string | null, ownHost: string): string | null
 }
 
 export const GET: APIRoute = async ({ params, request }) => {
-  const username = params.username ?? '';
-  if (!username) return new Response('Not found', { status: 404 });
+  const slug = params.username ?? '';
+  if (!slug) return new Response('Not found', { status: 404 });
+
+  // Vanity aliases (GO_ALIASES in src/config/sponsors.ts): `/go/bigtittytifff` resolves to
+  // emilylopz's linkOverride + clickTable and is logged as placement 'vanity:bigtittytifff',
+  // so every shared link reports separately in the panel. Non-aliases resolve to themselves,
+  // so plain `/go/<username>` is unchanged.
+  const { username, isAlias } = resolveGoAlias(slug);
 
   const override = getSponsorOverride(username);
   const destination = override?.linkOverride || `https://onlyfans.com/${encodeURIComponent(username)}`;
@@ -64,7 +70,9 @@ export const GET: APIRoute = async ({ params, request }) => {
     const referer = request.headers.get('referer');
     const requestUrl = new URL(request.url);
     const slot = requestUrl.searchParams.get('slot');
-    const placement = slot || derivePlacement(referer, requestUrl.host);
+    // A vanity alias self-identifies its placement the same way an explicit ?slot= does.
+    const placement = slot
+      || (isAlias ? `vanity:${slug.trim().toLowerCase()}` : derivePlacement(referer, requestUrl.host));
 
     const clientIp = extractClientIp(request.headers.get('x-forwarded-for'));
     const CLICK_IP_SALT = import.meta.env.CLICK_IP_SALT;

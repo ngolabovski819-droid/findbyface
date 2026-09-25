@@ -88,3 +88,48 @@ export function getSponsorOverride(username: string): SponsorOverride | undefine
   }
   return undefined;
 }
+
+/**
+ * Vanity slugs for the `/go/<slug>` redirect ONLY. Lets a sponsor share
+ * `findbyface.org/go/<anything>` — the OF username of a profile in the owner's promo
+ * sheet, an IG/TikTok persona, a per-campaign name — instead of `/go/<of-username>`.
+ * The route resolves the alias to the target's `linkOverride` + `clickTable` and logs
+ * the click with `placement: 'vanity:<alias>'`, so each shared link reports separately.
+ *
+ * Alias → real OF username, both matched case-insensitively. Adding one is a single
+ * line + deploy: no DNS, no Vercel config, no migration (it reuses the target's table).
+ * Cards, profile pages and click-token minting never see aliases — they key on the
+ * real username via getSponsorOverride().
+ *
+ * Mirrors GO_ALIASES in the fanspedia repo; the two sites' alias lists are independent,
+ * since each promo-sheet row is sold per-site.
+ */
+export const GO_ALIASES: Record<string, string> = {
+  // emilylopz
+  bigtittytifff: 'emilylopz',
+};
+
+const NORMALIZED_ALIASES: Record<string, string> = Object.fromEntries(
+  Object.entries(GO_ALIASES).map(([alias, username]) => [alias.trim().toLowerCase(), username.trim().toLowerCase()]),
+);
+
+// Build-time guard (runs on module load, so a bad config fails the build loudly): an alias
+// that shadows a real sponsor username would silently hijack that sponsor's /go/ link, and
+// an alias pointing at a non-sponsor would redirect but never log.
+for (const [alias, username] of Object.entries(NORMALIZED_ALIASES)) {
+  if (getSponsorOverride(alias)) {
+    throw new Error(`GO_ALIASES: "${alias}" collides with a sponsors username`);
+  }
+  if (!getSponsorOverride(username)) {
+    throw new Error(`GO_ALIASES: "${alias}" points at "${username}", which has no sponsors entry`);
+  }
+}
+
+/**
+ * Resolve a `/go/<slug>` path segment to the real sponsor username. Non-aliases resolve
+ * to themselves unchanged, so existing `/go/<username>` links behave exactly as before.
+ */
+export function resolveGoAlias(slug: string): { username: string; isAlias: boolean } {
+  const target = NORMALIZED_ALIASES[slug.trim().toLowerCase()];
+  return target ? { username: target, isAlias: true } : { username: slug, isAlias: false };
+}
