@@ -60,4 +60,15 @@ export const networkClickSources: Record<string, NetworkClickSource[]> = {
     { site: 'onlyamericanfans.com', table: 'sponsor_clicks_rinayanami_oaf', timestampColumn: 'clicked_at' },
     { site: 'onlyaussiefans.com', table: 'sponsor_clicks_oaussief_rinayanami', timestampColumn: 'clicked_at' },
   ],
+  // 2026-09-26: shares a panel login with emilylopz (same client). Her findbyface leg is NOT
+  // listed here — panelStats reads it from sponsors.ts like every other client — but note that
+  // sponsor_clicks_sophiescrts_fbf did not exist when this was added (migrations/029 was never
+  // run), so that leg reports nothing until it is. Legs below probed via REST on 2026-09-26:
+  // fanspedia 40 rows, onlyaussiefans 147, onlybritishfans 0 (table freshly created). She has
+  // no onlyamericanfans campaign, so there is no _oaf leg.
+  sophiescrts: [
+    { site: 'fanspedia.net', table: 'sponsor_clicks_sophiescrts', timestampColumn: 'clicked_at' },
+    { site: 'onlyaussiefans.com', table: 'sponsor_clicks_oaussief_sophiescrts', timestampColumn: 'clicked_at' },
+    { site: 'onlybritishfans.com', table: 'sponsor_clicks_obf_sophiescrts', timestampColumn: 'clicked_at' },
+  ],
 };
