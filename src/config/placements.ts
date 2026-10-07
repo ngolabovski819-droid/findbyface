@@ -24,11 +24,15 @@ export interface Placement {
 }
 
 export const placements: Record<string, Placement> = {
+  // No caller renders this scope today: the homepage has no creator grid any more, only
+  // UploadBox's face search, whose ads come from 'face-search' below. Kept in step with
+  // the owner's "homepage" order in case a grid comes back.
   home: {
     pinned: [
       { username: 'emilylopz', position: 1 },
       { username: 'rocketreynaxo', position: 2 },
       { username: 'hannazuki', position: 3 },
+      { username: 'sophiescrts', position: 5 },
     ],
     excluded: [],
   },
@@ -36,8 +40,8 @@ export const placements: Record<string, Placement> = {
     pinned: [
       { username: 'emilylopz', position: 1 },
       { username: 'rocketreynaxo', position: 2 },
-      { username: 'rinayanami', position: 3 },
-      { username: 'hannazuki', position: 4 },
+      { username: 'hannazuki', position: 3 },
+      { username: 'rinayanami', position: 4 },
       { username: 'sophiescrts', position: 5 },
     ],
     excluded: [],
@@ -64,9 +68,9 @@ export const placements: Record<string, Placement> = {
     pinned: [
       { username: 'emilylopz', position: 1 },
       { username: 'rocketreynaxo', position: 2 },
+      { username: 'hannazuki', position: 3 },
       { username: 'rinayanami', position: 4 },
-      { username: 'hannazuki', position: 5 },
-      { username: 'sophiescrts', position: 7 },
+      { username: 'sophiescrts', position: 5 },
     ],
     excluded: [],
   },
@@ -90,12 +94,16 @@ export function pinAcrossCategories(username: string, position: number, slugs?: 
 }
 
 // Active paid placements — one call per order.
-// Current order (onlyfans-search / categories): emilylopz 1, rocketreynaxo 2,
-// rinayanami 4, hannazuki 5, sophiescrts 7. Positions 3 and 6 are left to organic creators.
+// Current order (onlyfans-search / categories): emilylopz 1, rocketreynaxo 2, hannazuki 3,
+// rinayanami 4, sophiescrts 5; position 6 onward is organic.
+// 2026-10-07 (owner's call): on the homepage face search, onlyfans-search and every
+// category, hannazuki moved up to 3 and sophiescrts to 5. On face-search that made
+// rinayanami and hannazuki swap ad slots (rinayanami 3 → 4, i.e. grid card 5 → 7); on
+// onlyfans-search and categories rinayanami keeps 4.
 // rinayanami (added 2026-08-26) bought onlyfans-search + all categories + face-search, which
 // bumped hannazuki 4 → 5 on the first two. face-search is pinned separately above and its
-// numbers count AD slots (pos N → grid card 2N-1): emily 1, rocket 2, rinayanami 3,
-// hannazuki 4, sophiescrts 5 → cards 1/3/5/7/9, i.e. ad, match, ad, match, … ad.
+// numbers count AD slots (pos N → grid card 2N-1): emily 1, rocket 2, hannazuki 3,
+// rinayanami 4, sophiescrts 5 → cards 1/3/5/7/9, i.e. ad, match, ad, match, … ad.
 // sophiescrts (added 2026-09-19): face-search slot 5 right after hannazuki, plus position 7 on
 // onlyfans-search and every category.
 // 2026-09-19: cosplaytsumiko's campaign was removed and emilylopz took her position 1 on
@@ -104,6 +112,6 @@ export function pinAcrossCategories(username: string, position: number, slugs?: 
 // hannazuki 3) — cosplaytsumiko was never on it.
 pinAcrossCategories('emilylopz', 1);
 pinAcrossCategories('rocketreynaxo', 2);
+pinAcrossCategories('hannazuki', 3);
 pinAcrossCategories('rinayanami', 4);
-pinAcrossCategories('hannazuki', 5);
-pinAcrossCategories('sophiescrts', 7);
+pinAcrossCategories('sophiescrts', 5);
