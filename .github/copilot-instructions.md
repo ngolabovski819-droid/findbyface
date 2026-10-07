@@ -414,6 +414,8 @@ export async function getStaticPaths() {
   `FAQPage` JSON-LD. Repeating those across 50 URLs is duplicate content competing with
   page 1, and `CategoryBody` → `TopCreators` runs its own query per render.
 - **Sitemap lists page 1 only** — page 2+ is discovered by crawling the pagination links.
+  Never list paginated pages (commit 76172a09 did; it put ~3,500 zero-value URLs in the
+  sitemap and flooded GSC with "Discovered - currently not indexed").
 - **Frozen until redeploy.** Placements/sponsors were already redeploy-gated (they're
   config, not data), so this only extends that to the organic creator list. There is no
   ISR/timer: redeploy to refresh.
@@ -533,6 +535,10 @@ export function buildSrcset(url: string): { src: string; srcset: string; sizes: 
 - Title pattern: "Find [Category] OnlyFans Lookalikes | findbyface"
 - JSON-LD on category pages: BreadcrumbList + ItemList
 - robots.txt: allow all, disallow `/api/`
+- Sitemaps (`src/lib/sitemap.ts`): `/sitemap.xml` is an index of per-template children —
+  `/sitemap/0` core pages, `/sitemap/1` categories (page 1), `/sitemap/2` blog posts. Each
+  is listed in robots.txt and submitted to GSC individually so Page Indexing can be filtered
+  per template. New template = append a child (never reorder; the index is the URL).
 - Trailing slash on all canonical URLs
 
 ---
@@ -545,7 +551,7 @@ The public site is fully mirrored in neutral/LatAm Spanish under `/es/` with **t
 **Single sources of truth:**
 - `src/i18n/routes.ts` — `staticRoutes` maps every EN path → ES path. Consumed by Base.astro
   (hreflang), Nav (links, active-state via `routeKey()`, language switcher), the footer,
-  `sitemap.xml.ts`, and `scripts/check-i18n-routes.mjs`. **Adding a page = add its pair here.**
+  `src/lib/sitemap.ts`, and `scripts/check-i18n-routes.mjs`. **Adding a page = add its pair here.**
 - `src/i18n/ui.ts` — typed dictionary + `t()` for cross-cutting chrome (nav, footer, cards,
   blog chrome). Big self-contained components (UploadBox, SearchStories, VideoFaceSearch,
   AuthPage) keep colocated `enCopy`/`esCopy` dicts in their own frontmatter instead.

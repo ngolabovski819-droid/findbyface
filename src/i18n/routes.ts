@@ -8,7 +8,7 @@ export const defaultLocale: Locale = 'en';
 // EN path -> ES path, both with trailing slash. SINGLE SOURCE OF TRUTH for
 // every static route pair. Consumed by: Base.astro (hreflang cluster),
 // Nav.astro (links, active-state, language switcher), the footer,
-// sitemap.xml.ts, and scripts/check-i18n-routes.mjs.
+// src/lib/sitemap.ts, and scripts/check-i18n-routes.mjs.
 // To keep an English slug for a page, set the value to `/es${enPath}`.
 export const staticRoutes: Record<string, string> = {
   '/':                             '/es/',

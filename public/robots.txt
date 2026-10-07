@@ -6,3 +6,6 @@ Disallow: /go/
 Disallow: /panel
 
 Sitemap: https://findbyface.org/sitemap.xml
+Sitemap: https://findbyface.org/sitemap/0
+Sitemap: https://findbyface.org/sitemap/1
+Sitemap: https://findbyface.org/sitemap/2
