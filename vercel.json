@@ -7,6 +7,61 @@
       "schedule": "0 8 * * *"
     }
   ],
+  "redirects": [
+    {
+      "source": "/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.findbyface.org"
+        }
+      ],
+      "destination": "https://findbyface.org/:path",
+      "permanent": true
+    },
+    {
+      "source": "/categories",
+      "destination": "/categories/top/",
+      "permanent": true
+    },
+    {
+      "source": "/categories/",
+      "destination": "/categories/top/",
+      "permanent": true
+    },
+    {
+      "source": "/es/categorias",
+      "destination": "/es/categorias/top/",
+      "permanent": true
+    },
+    {
+      "source": "/es/categorias/",
+      "destination": "/es/categorias/top/",
+      "permanent": true
+    },
+    {
+      "source": "/sitemap",
+      "has": [
+        {
+          "type": "host",
+          "value": "findbyface.org"
+        }
+      ],
+      "destination": "/sitemap/",
+      "permanent": true
+    },
+    {
+      "source": "/:path((?:about|battle|blog|categories|community-guidelines|contact|dmca|how-our-search-engine-works|onlyfans-finder-by-face|onlyfans-search|pornstar-finder-by-face|privacy-policy|promote|terms-of-use|video-search|es)(?:/[^/.]+)*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "findbyface.org"
+        }
+      ],
+      "destination": "/:path/",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/149e9513-01fa-4fb0-aad4-566afd725d1b/2d206a39-8ed7-437e-a3be-862e0f06eea3/a-4-a/c.js",

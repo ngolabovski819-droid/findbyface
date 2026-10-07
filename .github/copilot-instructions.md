@@ -540,6 +540,13 @@ export function buildSrcset(url: string): { src: string; srcset: string; sizes: 
   is listed in robots.txt and submitted to GSC individually so Page Indexing can be filtered
   per template. New template = append a child (never reorder; the index is the URL).
 - Trailing slash on all canonical URLs
+- Redirects live in `vercel.json` (it IS applied in production — the BotID rewrites prove it):
+  `www.findbyface.org` → apex (308); `/categories/` and `/es/categorias/` → `…/top/`; and a
+  trailing-slash 308 for page routes only, via an allowlist of first path segments on the apex
+  host. A new top-level page route must be added to that allowlist. Never add `/api`, `/go`,
+  `/auth`, `/_image`, `/sitemap/<n>` or panel paths — client code fetches those without a slash.
+  Don't use Astro `trailingSlash: 'always'` or vercel.json `trailingSlash: true`: both are
+  site-wide and would 308 every extensionless endpoint.
 
 ---
 
