@@ -35,8 +35,10 @@ export const sponsors: Record<string, SponsorOverride> = {
     imageOverride: '/uploads/sponsors/rocketreynaxo/rocket-01.jpg',
     clickTable: 'sponsor_clicks_rocketreynaxo_fbf',
     tags: ['asian milf', 'busty', 'curvy'],
+    // 01-03 added 2026-10-07 in front of the original set (client's 1, 2, 3); the
+    // original 01-10 were renumbered to 04-13, so this array is still display order.
     galleryImages: Array.from(
-      { length: 10 },
+      { length: 13 },
       (_, index) => `/uploads/sponsors/rocketreynaxo/rocket-${String(index + 1).padStart(2, '0')}.jpg`,
     ),
   },
@@ -59,8 +61,10 @@ export const sponsors: Record<string, SponsorOverride> = {
     imageOverride: '/uploads/sponsors/hannazuki/hanna-01.jpg',
     clickTable: 'sponsor_clicks_hannazuki_fbf',
     tags: ['asian', 'cosplay', 'egirl', 'GFE'],
+    // 01-04 added 2026-10-07 in front of the original set (client's 1.1, 2.2, 2.3, 2.4);
+    // the original 01-07 were renumbered to 05-11, so this array is still display order.
     galleryImages: Array.from(
-      { length: 7 },
+      { length: 11 },
       (_, index) => `/uploads/sponsors/hannazuki/hanna-${String(index + 1).padStart(2, '0')}.jpg`,
     ),
   },
