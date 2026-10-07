@@ -43,6 +43,11 @@ const pageDesc = page === 1
 
 const isFirstPage = page === 1;
 
+// Page 2+ is noindex,follow (owner's call, 2026-10-07): these pages exist so visitors and
+// crawlers can page through a category, never to rank. Not one has had an impression.
+// `follow` keeps the creator links crawlable; Base.astro drops hreflang on noindex pages.
+const robots = isFirstPage ? undefined : 'noindex, follow';
+
 // Lookup key is always the ENGLISH slug (category.slug), matching how categoryContent.ts
 // is keyed. This same array feeds both the JSON-LD below and the visible FAQ in
 // CategoryBody, so they can't drift apart.
@@ -86,7 +91,7 @@ if (isFirstPage) {
 const jsonLd = JSON.stringify({ '@context': 'https://schema.org', '@graph': graph });
 ---
 
-<Base title={pageTitle} description={pageDesc} canonical={canonical} alternate={alternate}>
+<Base title={pageTitle} description={pageDesc} canonical={canonical} alternate={alternate} robots={robots}>
   <Fragment slot="head">
     <script type="application/ld+json" set:html={jsonLd} />
     {page > 1 && <link rel="prev" href={absUrl(page === 2 ? `${baseUrl}/` : `${baseUrl}/${page - 1}/`)} />}

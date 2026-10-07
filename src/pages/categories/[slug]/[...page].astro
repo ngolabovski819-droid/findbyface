@@ -51,6 +51,11 @@ const pageDesc = page === 1
 // across 50 paginated URLs would just be duplicate content competing with page 1.
 const isFirstPage = page === 1;
 
+// Page 2+ is noindex,follow (owner's call, 2026-10-07): these pages exist so visitors and
+// crawlers can page through a category, never to rank. Not one has had an impression.
+// `follow` keeps the creator links crawlable; Base.astro drops hreflang on noindex pages.
+const robots = isFirstPage ? undefined : 'noindex, follow';
+
 // Pilot categories (src/config/categoryContent.ts) supply their own hand-written
 // FAQ; everything else falls back to the generic templated one. Either way, this
 // same array feeds both the JSON-LD below AND the visible FAQ in CategoryBody —
@@ -94,7 +99,7 @@ if (isFirstPage) {
 const jsonLd = JSON.stringify({ '@context': 'https://schema.org', '@graph': graph });
 ---
 
-<Base title={pageTitle} description={pageDesc} canonical={canonical} alternate={alternate}>
+<Base title={pageTitle} description={pageDesc} canonical={canonical} alternate={alternate} robots={robots}>
   <Fragment slot="head">
     <script type="application/ld+json" set:html={jsonLd} />
     {page > 1 && <link rel="prev" href={absUrl(page === 2 ? `${baseUrl}/` : `${baseUrl}/${page - 1}/`)} />}
