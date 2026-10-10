@@ -85,6 +85,11 @@ const enCopy = {
   unlockBanner: '🔒 <strong>8 more matches found</strong> — sign in free to see all',
   createFreeAccount: 'Create free account',
   logIn: 'Log in',
+  selectFace: 'Select the face',
+  tryAnotherPhoto: 'Try another photo',
+  faceSelectTitle: 'Select the face',
+  faceSelectSub: "Drag a box around the face in your photo and we'll search that area.",
+  faceSelectSearch: 'Search this face',
 };
 
 const esCopy: typeof enCopy = {
@@ -156,6 +161,11 @@ const esCopy: typeof enCopy = {
   unlockBanner: '🔒 <strong>8 coincidencias más encontradas</strong> — inicia sesión gratis para verlas todas',
   createFreeAccount: 'Crear cuenta gratis',
   logIn: 'Iniciar sesión',
+  selectFace: 'Seleccionar el rostro',
+  tryAnotherPhoto: 'Probar otra foto',
+  faceSelectTitle: 'Selecciona el rostro',
+  faceSelectSub: 'Arrastra un recuadro alrededor del rostro en tu foto y buscaremos en esa zona.',
+  faceSelectSearch: 'Buscar este rostro',
 };
 
 const C = lang === 'es' ? esCopy : enCopy;
@@ -169,6 +179,12 @@ const enClient = {
   psResultsUnavailable: 'Pornstar video results were unavailable for this search.',
   loadingModels: 'Loading face detection models (first load may take ~15s)...',
   detectingFace: 'Detecting face in your photo...',
+  detectingFaceCloser: 'Taking a closer look at your photo...',
+  weakFaceNotice: "We weren't fully sure about the face in this photo, so these matches may be less accurate. A closer, front-facing photo works best.",
+  noFaceNotice: "We couldn't find a face in this photo. Select the face yourself or try another photo. In the meantime, here are some popular creators.",
+  popularHeading: 'Popular creators',
+  faceSelectNoFace: "We still couldn't find a face there. Try drawing the box around just the face.",
+  faceSelectBusy: 'Searching…',
   searchingBoth: 'Searching creator profiles and indexed videos...',
   searchingVideos: 'Searching indexed videos...',
   ofUnavailable: 'OnlyFans creator search was unavailable.',
@@ -223,6 +239,12 @@ const esClient: Record<keyof typeof enClient, string> = {
   psResultsUnavailable: 'Los resultados de video no estuvieron disponibles para esta búsqueda.',
   loadingModels: 'Cargando modelos de detección facial (la primera vez puede tardar ~15s)...',
   detectingFace: 'Detectando el rostro en tu foto...',
+  detectingFaceCloser: 'Revisando tu foto más de cerca...',
+  weakFaceNotice: 'No estábamos del todo seguros del rostro en esta foto, así que estas coincidencias pueden ser menos precisas. Una foto más cercana y de frente funciona mejor.',
+  noFaceNotice: 'No encontramos un rostro en esta foto. Selecciona el rostro manualmente o prueba con otra foto. Mientras tanto, aquí tienes algunas creadoras populares.',
+  popularHeading: 'Creadoras populares',
+  faceSelectNoFace: 'Seguimos sin encontrar un rostro ahí. Intenta dibujar el recuadro solo alrededor del rostro.',
+  faceSelectBusy: 'Buscando…',
   searchingBoth: 'Buscando perfiles de creadoras y videos indexados...',
   searchingVideos: 'Buscando videos indexados...',
   ofUnavailable: 'La búsqueda de creadoras de OnlyFans no estuvo disponible.',
@@ -316,6 +338,25 @@ const CLIENT = lang === 'es' ? esClient : enClient;
       {C.authGoogle}
     </a>
     <button class="auth-skip" id="authSkip">{C.authSkip}</button>
+  </div>
+</div>
+
+<!-- Manual face selection, offered when auto-detection is unsure or finds nothing -->
+<div id="faceSelectModal" class="auth-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="faceSelectTitle">
+  <div class="auth-backdrop" id="faceSelectBackdrop"></div>
+  <div class="auth-box face-select-box">
+    <button class="auth-close" id="faceSelectClose" aria-label={C.close}>×</button>
+    <h3 id="faceSelectTitle">{C.faceSelectTitle}</h3>
+    <p>{C.faceSelectSub}</p>
+    <div class="face-select-stage" id="faceSelectStage">
+      <img id="faceSelectImg" alt="" draggable="false" />
+      <div class="face-select-rect" id="faceSelectRect"></div>
+    </div>
+    <p class="face-select-error" id="faceSelectError" style="display:none"></p>
+    <div class="terms-actions">
+      <button class="terms-cancel-btn" id="faceSelectCancel">{C.termsCancel}</button>
+      <button class="terms-agree-btn" id="faceSelectSearchBtn" disabled>{C.faceSelectSearch}</button>
+    </div>
   </div>
 </div>
 
@@ -457,6 +498,10 @@ const CLIENT = lang === 'es' ? esClient : enClient;
   <div id="onlyfansResultsPanel" class="result-source-panel">
     <h3 class="result-panel-heading">♡ OnlyFans <span id="onlyfansResultCount"></span></h3>
     <div id="onlyfansPanelNotice" class="result-panel-notice" style="display:none"></div>
+    <div id="faceFallbackActions" class="face-fallback-actions" style="display:none">
+      <button type="button" id="selectFaceBtn" class="select-face-btn">{C.selectFace}</button>
+      <button type="button" id="tryAnotherBtn" class="new-search-btn">{C.tryAnotherPhoto}</button>
+    </div>
     <div id="shareCta" class="share-cta" style="display:none">
       <span class="share-cta-step">1</span>
       <span class="share-cta-arrow" aria-hidden="true">→</span>
@@ -575,6 +620,7 @@ const CLIENT = lang === 'es' ? esClient : enClient;
   const pornstarPanelNotice = document.getElementById('pornstarPanelNotice')!;
   const pornstarResultsMeta = document.getElementById('pornstarResultsMeta')!;
   const pornstarResultsGrid = document.getElementById('pornstarResultsGrid')!;
+  const faceFallbackActions = document.getElementById('faceFallbackActions')!;
   const searchMode = document.getElementById('onlyfans-finder')?.dataset.searchMode === 'onlyfans'
     ? 'onlyfans'
     : 'all';
@@ -682,6 +728,11 @@ const CLIENT = lang === 'es' ? esClient : enClient;
   let allFaceResults: Record<string, unknown>[] = [];
   let faceShownCount = 0;
   let currentFaceSearchMode: string | undefined;
+  // What the OnlyFans grid is currently showing: real face matches, matches from a face the
+  // detector was unsure about ('weak' — note shown, no match %), or popular creators because
+  // no face was found at all ('popular' — nothing locked, saved or shareable as "matches").
+  type ResultKind = 'match' | 'weak' | 'popular';
+  let resultKind: ResultKind = 'match';
   const FACE_PAGE_SIZE = 12;
   const FREE_REGULAR_RESULT_COUNT = 15;
   const PENDING_FACE_RESULTS_KEY = 'fbf_pending_face_results';
@@ -713,7 +764,7 @@ const CLIENT = lang === 'es' ? esClient : enClient;
   }
 
   function savePendingFaceResults(setAuthReturn = false): void {
-    if (allFaceResults.length === 0) return;
+    if (allFaceResults.length === 0 || resultKind === 'popular') return;
     const returnPath = faceResultsReturnPath();
     const payload: PendingFaceResults = {
       version: 1,
@@ -1012,12 +1063,96 @@ const CLIENT = lang === 'es' ? esClient : enClient;
     _modelsLoaded = true;
   }
 
-  async function detectDescriptor(faceapi: any, img: HTMLImageElement): Promise<Float32Array | null> {
-    const result = await faceapi
-      .detectSingleFace(img, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.4 }))
+  // SSD MobileNet shrinks the whole photo to 512x512 before it looks for faces, so a face
+  // that is small in the frame (full-body shots, feet in the foreground) can score under
+  // FACE_MIN_SCORE even when it's clearly visible. Two such uploads scored 0.37 and 0.23
+  // on the full photo, then 0.98 and 0.95 on a crop around the face. So detection runs in
+  // passes, each tried only when the previous one found nothing:
+  //   'full'  today's single check on the whole photo, unchanged
+  //   'crop'  weak candidates re-checked on a crop around each one, at the normal bar
+  //   'weak'  the best candidate that never cleared the bar: results get shown with a
+  //           lower-accuracy note and no match percentages
+  //   'none'  nothing face-like at all: the caller shows popular creators rather than
+  //           pretending to match a face that isn't there
+  // The fallback passes stop once FALLBACK_BUDGET_MS has gone by, so a slow CPU-only device
+  // gets fewer passes instead of hitting DETECT_TIMEOUT_MS.
+  const FACE_MIN_SCORE = 0.4;
+  const WEAK_FACE_MIN_SCORE = 0.15;
+  const CANDIDATE_CROP_SCALE = 3;
+  const MANUAL_CROP_SCALE = 1.6;
+  const MAX_FACE_CANDIDATES = 3;
+  const FALLBACK_BUDGET_MS = 25_000;
+  const DETECT_TIMEOUT_MS = 45_000;
+
+  type FaceTier = 'full' | 'crop' | 'weak' | 'none';
+  type FaceDetectResult = { tier: FaceTier; descriptor: Float32Array | null };
+  type FaceBox = { x: number; y: number; width: number; height: number };
+
+  // Square crop of `scale` times the box's longer side, centred on the box and kept
+  // inside the image, so the face fills far more of what the detector sees.
+  function cropAroundBox(source: HTMLImageElement | HTMLCanvasElement, box: FaceBox, scale: number): HTMLCanvasElement {
+    const sourceWidth = source instanceof HTMLImageElement ? source.naturalWidth : source.width;
+    const sourceHeight = source instanceof HTMLImageElement ? source.naturalHeight : source.height;
+    const side = Math.max(box.width, box.height) * scale;
+    const width = Math.min(side, sourceWidth);
+    const height = Math.min(side, sourceHeight);
+    const left = Math.max(0, Math.min(sourceWidth - width, box.x + box.width / 2 - width / 2));
+    const top = Math.max(0, Math.min(sourceHeight - height, box.y + box.height / 2 - height / 2));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(width));
+    canvas.height = Math.max(1, Math.round(height));
+    canvas.getContext('2d')!.drawImage(source, left, top, width, height, 0, 0, canvas.width, canvas.height);
+    return canvas;
+  }
+
+  async function detectFace(
+    faceapi: any,
+    source: HTMLImageElement | HTMLCanvasElement,
+    onFallback?: () => void,
+  ): Promise<FaceDetectResult> {
+    const options = (minConfidence: number, maxResults?: number) =>
+      new faceapi.SsdMobilenetv1Options(maxResults ? { minConfidence, maxResults } : { minConfidence });
+    const describe = (input: HTMLImageElement | HTMLCanvasElement, minConfidence: number) => faceapi
+      .detectSingleFace(input, options(minConfidence))
       .withFaceLandmarks()
       .withFaceDescriptor();
-    return result?.descriptor ?? null;
+
+    const startedAt = performance.now();
+    const overBudget = () => performance.now() - startedAt > FALLBACK_BUDGET_MS;
+
+    const full = await describe(source, FACE_MIN_SCORE);
+    if (full) return { tier: 'full', descriptor: full.descriptor };
+
+    onFallback?.();
+    const candidates = await faceapi.detectAllFaces(source, options(WEAK_FACE_MIN_SCORE, MAX_FACE_CANDIDATES));
+    let weak: { score: number; descriptor: Float32Array } | null = null;
+    for (const candidate of candidates) {
+      if (overBudget()) break;
+      const hit = await describe(cropAroundBox(source, candidate.box, CANDIDATE_CROP_SCALE), WEAK_FACE_MIN_SCORE);
+      if (!hit) continue;
+      if (hit.detection.score >= FACE_MIN_SCORE) return { tier: 'crop', descriptor: hit.descriptor };
+      if (!weak || hit.detection.score > weak.score) weak = { score: hit.detection.score, descriptor: hit.descriptor };
+    }
+    if (!weak && candidates.length > 0 && !overBudget()) {
+      const hit = await describe(source, WEAK_FACE_MIN_SCORE);
+      if (hit) weak = { score: hit.detection.score, descriptor: hit.descriptor };
+    }
+    return weak ? { tier: 'weak', descriptor: weak.descriptor } : { tier: 'none', descriptor: null };
+  }
+
+  // One GA4 event per detection, so we can see how often each fallback pass is needed.
+  // Base.astro's gtag() is module-scoped (Astro bundles that <script>), so window.gtag
+  // doesn't exist; push an `arguments` object straight onto dataLayer, which is the
+  // shape gtag.js reads.
+  function trackFaceDetect(tier: FaceTier, source: 'upload' | 'manual'): void {
+    const w = window as typeof window & { gtag?: (...args: unknown[]) => void; dataLayer?: unknown[] };
+    const params = { tier, source, finder: searchMode };
+    if (typeof w.gtag === 'function') {
+      w.gtag('event', 'face_detect', params);
+    } else if (Array.isArray(w.dataLayer)) {
+      const dataLayer = w.dataLayer;
+      (function (..._args: unknown[]) { dataLayer.push(arguments); })('event', 'face_detect', params);
+    }
   }
 
   function storedAccessToken(): string | null {
@@ -1070,9 +1205,67 @@ const CLIENT = lang === 'es' ? esClient : enClient;
     }
   }
 
+  async function searchFaceMatches(descriptor: Float32Array, tier: FaceTier): Promise<any> {
+    let data: any;
+    try {
+      const resp = await fetch('/api/face-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ descriptor: Array.from(descriptor) }),
+      });
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => `HTTP ${resp.status}`);
+        throw new Error(`API ${resp.status}: ${errText.slice(0, 120)}`);
+      }
+      data = await resp.json();
+    } catch (e: any) {
+      throw new Error(`Search API failed: ${e?.message ?? e}`);
+    }
+    // Similarity against a face the detector wasn't sure about would overstate the match.
+    if (tier === 'weak' && Array.isArray(data.results)) {
+      data.results = data.results.map((c: Record<string, unknown>) => ({ ...c, matchPct: null }));
+    }
+    return data;
+  }
+
+  // No face at all: show the same list as the /onlyfans-search/ grid (sponsor slots
+  // included) instead of a dead-end error. Only if that also fails does the error stand.
+  const POPULAR_FALLBACK_COUNT = 24;
+  async function fetchPopularCreators(): Promise<{ results: Record<string, unknown>[] }> {
+    try {
+      const resp = await fetch(`/api/search?scope=onlyfans-search&page_size=${POPULAR_FALLBACK_COUNT}`);
+      if (resp.ok) {
+        const payload = await resp.json();
+        if (Array.isArray(payload.creators) && payload.creators.length > 0) return { results: payload.creators };
+      }
+    } catch { /* fall through to the error below */ }
+    throw new Error(T.noFaceDetected);
+  }
+
+  function announceSearchProof(data: any): void {
+    if (searchMode !== 'onlyfans' || typeof data.searchProof !== 'string') return;
+    try { sessionStorage.setItem('fbf_search_proof_onlyfans', data.searchProof); } catch { /* storage can be unavailable */ }
+    window.dispatchEvent(new CustomEvent('fbf:search-complete', {
+      detail: { finder: 'onlyfans', searchProof: data.searchProof },
+    }));
+  }
+
+  // The last upload, kept so "Select the face" can re-search a region of the same photo
+  // without re-running the pornstar search or the free-search gate.
+  type LastSearch = {
+    dataUrl: string;
+    ownerId: ReturnType<typeof currentAccountId>;
+    wantsOnlyfans: boolean;
+    wantsPornstars: boolean;
+    pornstarData: HomepageVideoResponse;
+    counted: boolean;
+  };
+  let lastSearch: LastSearch | null = null;
+
   async function handleFile(file: File): Promise<void> {
     const searchOwnerId = currentAccountId();
     if (!isSignedIn() && getSearchCount() >= 2) { showAuthModal(); return; }
+    lastSearch = null;
     uploadError.style.display = 'none';
     faceResults.style.display = 'none';
     resultsAreVisible = false;
@@ -1107,6 +1300,7 @@ const CLIENT = lang === 'es' ? esClient : enClient;
 
     try {
       let data: any = { results: [], mode: undefined };
+      let kind: ResultKind = 'match';
 
       if (wantsOnlyfans) {
         // Phase 1: load models
@@ -1125,41 +1319,39 @@ const CLIENT = lang === 'es' ? esClient : enClient;
         img.src = dataUrl;
         await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error(T.imageDecodeFailed)); });
 
-        let descriptor: Float32Array | null;
+        let detected: FaceDetectResult;
         try {
-          descriptor = await withTimeout(detectDescriptor(faceapi, img), 30000, 'face detection');
+          detected = await withTimeout(
+            detectFace(faceapi, img, () => setProgressLabel(T.detectingFaceCloser)),
+            DETECT_TIMEOUT_MS,
+            'face detection',
+          );
         } catch (e: any) {
           throw new Error(`Face detection failed: ${e?.message ?? e}`);
         }
+        trackFaceDetect(detected.tier, 'upload');
 
-        if (!descriptor) {
-          throw new Error(T.noFaceDetected);
-        }
-
-        // Phase 3: search API
-        setProgressLabel(wantsPornstars
-          ? T.searchingBoth
-          : T.searchingOF);
-        try {
-          const resp = await fetch('/api/face-search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ descriptor: Array.from(descriptor) }),
-          });
-          if (!resp.ok) {
-            const errText = await resp.text().catch(() => `HTTP ${resp.status}`);
-            throw new Error(`API ${resp.status}: ${errText.slice(0, 120)}`);
-          }
-          data = await resp.json();
-        } catch (e: any) {
-          throw new Error(`Search API failed: ${e?.message ?? e}`);
+        if (detected.descriptor) {
+          // Phase 3: search API
+          setProgressLabel(wantsPornstars
+            ? T.searchingBoth
+            : T.searchingOF);
+          data = await searchFaceMatches(detected.descriptor, detected.tier);
+          if (detected.tier === 'weak') kind = 'weak';
+        } else {
+          data = await fetchPopularCreators();
+          kind = 'popular';
         }
       } else {
         setProgressLabel(T.searchingVideos);
       }
 
       const pornstarData = await pornstarSearch;
-      incrementSearchCount();
+      // A no-face upload only counts toward the free searches if the video search still
+      // returned something; otherwise "Select the face" gets the visitor's search instead.
+      const counted = kind !== 'popular' || (wantsPornstars && pornstarData.ok);
+      if (counted) incrementSearchCount();
+      lastSearch = { dataUrl, ownerId: searchOwnerId, wantsOnlyfans, wantsPornstars, pornstarData, counted };
       await new Promise(r => setTimeout(r, 300));
       stopScanFX();
       uploadScanning.style.display = 'none';
@@ -1169,15 +1361,11 @@ const CLIENT = lang === 'es' ? esClient : enClient;
       const topName = results[0] ? ((results[0].name || results[0].username) as string) : undefined;
       // Each requested source owns exactly one history record. In video-only mode
       // `data.results` is deliberately empty, so never mislabel it as creator history.
-      if (wantsOnlyfans) recordCreatorSearchHistory(results, topName, searchOwnerId);
+      // Popular creators aren't matches, so they never become a history entry.
+      if (wantsOnlyfans && kind !== 'popular') recordCreatorSearchHistory(results, topName, searchOwnerId);
       if (wantsPornstars && pornstarData.ok) recordVideoSearchHistory(pornstarData, searchOwnerId);
-      showResults(results, data.mode, pornstarData, undefined, wantsOnlyfans, wantsPornstars);
-      if (searchMode === 'onlyfans' && typeof data.searchProof === 'string') {
-        try { sessionStorage.setItem('fbf_search_proof_onlyfans', data.searchProof); } catch { /* storage can be unavailable */ }
-        window.dispatchEvent(new CustomEvent('fbf:search-complete', {
-          detail: { finder: 'onlyfans', searchProof: data.searchProof },
-        }));
-      }
+      showResults(results, data.mode, pornstarData, undefined, wantsOnlyfans, wantsPornstars, kind);
+      announceSearchProof(data);
     } catch (err: any) {
       const pornstarData = await pornstarSearch;
       stopScanFX();
@@ -1218,8 +1406,9 @@ const CLIENT = lang === 'es' ? esClient : enClient;
     const profileUrl = (c.profileUrl as string) || `https://onlyfans.com/${encodeURIComponent(c.username as string)}`;
     const rel = (profileUrl as string).startsWith('/go/') ? 'noopener nofollow sponsored' : 'noopener nofollow';
     // Keep the first 15 regular results visible to signed-out visitors. Sponsored cards
-    // are not part of that count and always remain visible and clearly disclosed.
-    const locked = !signedIn && !isSponsored && regularResultPosition > FREE_REGULAR_RESULT_COUNT;
+    // are not part of that count and always remain visible and clearly disclosed. Popular
+    // creators (no-face fallback) are public listings, so they're never locked.
+    const locked = !signedIn && !isSponsored && resultKind !== 'popular' && regularResultPosition > FREE_REGULAR_RESULT_COUNT;
 
     if (locked) {
       const unlockHref = authHref('/signup/');
@@ -1359,27 +1548,36 @@ const CLIENT = lang === 'es' ? esClient : enClient;
     onlyfansError?: string,
     wantsOnlyfans: boolean = true,
     wantsPornstars: boolean = searchMode === 'all',
+    kind: ResultKind = 'match',
   ): void {
     const heading = document.querySelector('.results-heading') as HTMLElement | null;
     if (heading) {
-      heading.textContent = T.yourMatches;
+      // Video matches can share the page with the popular list, so only retitle it when
+      // the popular list is all there is.
+      heading.textContent = kind === 'popular' && !wantsPornstars ? T.popularHeading : T.yourMatches;
     }
+    resultKind = kind;
     allFaceResults = results;
     currentFaceSearchMode = mode;
     faceShownCount = 0;
     faceResultsGrid.innerHTML = '';
     if (shareCta) shareCta.style.display = 'none';
     renderNextFacePage();
+    // The popular list is short and has no "matches" to page through, so show it whole.
+    if (kind === 'popular') while (faceShownCount < allFaceResults.length) renderNextFacePage();
     updateCopyBtn();
     configureUnlockLinks();
     if (!isSignedIn()) savePendingFaceResults();
     onlyfansResultCount.textContent = onlyfansError ? T.unavailable : `(${results.length})`;
-    onlyfansPanelNotice.style.display = onlyfansError || results.length === 0 ? 'block' : 'none';
-    onlyfansPanelNotice.textContent = onlyfansError || (results.length === 0
-      ? T.noOFMatches
-      : '');
+    const notice = onlyfansError
+      || (kind === 'popular' ? T.noFaceNotice : '')
+      || (kind === 'weak' ? T.weakFaceNotice : '')
+      || (results.length === 0 ? T.noOFMatches : '');
+    onlyfansPanelNotice.style.display = notice ? 'block' : 'none';
+    onlyfansPanelNotice.textContent = notice;
+    faceFallbackActions.style.display = !onlyfansError && kind !== 'match' ? 'flex' : 'none';
     onlyfansResultsPanel.hidden = !wantsOnlyfans;
-    copyResultsBtn.style.display = wantsOnlyfans ? 'inline-flex' : 'none';
+    copyResultsBtn.style.display = wantsOnlyfans && kind !== 'popular' ? 'inline-flex' : 'none';
 
     if (searchMode === 'all' && wantsPornstars) {
       renderPornstarResults(pornstarPayload ?? { ok: false, error: T.psResultsUnavailable });
@@ -1404,7 +1602,7 @@ const CLIENT = lang === 'es' ? esClient : enClient;
     // Nudge toward the community stories section — only on pages that render one
     // (the finder pages), never on the homepage, and only when there's a result the
     // visitor could plausibly be thankful for.
-    if (storiesNudge) storiesNudge.hidden = !(results.length > 0 && document.querySelector('[data-search-stories]'));
+    if (storiesNudge) storiesNudge.hidden = !(kind !== 'popular' && results.length > 0 && document.querySelector('[data-search-stories]'));
   }
 
   function restorePendingFaceResults(): void {
@@ -1492,7 +1690,7 @@ const CLIENT = lang === 'es' ? esClient : enClient;
       .length;
 
     // Unlock banner: shown once a locked regular result has been rendered.
-    if (!signedIn && shownRegularResults > FREE_REGULAR_RESULT_COUNT) {
+    if (!signedIn && resultKind !== 'popular' && shownRegularResults > FREE_REGULAR_RESULT_COUNT) {
       unlockBannerText.innerHTML = T.moreLocked;
       unlockBanner.style.display = 'flex';
     } else {
@@ -1569,6 +1767,165 @@ const CLIENT = lang === 'es' ? esClient : enClient;
       copyResultsBtn.title = T.copyTitleSignIn;
     }
   }
+
+  // ── "Select the face" ─────────────────────────────────────────────────────
+  // Offered under weak-face and no-face results: the visitor drags a box over the face and
+  // the same detection passes run on a crop of that area, then the normal search runs.
+  const faceSelectModal     = document.getElementById('faceSelectModal')!;
+  const faceSelectStage     = document.getElementById('faceSelectStage')!;
+  const faceSelectImg       = document.getElementById('faceSelectImg') as HTMLImageElement;
+  const faceSelectRect      = document.getElementById('faceSelectRect')!;
+  const faceSelectError     = document.getElementById('faceSelectError')!;
+  const faceSelectSearchBtn = document.getElementById('faceSelectSearchBtn') as HTMLButtonElement;
+  const faceSelectSearchLabel = faceSelectSearchBtn.textContent ?? '';
+  // In displayed pixels. Kept small: a face that is tiny in a big photo is exactly the case
+  // this tool is for, and the crop is enlarged by MANUAL_CROP_SCALE before detection anyway.
+  const MIN_SELECTION_PX = 8;
+
+  let faceSelection: { x: number; y: number; width: number; height: number } | null = null;
+  let faceSelectDragStart: { x: number; y: number } | null = null;
+  let faceSelectBusy = false;
+
+  function drawFaceSelection(): void {
+    const sel = faceSelection;
+    if (!sel || sel.width < 2 || sel.height < 2) {
+      faceSelectRect.style.display = 'none';
+      return;
+    }
+    faceSelectRect.style.display = 'block';
+    faceSelectRect.style.left = `${sel.x}px`;
+    faceSelectRect.style.top = `${sel.y}px`;
+    faceSelectRect.style.width = `${sel.width}px`;
+    faceSelectRect.style.height = `${sel.height}px`;
+  }
+
+  function setFaceSelectError(message: string): void {
+    faceSelectError.textContent = message;
+    faceSelectError.style.display = message ? 'block' : 'none';
+  }
+
+  function updateFaceSelectButton(): void {
+    faceSelectSearchBtn.disabled = faceSelectBusy
+      || !faceSelection
+      || faceSelection.width < MIN_SELECTION_PX
+      || faceSelection.height < MIN_SELECTION_PX;
+    faceSelectSearchBtn.textContent = faceSelectBusy ? T.faceSelectBusy : faceSelectSearchLabel;
+  }
+
+  function openFaceSelect(): void {
+    if (!lastSearch) return;
+    faceSelectImg.src = lastSearch.dataUrl;
+    faceSelection = null;
+    faceSelectDragStart = null;
+    drawFaceSelection();
+    setFaceSelectError('');
+    updateFaceSelectButton();
+    faceSelectModal.style.display = 'flex';
+  }
+
+  function closeFaceSelect(): void {
+    if (faceSelectBusy) return;
+    faceSelectModal.style.display = 'none';
+  }
+
+  function pointInFaceImage(event: PointerEvent): { x: number; y: number } {
+    const rect = faceSelectImg.getBoundingClientRect();
+    return {
+      x: Math.max(0, Math.min(rect.width, event.clientX - rect.left)),
+      y: Math.max(0, Math.min(rect.height, event.clientY - rect.top)),
+    };
+  }
+
+  faceSelectStage.addEventListener('pointerdown', event => {
+    if (faceSelectBusy || !faceSelectImg.naturalWidth) return;
+    event.preventDefault();
+    // Keeps the drag alive when the finger/cursor leaves the photo; never worth failing over.
+    try { faceSelectStage.setPointerCapture(event.pointerId); } catch { /* inactive pointer */ }
+    faceSelectDragStart = pointInFaceImage(event);
+    faceSelection = { ...faceSelectDragStart, width: 0, height: 0 };
+    drawFaceSelection();
+    setFaceSelectError('');
+  });
+  faceSelectStage.addEventListener('pointermove', event => {
+    if (!faceSelectDragStart) return;
+    const point = pointInFaceImage(event);
+    faceSelection = {
+      x: Math.min(point.x, faceSelectDragStart.x),
+      y: Math.min(point.y, faceSelectDragStart.y),
+      width: Math.abs(point.x - faceSelectDragStart.x),
+      height: Math.abs(point.y - faceSelectDragStart.y),
+    };
+    drawFaceSelection();
+  });
+  const endFaceSelectDrag = () => {
+    faceSelectDragStart = null;
+    updateFaceSelectButton();
+  };
+  faceSelectStage.addEventListener('pointerup', endFaceSelectDrag);
+  faceSelectStage.addEventListener('pointercancel', endFaceSelectDrag);
+
+  faceSelectSearchBtn.addEventListener('click', async () => {
+    const search = lastSearch;
+    const sel = faceSelection;
+    if (!search || !sel || faceSelectBusy) return;
+    // Selection is in displayed pixels; the crop needs the photo's own pixels.
+    const scaleX = faceSelectImg.naturalWidth / faceSelectImg.clientWidth;
+    const scaleY = faceSelectImg.naturalHeight / faceSelectImg.clientHeight;
+    const box = { x: sel.x * scaleX, y: sel.y * scaleY, width: sel.width * scaleX, height: sel.height * scaleY };
+
+    faceSelectBusy = true;
+    updateFaceSelectButton();
+    setFaceSelectError('');
+    try {
+      const faceapi = await loadFaceApi();
+      await ensureModels(faceapi);
+      const detected = await withTimeout(
+        detectFace(faceapi, cropAroundBox(faceSelectImg, box, MANUAL_CROP_SCALE)),
+        DETECT_TIMEOUT_MS,
+        'face detection',
+      );
+      trackFaceDetect(detected.tier, 'manual');
+      if (!detected.descriptor) {
+        setFaceSelectError(T.faceSelectNoFace);
+        return;
+      }
+      const data = await searchFaceMatches(detected.descriptor, detected.tier);
+      if (!search.counted) {
+        incrementSearchCount();
+        search.counted = true;
+      }
+      const results = data.results ?? [];
+      const topName = results[0] ? ((results[0].name || results[0].username) as string) : undefined;
+      recordCreatorSearchHistory(results, topName, search.ownerId);
+      faceSelectBusy = false;
+      closeFaceSelect();
+      showResults(
+        results,
+        data.mode,
+        search.pornstarData,
+        undefined,
+        search.wantsOnlyfans,
+        search.wantsPornstars,
+        detected.tier === 'weak' ? 'weak' : 'match',
+      );
+      announceSearchProof(data);
+    } catch (err: any) {
+      setFaceSelectError(err?.message ?? T.searchFailed);
+      console.error('[findbyface] select-face error:', err);
+    } finally {
+      faceSelectBusy = false;
+      updateFaceSelectButton();
+    }
+  });
+
+  document.getElementById('selectFaceBtn')!.addEventListener('click', openFaceSelect);
+  document.getElementById('tryAnotherBtn')!.addEventListener('click', () => {
+    fileInput.value = '';
+    fileInput.click();
+  });
+  document.getElementById('faceSelectCancel')!.addEventListener('click', closeFaceSelect);
+  document.getElementById('faceSelectClose')!.addEventListener('click', closeFaceSelect);
+  document.getElementById('faceSelectBackdrop')!.addEventListener('click', closeFaceSelect);
 
   restorePendingFaceResults();
 </script>
@@ -1658,6 +2015,29 @@ const CLIENT = lang === 'es' ? esClient : enClient;
   .auth-icon-wrap { font-size: 40px; margin-bottom: 16px; }
   .auth-box h3 { font-size: 1.3rem; margin-bottom: 10px; }
   .auth-box p { color: var(--text-muted); font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
+  /* Select-the-face modal */
+  .face-select-box { max-width: 560px; padding: 32px 24px 24px; }
+  .face-select-box p { margin-bottom: 16px; }
+  .face-select-stage {
+    position: relative; display: inline-block; max-width: 100%;
+    overflow: hidden; border-radius: 8px; border: 1px solid var(--border);
+    cursor: crosshair; touch-action: none; user-select: none; -webkit-user-select: none;
+    margin-bottom: 16px;
+  }
+  .face-select-stage img { display: block; max-width: 100%; max-height: 55vh; pointer-events: none; }
+  .face-select-rect {
+    display: none; position: absolute; pointer-events: none;
+    border: 2px solid var(--accent-light); border-radius: 6px;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
+  }
+  .face-select-box .face-select-error { color: #f87171; font-size: 13px; margin: -4px 0 14px; }
+  .face-fallback-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 20px; }
+  .select-face-btn {
+    background: var(--accent); color: #fff; border: none; border-radius: 8px;
+    padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+    transition: background 0.2s;
+  }
+  .select-face-btn:hover { background: var(--accent-light); }
   .google-btn {
     display: flex; align-items: center; justify-content: center; gap: 10px;
     background: #fff; color: #1f1f1f; border-radius: 999px;
