@@ -31,8 +31,11 @@ export const placements: Record<string, Placement> = {
     pinned: [
       { username: 'emilylopz', position: 1 },
       { username: 'rocketreynaxo', position: 2 },
-      { username: 'hannazuki', position: 3 },
+      { username: 'sarahwylde', position: 3 },
+      { username: 'hannazuki', position: 4 },
       { username: 'sophiescrts', position: 5 },
+      { username: 'vietnami', position: 6 },
+      { username: 'aussiesunlocked', position: 7 },
     ],
     excluded: [],
   },
@@ -40,9 +43,11 @@ export const placements: Record<string, Placement> = {
     pinned: [
       { username: 'emilylopz', position: 1 },
       { username: 'rocketreynaxo', position: 2 },
-      { username: 'hannazuki', position: 3 },
-      { username: 'rinayanami', position: 4 },
+      { username: 'sarahwylde', position: 3 },
+      { username: 'hannazuki', position: 4 },
       { username: 'sophiescrts', position: 5 },
+      { username: 'vietnami', position: 6 },
+      { username: 'aussiesunlocked', position: 7 },
     ],
     excluded: [],
   },
@@ -68,9 +73,11 @@ export const placements: Record<string, Placement> = {
     pinned: [
       { username: 'emilylopz', position: 1 },
       { username: 'rocketreynaxo', position: 2 },
-      { username: 'hannazuki', position: 3 },
-      { username: 'rinayanami', position: 4 },
+      { username: 'sarahwylde', position: 3 },
+      { username: 'hannazuki', position: 4 },
       { username: 'sophiescrts', position: 5 },
+      { username: 'vietnami', position: 6 },
+      { username: 'aussiesunlocked', position: 7 },
     ],
     excluded: [],
   },
@@ -94,8 +101,12 @@ export function pinAcrossCategories(username: string, position: number, slugs?: 
 }
 
 // Active paid placements — one call per order.
-// Current order (onlyfans-search / categories): emilylopz 1, rocketreynaxo 2, hannazuki 3,
-// rinayanami 4, sophiescrts 5; position 6 onward is organic.
+// Current order (face-search / onlyfans-search / categories / home): emilylopz 1,
+// rocketreynaxo 2, sarahwylde 3, hannazuki 4, sophiescrts 5, vietnami 6, aussiesunlocked 7;
+// position 8 onward is organic. On face-search that's ad slots 1-7 = grid cards 1/3/…/13.
+// 2026-10-10 (owner's call): sarahwylde, vietnami and aussiesunlocked onboarded at 3, 6 and 7;
+// rinayanami's campaign ended (not renewing), so her pins and sponsor override are gone —
+// her panel keeps reporting via networkClickSources.ts. hannazuki 3 → 4.
 // 2026-10-07 (owner's call): on the homepage face search, onlyfans-search and every
 // category, hannazuki moved up to 3 and sophiescrts to 5. On face-search that made
 // rinayanami and hannazuki swap ad slots (rinayanami 3 → 4, i.e. grid card 5 → 7); on
@@ -112,6 +123,8 @@ export function pinAcrossCategories(username: string, position: number, slugs?: 
 // hannazuki 3) — cosplaytsumiko was never on it.
 pinAcrossCategories('emilylopz', 1);
 pinAcrossCategories('rocketreynaxo', 2);
-pinAcrossCategories('hannazuki', 3);
-pinAcrossCategories('rinayanami', 4);
+pinAcrossCategories('sarahwylde', 3);
+pinAcrossCategories('hannazuki', 4);
 pinAcrossCategories('sophiescrts', 5);
+pinAcrossCategories('vietnami', 6);
+pinAcrossCategories('aussiesunlocked', 7);

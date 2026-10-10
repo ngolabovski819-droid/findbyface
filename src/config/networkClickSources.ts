@@ -53,9 +53,12 @@ export const networkClickSources: Record<string, NetworkClickSource[]> = {
   // 2026-08-28: all three sister-site legs live. Each table was probed via REST before being
   // added here (fanspedia 6 rows, onlyamericanfans 13, onlyaussiefans 1 at the time); names
   // copied from each sibling repo's sponsor config (onlyamericanfans:
-  // src/config/sponsor-overrides.ts, onlyaussiefans: src/config/sponsors.ts). findbyface's own
-  // sponsor_clicks_rinayanami_fbf still comes from sponsors.ts, as for every client.
+  // src/config/sponsor-overrides.ts, onlyaussiefans: src/config/sponsors.ts). Her findbyface
+  // campaign ended 2026-10-10 and her sponsors.ts entry
+  // went with it, so sponsor_clicks_rinayanami_fbf is listed here (as for cosplaytsumiko) to
+  // keep it in her panel.
   rinayanami: [
+    { site: 'findbyface.org', table: 'sponsor_clicks_rinayanami_fbf', timestampColumn: 'created_at' },
     { site: 'fanspedia.net', table: 'sponsor_clicks_rinayanami', timestampColumn: 'clicked_at' },
     { site: 'onlyamericanfans.com', table: 'sponsor_clicks_rinayanami_oaf', timestampColumn: 'clicked_at' },
     { site: 'onlyaussiefans.com', table: 'sponsor_clicks_oaussief_rinayanami', timestampColumn: 'clicked_at' },

@@ -42,20 +42,6 @@ export const sponsors: Record<string, SponsorOverride> = {
       (_, index) => `/uploads/sponsors/rocketreynaxo/rocket-${String(index + 1).padStart(2, '0')}.jpg`,
     ),
   },
-  rinayanami: {
-    linkOverride: 'https://onlyfans.com/rinayanami/c31',
-    imageOverride: '/uploads/sponsors/rinayanami/rina-01.jpg',
-    clickTable: 'sponsor_clicks_rinayanami_fbf',
-    tags: ['petite', 'asian', 'nerdy', 'GFE'],
-    additionalTagCount: 5,
-    // Client's set was numbered 1, 3-9, 13-16 (their numbering had gaps, and 15 was a
-    // byte-identical copy of 9, so it was dropped). Written to disk in that numeric order
-    // as a plain 01..11 run, so this array IS the client's "starting from 1" order.
-    galleryImages: Array.from(
-      { length: 11 },
-      (_, index) => `/uploads/sponsors/rinayanami/rina-${String(index + 1).padStart(2, '0')}.jpg`,
-    ),
-  },
   hannazuki: {
     linkOverride: 'https://onlyfans.com/hannazuki/trial/kqv4mhnqp9ifhpwin0vtfxnsscmlv9jy',
     imageOverride: '/uploads/sponsors/hannazuki/hanna-01.jpg',
@@ -81,6 +67,41 @@ export const sponsors: Record<string, SponsorOverride> = {
     galleryImages: Array.from(
       { length: 50 },
       (_, index) => `/uploads/sponsors/sophiescrts/sophie-${String(index + 1).padStart(2, '0')}.jpg`,
+    ),
+  },
+  // sarahwylde, vietnami and aussiesunlocked added 2026-10-10: #3, #6 and #7 on face-search,
+  // onlyfans-search and every category (see placements.ts). Each sent three photos, written to
+  // disk in the client's 1, 2, 3 order, so the 01..03 arrays are display order.
+  sarahwylde: {
+    linkOverride: 'https://onlyfans.com/sarahwylde/c35',
+    imageOverride: '/uploads/sponsors/sarahwylde/sarah-01.jpg',
+    clickTable: 'sponsor_clicks_sarahwylde_fbf', // scripts/migrations/030_*.sql
+    tags: ['fetish friendly', 'blonde'],
+    additionalTagCount: 9,
+    galleryImages: Array.from(
+      { length: 3 },
+      (_, index) => `/uploads/sponsors/sarahwylde/sarah-${String(index + 1).padStart(2, '0')}.jpg`,
+    ),
+  },
+  vietnami: {
+    linkOverride: 'https://onlyfans.com/vietnami/c157',
+    imageOverride: '/uploads/sponsors/vietnami/nami-01.jpg',
+    clickTable: 'sponsor_clicks_vietnami_fbf', // scripts/migrations/030_*.sql
+    tags: ['petite', 'kinky'],
+    galleryImages: Array.from(
+      { length: 3 },
+      (_, index) => `/uploads/sponsors/vietnami/nami-${String(index + 1).padStart(2, '0')}.jpg`,
+    ),
+  },
+  aussiesunlocked: {
+    linkOverride: 'https://onlyfans.com/aussiesunlocked/c304',
+    imageOverride: '/uploads/sponsors/aussiesunlocked/aussies-01.jpg',
+    clickTable: 'sponsor_clicks_aussiesunlocked_fbf', // scripts/migrations/030_*.sql
+    tags: ['horny duo', 'JOI'],
+    additionalTagCount: 8,
+    galleryImages: Array.from(
+      { length: 3 },
+      (_, index) => `/uploads/sponsors/aussiesunlocked/aussies-${String(index + 1).padStart(2, '0')}.jpg`,
     ),
   },
 };
