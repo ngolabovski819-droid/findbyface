@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import type { FinderKind } from './finderComments';
+import { SITE } from './site';
 
 type ModerationDecision = 'approved' | 'rejected' | 'removed';
 
@@ -7,6 +8,7 @@ function emailConfig(): { apiKey: string; from: string } | null {
   const apiKey = import.meta.env.RESEND_API_KEY;
   const configuredFrom = import.meta.env.COMMENT_EMAIL_FROM?.trim();
   if (!apiKey) return null;
+  // Keep the existing sender until a replacement domain has been verified in Resend.
   const from = configuredFrom || (import.meta.env.PROD
     ? 'FindByFace Search Stories <community@findbyface.org>'
     : 'FindByFace Search Stories <onboarding@resend.dev>');
@@ -20,7 +22,7 @@ function finderPath(finder: FinderKind): string {
 }
 
 function publicSiteUrl(): string {
-  return (import.meta.env.PUBLIC_SITE_URL || 'https://findbyface.org').replace(/\/+$/, '');
+  return (import.meta.env.PUBLIC_SITE_URL?.trim() || SITE).replace(/\/+$/, '');
 }
 
 async function send(to: string, subject: string, text: string): Promise<boolean> {

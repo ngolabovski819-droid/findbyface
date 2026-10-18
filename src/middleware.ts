@@ -1,5 +1,5 @@
-// Routes panel.findbyface.org to the /panel pages while keeping them reachable at
-// findbyface.org/panel/* too (useful before the subdomain is attached in Vercel, and it's
+// Routes panel.findbyface.net to the /panel pages while keeping them reachable at
+// findbyface.net/panel/* too (useful before the subdomain is attached in Vercel, and it's
 // what /api/panel/* calls resolve against either way). Astro has no native multi-domain
 // concept — it matches routes purely on pathname — so this middleware is what decides, based
 // on the Host header, to rewrite a bare path like "/login" into "/panel/login" before the

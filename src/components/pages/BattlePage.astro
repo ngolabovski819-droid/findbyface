@@ -251,7 +251,7 @@ const enClient = {
   dailyCaption: enC.lbCaptionDefault,
   unlimitedCaption: 'Unlimited players ranked by lifetime battles won, then battles played.',
   rankingsFailed: 'Failed to load rankings',
-  shareText: 'Creator Battle by findbyface — {date}\n3 creator battles completed · {streak}-day streak\nfindbyface.org/battle/',
+  shareText: 'Creator Battle by findbyface — {date}\n3 creator battles completed · {streak}-day streak\nfindbyface.net/battle/',
   resultCopied: 'Result copied to clipboard',
   copyFailed: 'Could not copy — take a screenshot instead',
 };
@@ -305,7 +305,7 @@ const esClient: typeof enClient = {
   dailyCaption: esC.lbCaptionDefault,
   unlimitedCaption: 'Jugadores ilimitados clasificados por batallas ganadas de por vida y luego jugadas.',
   rankingsFailed: 'No se pudieron cargar los rankings',
-  shareText: 'Batalla de Creadoras de findbyface — {date}\n3 batallas completadas · racha de {streak} días\nfindbyface.org/es/batalla/',
+  shareText: 'Batalla de Creadoras de findbyface — {date}\n3 batallas completadas · racha de {streak} días\nfindbyface.net/es/batalla/',
   resultCopied: 'Resultado copiado al portapapeles',
   copyFailed: 'No se pudo copiar — toma una captura en su lugar',
 };
@@ -336,13 +336,13 @@ const structuredData = JSON.stringify([
     inLanguage: lang,
     contentRating: '18+',
     audience: { '@type': 'PeopleAudience', requiredMinAge: 18 },
-    image: `https://findbyface.org${socialImage}`,
+    image: absUrl(socialImage),
     offers: { '@type': 'Offer', price: 0, priceCurrency: 'USD' },
     publisher: {
       '@type': 'Organization',
       name: 'findbyface',
-      url: 'https://findbyface.org/',
-      logo: 'https://findbyface.org/findbyface-logo.png',
+      url: absUrl('/'),
+      logo: absUrl('/findbyface-logo.png'),
     },
   },
   {

@@ -14,6 +14,7 @@ import {
 import { sendCommentVerificationEmail } from '../../../lib/finderCommentEmail';
 import { verifySearchStoryProof } from '../../../lib/searchStoryProof';
 import { verifyTurnstileToken } from '../../../lib/turnstile';
+import { SITE } from '../../../lib/site';
 import { clientIp, json, parseJson, publicError, sameOrigin, withinRateLimit } from './_shared';
 
 export const prerender = false;
@@ -54,7 +55,7 @@ function finderDestination(finder: 'onlyfans' | 'pornstar', state: 'verified' | 
 
 function redirect(request: Request, finder: 'onlyfans' | 'pornstar', state: 'verified' | 'failed'): Response {
   const configuredOrigin = import.meta.env.PUBLIC_SITE_URL?.trim().replace(/\/+$/, '');
-  const origin = configuredOrigin || (import.meta.env.PROD ? 'https://findbyface.org' : new URL(request.url).origin);
+  const origin = configuredOrigin || (import.meta.env.PROD ? SITE : new URL(request.url).origin);
   return new Response(null, {
     status: 303,
     headers: {
@@ -150,8 +151,8 @@ export const POST: APIRoute = async ({ request }) => {
       requesterKey,
     });
 
-    const base = (import.meta.env.PUBLIC_SITE_URL
-      || (import.meta.env.PROD ? 'https://findbyface.org' : new URL(request.url).origin)).replace(/\/+$/, '');
+    const base = (import.meta.env.PUBLIC_SITE_URL?.trim()
+      || (import.meta.env.PROD ? SITE : new URL(request.url).origin)).replace(/\/+$/, '');
     const verificationUrl = new URL('/api/finder-comments/verify', `${base}/`);
     verificationUrl.searchParams.set('token', opaqueToken);
     const sent = await sendCommentVerificationEmail(email, verificationUrl.toString());

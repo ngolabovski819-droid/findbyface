@@ -27,7 +27,7 @@ function serviceHeaders(key: string): Record<string, string> {
 }
 
 function avatarStyleFromUrl(avatarUrl: string, fallback: number): number {
-  const parsed = Number(new URL(avatarUrl, 'https://findbyface.org').searchParams.get('style'));
+  const parsed = Number(new URL(avatarUrl, 'https://findbyface.net').searchParams.get('style'));
   return Number.isInteger(parsed) && parsed >= 1 && parsed <= 8 ? parsed : fallback;
 }
 

@@ -1,4 +1,4 @@
-export const SITE = 'https://findbyface.org';
+export const SITE = 'https://findbyface.net';
 
 /** Absolute URL on the canonical origin, always with the origin from SITE. */
 export const absUrl = (path: string) => new URL(path, SITE).href;

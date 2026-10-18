@@ -1,4 +1,5 @@
 ---
+import { absUrl } from '../lib/site';
 {/* i18n-twin: src/pages/es/promociona-tu-onlyfans.astro — mirror copy/structure changes */}
 import Base from '../layouts/Base.astro';
 
@@ -63,7 +64,7 @@ const faqJsonLd = JSON.stringify({
 <Base
   title="Promote Your OnlyFans — Get Real Paying Fans | findbyface"
   description="Get your OnlyFans featured on findbyface and reach thousands of high-intent fans searching by face, niche, and category every day. Go live in 24 hours — no password required."
-  canonical="https://findbyface.org/promote/"
+  canonical={absUrl('/promote/')}
 >
   <Fragment slot="head">
     <script type="application/ld+json" set:html={faqJsonLd} />

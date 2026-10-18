@@ -6,7 +6,7 @@ export default defineConfig({
   adapter: vercel({
     maxDuration: 30,
   }),
-  site: 'https://findbyface.org',
+  site: 'https://findbyface.net',
   // Creator photos are resized same-origin by Astro's built-in `/_image` sharp endpoint
   // (see src/utils/image.ts). It refuses any remote host not listed here — keep this to
   // the OnlyFans CDNs so the endpoint can't be used as an open resizer for other sites.

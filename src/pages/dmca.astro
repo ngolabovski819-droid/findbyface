@@ -1,4 +1,5 @@
 ---
+import { absUrl } from '../lib/site';
 {/* i18n-twin: src/pages/es/dmca.astro — mirror copy/structure changes */}
 import Base from '../layouts/Base.astro';
 
@@ -8,7 +9,7 @@ const updated = 'June 7, 2026';
 <Base
   title="DMCA & Content Removal | findbyface"
   description="How to submit a DMCA takedown notice or request removal of content from findbyface."
-  canonical="https://findbyface.org/dmca/"
+  canonical={absUrl('/dmca/')}
 >
   <article class="prose-page">
     <div class="page-head">
@@ -19,7 +20,7 @@ const updated = 'June 7, 2026';
     <div class="prose">
       <p>
         findbyface respects the intellectual property and privacy rights of others. If you believe
-        content displayed or linked on findbyface.org infringes your copyright, or if you wish to
+        content displayed or linked on findbyface.net infringes your copyright, or if you wish to
         request removal of your image, please follow the process below.
       </p>
 
@@ -28,7 +29,7 @@ const updated = 'June 7, 2026';
         findbyface surfaces publicly available creator profiles based on visual similarity. We do not
         host creators' original media; thumbnails and links may reference third-party platforms such
         as OnlyFans. Removing content from those platforms is handled by the platforms themselves. All
-        rights reserved. findbyface.org is neither owned nor affiliated with onlyfans.com, which is a
+        rights reserved. findbyface.net is neither owned nor affiliated with onlyfans.com, which is a
         registered trademark of Fenix International Limited.
       </p>
 
@@ -40,7 +41,7 @@ const updated = 'June 7, 2026';
       <ul>
         <li>A physical or electronic signature of the copyright owner or authorized agent.</li>
         <li>Identification of the copyrighted work claimed to have been infringed.</li>
-        <li>The exact URL(s) on findbyface.org where the material is located.</li>
+        <li>The exact URL(s) on findbyface.net where the material is located.</li>
         <li>Your contact information (name, address, email, phone number).</li>
         <li>A statement that you have a good-faith belief that the use is not authorized by the copyright owner, its agent, or the law.</li>
         <li>A statement, under penalty of perjury, that the information in your notice is accurate and that you are the owner or authorized to act on the owner's behalf.</li>

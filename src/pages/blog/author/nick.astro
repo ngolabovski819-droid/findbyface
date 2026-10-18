@@ -1,4 +1,5 @@
 ---
+import { absUrl } from '../../../lib/site';
 {/* i18n-twin: src/pages/es/blog/autor/nick.astro — mirror copy/structure changes */}
 import Base from '../../../layouts/Base.astro';
 import { getCollection } from 'astro:content';
@@ -12,7 +13,7 @@ const posts = allPosts.filter(post => post.data.author === 'Nick');
 <Base
   title="Nick — findbyface"
   description="Nick builds and maintains findbyface: the AI face-match search engine, FindRank creator rankings, and the OnlyFans directory."
-  canonical="https://findbyface.org/blog/author/nick/"
+  canonical={absUrl('/blog/author/nick/')}
 >
   <article class="author-page">
     <div class="author-head">

@@ -1,4 +1,4 @@
-// Session handling for panel.findbyface.org — completely separate from the consumer site's
+// Session handling for panel.findbyface.net — completely separate from the consumer site's
 // localStorage-based auth (fbf_user in Nav.astro). That pattern is a soft UX gate; this one
 // protects a real client's business data, so it's real server-side verification against
 // Supabase Auth on every request, backed by httpOnly cookies instead of localStorage.

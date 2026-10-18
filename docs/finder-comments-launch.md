@@ -23,9 +23,11 @@ Add these production environment variables in Vercel:
   private feedback IDs, comment replay IDs, IP rate-limit keys, and browser vote/report keys.
   If omitted, the app derives a separate purpose-specific subkey from `SEARCH_STORY_SECRET` or
   `CLICK_TOKEN_SECRET`.
-- `PUBLIC_SITE_URL=https://findbyface.org`
+- `PUBLIC_SITE_URL=https://findbyface.net`
 - `COMMENT_EMAIL_FROM`: optional override for the verified Resend sender. Production defaults to
   `FindByFace Search Stories <community@findbyface.org>`.
+  Keep this sender until a replacement `.net` sender domain is verified in Resend;
+  the website migration changes links independently of the email sender.
 - `COMMENT_MODERATION_EMAIL`: the private inbox that should receive the once-daily queue digest;
   falls back to the existing `CONTACT_NOTIFY_EMAIL`.
 - `CRON_SECRET`: a long random Vercel Cron bearer secret.

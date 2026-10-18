@@ -50,7 +50,7 @@ const NAV_ITEMS: NavItem[] = [
 
 // Astro.url reflects the REWRITTEN path (always /panel/... internally, regardless of which
 // host got us here — see middleware.ts) so comparing against a /panel-prefixed target works
-// the same whether the visitor is on the subdomain or the findbyface.org/panel/* fallback.
+// the same whether the visitor is on the subdomain or the findbyface.net/panel/* fallback.
 const activePath = Astro.url.pathname.replace(/\/+$/, '') || '/panel';
 function isActive(href: string): boolean {
   const target = (href === '/' ? '/panel' : `/panel${href}`).replace(/\/+$/, '');
@@ -302,6 +302,8 @@ const publicPath = `${base}${innerPath}`;
 </style>
 
 <script>
+  import { isPanelHost } from '../lib/panelHost';
+
   // Keep the admin's pending queue visible throughout the panel. The moderation page owns
   // this badge while open (it already fetches the full queue); other admin pages make one
   // small count request. Guests never render the badge and therefore never make this call.
@@ -329,7 +331,7 @@ const publicPath = `${base}${innerPath}`;
       // leaving the button looking dead. Nothing more useful to do client-side than that.
     }
     const host = window.location.hostname;
-    const onPanelHost = host === 'panel.findbyface.org' || host === 'panel.localhost';
+    const onPanelHost = isPanelHost(host);
     window.location.href = onPanelHost ? '/login/' : '/panel/login/';
   });
 

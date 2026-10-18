@@ -1,4 +1,5 @@
 ---
+import { absUrl } from '../../lib/site';
 {/* i18n-twin: src/pages/es/blog/index.astro — mirror copy/structure changes */}
 import Base from '../../layouts/Base.astro';
 import { getCollection } from 'astro:content';
@@ -16,7 +17,7 @@ const postSlug = (post: any) => post.id.replace(/\.md$/, '');
 <Base
   title={BLOG_SEO.title}
   description={BLOG_SEO.description}
-  canonical="https://findbyface.org/blog/"
+  canonical={absUrl('/blog/')}
 >
   <section class="blog-page">
     <div class="blog-header">

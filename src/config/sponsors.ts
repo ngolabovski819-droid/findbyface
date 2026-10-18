@@ -116,7 +116,7 @@ export function getSponsorOverride(username: string): SponsorOverride | undefine
 
 /**
  * Vanity slugs for the `/go/<slug>` redirect ONLY. Lets a sponsor share
- * `findbyface.org/go/<anything>` — the OF username of a profile in the owner's promo
+ * `findbyface.net/go/<anything>` — the OF username of a profile in the owner's promo
  * sheet, an IG/TikTok persona, a per-campaign name — instead of `/go/<of-username>`.
  * The route resolves the alias to the target's `linkOverride` + `clickTable` and logs
  * the click with `placement: 'vanity:<alias>'`, so each shared link reports separately.

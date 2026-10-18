@@ -1,4 +1,5 @@
 ---
+import { absUrl } from '../lib/site';
 {/* i18n-twin: src/pages/es/politica-de-privacidad.astro — mirror copy/structure changes */}
 import Base from '../layouts/Base.astro';
 
@@ -8,7 +9,7 @@ const updated = 'August 13, 2026';
 <Base
   title="Privacy Policy | findbyface"
   description="How findbyface handles photos you upload, what data we collect, cookies, analytics, and your privacy rights."
-  canonical="https://findbyface.org/privacy-policy/"
+  canonical={absUrl('/privacy-policy/')}
 >
   <article class="prose-page">
     <div class="page-head">
@@ -19,7 +20,7 @@ const updated = 'August 13, 2026';
     <div class="prose">
       <p>
         This Privacy Policy explains how findbyface ("we", "us", "our") handles information when you
-        use findbyface.org (the "Service"). By using the Service, you agree to the practices described
+        use findbyface.net (the "Service"). By using the Service, you agree to the practices described
         here.
       </p>
 

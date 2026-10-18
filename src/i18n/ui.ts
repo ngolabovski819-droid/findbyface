@@ -46,8 +46,8 @@ const en = {
   'footer.guidelines': 'Community Guidelines',
   'footer.dmca': 'DMCA',
   'footer.sitemap': 'Sitemap',
-  'footer.legal1': '© {year} findbyface.org — For entertainment purposes only. Results are based on visual similarity and are not an indication of identity.',
-  'footer.legal2': 'All rights reserved. findbyface.org is neither owned nor affiliated with onlyfans.com, which is a registered trademark of Fenix International Limited.',
+  'footer.legal1': '© {year} findbyface.net — For entertainment purposes only. Results are based on visual similarity and are not an indication of identity.',
+  'footer.legal2': 'All rights reserved. findbyface.net is neither owned nor affiliated with onlyfans.com, which is a registered trademark of Fenix International Limited.',
 
   // --- Common / cards ---
   'common.loading': 'Loading...',
@@ -153,8 +153,8 @@ const es: Dict = {
   'footer.guidelines': 'Normas de la comunidad',
   'footer.dmca': 'DMCA',
   'footer.sitemap': 'Mapa del sitio',
-  'footer.legal1': '© {year} findbyface.org — Solo con fines de entretenimiento. Los resultados se basan en similitud visual y no son una indicación de identidad.',
-  'footer.legal2': 'Todos los derechos reservados. findbyface.org no es propiedad de ni está afiliado a onlyfans.com, marca registrada de Fenix International Limited.',
+  'footer.legal1': '© {year} findbyface.net — Solo con fines de entretenimiento. Los resultados se basan en similitud visual y no son una indicación de identidad.',
+  'footer.legal2': 'Todos los derechos reservados. findbyface.net no es propiedad de ni está afiliado a onlyfans.com, marca registrada de Fenix International Limited.',
 
   // --- Common / cards ---
   'common.loading': 'Cargando...',

@@ -47,6 +47,9 @@ import PanelLayout from '../../layouts/PanelLayout.astro';
 </script>
 <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstileLoad" async defer></script>
 <script>
+  import { isPanelHost } from '../../lib/panelHost';
+  import { absUrl } from '../../lib/site';
+
   const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
 
   const form = document.getElementById('panelLoginForm') as HTMLFormElement;
@@ -76,19 +79,19 @@ import PanelLayout from '../../layouts/PanelLayout.astro';
   // blank screen. Unknown/missing role falls back to the dashboard, which is safe for both.
   function panelDestination(role?: string): string {
     const host = window.location.hostname;
-    const onPanelHost = host === 'panel.findbyface.org' || host === 'panel.localhost';
+    const onPanelHost = isPanelHost(host);
     const sub = role === 'admin' ? 'comments/' : '';
     return onPanelHost ? `/${sub}` : `/panel/${sub}`;
   }
 
   function beginGoogleLogin(): void {
-    if (window.location.hostname === 'panel.findbyface.org') {
-      window.location.href = 'https://findbyface.org/panel/login/?google=1';
-      return;
-    }
     if (window.location.hostname === 'panel.localhost') {
       const port = window.location.port ? `:${window.location.port}` : '';
       window.location.href = `${window.location.protocol}//localhost${port}/panel/login/?google=1`;
+      return;
+    }
+    if (isPanelHost(window.location.hostname)) {
+      window.location.href = absUrl('/panel/login/?google=1');
       return;
     }
     const returnTo = '/panel/login/?connect=1';

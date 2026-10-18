@@ -10,13 +10,31 @@
   "redirects": [
     {
       "source": "/:path(.*)",
+      "has": [{ "type": "host", "value": "findbyface.org" }],
+      "destination": "https://findbyface.net/:path",
+      "permanent": true
+    },
+    {
+      "source": "/:path(.*)",
       "has": [
         {
           "type": "host",
           "value": "www.findbyface.org"
         }
       ],
-      "destination": "https://findbyface.org/:path",
+      "destination": "https://findbyface.net/:path",
+      "permanent": true
+    },
+    {
+      "source": "/:path(.*)",
+      "has": [{ "type": "host", "value": "www.findbyface.net" }],
+      "destination": "https://findbyface.net/:path",
+      "permanent": true
+    },
+    {
+      "source": "/:path(.*)",
+      "has": [{ "type": "host", "value": "panel.findbyface.org" }],
+      "destination": "https://panel.findbyface.net/:path",
       "permanent": true
     },
     {
@@ -44,7 +62,7 @@
       "has": [
         {
           "type": "host",
-          "value": "findbyface.org"
+          "value": "findbyface.net"
         }
       ],
       "destination": "/sitemap/",
@@ -55,7 +73,7 @@
       "has": [
         {
           "type": "host",
-          "value": "findbyface.org"
+          "value": "findbyface.net"
         }
       ],
       "destination": "/:path/",

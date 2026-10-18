@@ -1,4 +1,4 @@
-// Registry of panel.findbyface.org tenants. Keys are the same OnlyFans username slug used in
+// Registry of panel.findbyface.net tenants. Keys are the same OnlyFans username slug used in
 // src/config/sponsors.ts — the panel cross-references that file for the actual clickTable name
 // (see src/lib/panelStats.ts) rather than duplicating it here. This file only owns
 // panel-facing display concerns (what the client sees themselves called).

@@ -1,10 +1,11 @@
 ---
+import { absUrl } from '../lib/site';
 {/* i18n-twin: src/pages/es/mapa-del-sitio.astro — mirror copy/structure changes */}
 import Base from '../layouts/Base.astro';
 import { getCollection } from 'astro:content';
 import { categories } from '../config/categories';
 
-const canonical = 'https://findbyface.org/sitemap/';
+const canonical = absUrl('/sitemap/');
 const title = 'HTML Sitemap | findbyface';
 const description =
   'Browse the main search tools, guides, category pages, and legal resources available on findbyface.';

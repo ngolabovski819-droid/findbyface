@@ -1,10 +1,11 @@
 ---
+import { absUrl } from '../lib/site';
 {/* i18n-twin: src/pages/es/buscador-de-actrices-porno-por-cara.astro — mirror copy/structure changes */}
 import Base from '../layouts/Base.astro';
 import VideoFaceSearch from '../components/VideoFaceSearch.astro';
 import SearchStories from '../components/SearchStories.astro';
 
-const canonical = 'https://findbyface.org/pornstar-finder-by-face/';
+const canonical = absUrl('/pornstar-finder-by-face/');
 const title = 'Pornstar Finder by Face or Photo | Free AI Search';
 const description =
   'Use our free AI pornstar finder to search by face, photo, picture, or video screenshot. Get ranked matching appearances from a growing private beta index.';
@@ -110,7 +111,7 @@ const structuredData = JSON.stringify([
         '@type': 'ListItem',
         position: 1,
         name: 'Home',
-        item: 'https://findbyface.org/',
+        item: absUrl('/'),
       },
       {
         '@type': 'ListItem',

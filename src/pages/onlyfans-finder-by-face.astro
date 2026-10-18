@@ -1,10 +1,11 @@
 ---
+import { absUrl } from '../lib/site';
 {/* i18n-twin: src/pages/es/buscador-de-onlyfans-por-cara.astro — mirror copy/structure changes */}
 import Base from '../layouts/Base.astro';
 import UploadBox from '../components/UploadBox.astro';
 import SearchStories from '../components/SearchStories.astro';
 
-const canonical = 'https://findbyface.org/onlyfans-finder-by-face/';
+const canonical = absUrl('/onlyfans-finder-by-face/');
 const title = 'Free OnlyFans Finder by Face or Photo | AI Search';
 const description =
   'Use our free OnlyFans finder to search by face, image, photo, picture, or screenshot. Get ranked creator profile matches and direct links in seconds.';
@@ -101,7 +102,7 @@ const structuredData = JSON.stringify([
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://findbyface.org/' },
+      { '@type': 'ListItem', position: 1, name: 'Home', item: absUrl('/') },
       { '@type': 'ListItem', position: 2, name: 'OnlyFans Finder by Face', item: canonical },
     ],
   },

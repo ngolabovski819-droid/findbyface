@@ -54,7 +54,7 @@ function humanizePlacement(placement: string | null): string {
 function resolveSources(clientSlug: string): NetworkClickSource[] {
   const sources: NetworkClickSource[] = [];
   const ownTable = getSponsorOverride(clientSlug)?.clickTable;
-  if (ownTable) sources.push({ site: 'findbyface.org', table: ownTable, timestampColumn: 'created_at' });
+  if (ownTable) sources.push({ site: 'findbyface.net', table: ownTable, timestampColumn: 'created_at' });
   sources.push(...(networkClickSources[clientSlug] ?? []));
   return sources;
 }

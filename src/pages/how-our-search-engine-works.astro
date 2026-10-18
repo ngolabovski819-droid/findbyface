@@ -1,4 +1,5 @@
 ---
+import { absUrl } from '../lib/site';
 {/* i18n-twin: src/pages/es/como-funciona-nuestro-buscador.astro — mirror copy/structure changes */}
 import Base from '../layouts/Base.astro';
 
@@ -40,7 +41,7 @@ const jsonLd = JSON.stringify(faqJsonLd);
 <Base
   title="How Our Search Engine Works | findbyface"
   description="How findbyface ranks OnlyFans creators with FindRank, how our AI face-match search works, and how sponsored placements are disclosed."
-  canonical="https://findbyface.org/how-our-search-engine-works/"
+  canonical={absUrl('/how-our-search-engine-works/')}
 >
   <Fragment slot="head">
     <script type="application/ld+json" set:html={jsonLd} />
