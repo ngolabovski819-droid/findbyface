@@ -38,6 +38,12 @@ matcher_image = (
         "wget -q https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip -O /tmp/buffalo_l.zip",
         "unzip -q /tmp/buffalo_l.zip -d /root/.insightface/models/buffalo_l",
         "rm /tmp/buffalo_l.zip",
+        # Search only needs detection + recognition. FaceAnalysis loads every
+        # .onnx it finds (even with allowed_modules), so drop the landmark and
+        # gender/age models to cut ~2s of cold start. Embeddings are unchanged.
+        "cd /root/.insightface/models/buffalo_l"
+        " && rm 1k3d68.onnx 2d106det.onnx genderage.onnx"
+        " && test -f det_10g.onnx && test -f w600k_r50.onnx",
     )
 )
 
@@ -48,9 +54,13 @@ app = modal.App(APP_NAME)
     image=matcher_image,
     secrets=[modal.Secret.from_name(SECRET_NAME)],
     cpu=2.0,
-    memory=4096,
+    # Peak usage is ~750 MB; Modal bills max(request, usage), and the request
+    # is not a hard cap, so 2 GiB keeps headroom without paying for idle RAM.
+    memory=2048,
     timeout=120,
-    scaledown_window=300,
+    # Searches mostly arrive >5 min apart, so a long idle window was billed
+    # idle time on nearly every call. 60s still keeps back-to-back searches warm.
+    scaledown_window=60,
     max_containers=20,
 )
 @modal.concurrent(max_inputs=1)
@@ -84,6 +94,7 @@ def matcher_api():
         name=MODEL_NAME,
         root="/root/.insightface",
         providers=["CPUExecutionProvider"],
+        allowed_modules=["detection", "recognition"],
     )
     face_app.prepare(ctx_id=-1, det_size=(640, 640))
 
