@@ -36,6 +36,7 @@ export const placements: Record<string, Placement> = {
       { username: 'sophiescrts', position: 5 },
       { username: 'vietnami', position: 6 },
       { username: 'aussiesunlocked', position: 7 },
+      { username: 'zoeprvx', position: 10 },
     ],
     excluded: [],
   },
@@ -48,6 +49,7 @@ export const placements: Record<string, Placement> = {
       { username: 'sophiescrts', position: 5 },
       { username: 'vietnami', position: 6 },
       { username: 'aussiesunlocked', position: 7 },
+      { username: 'zoeprvx', position: 10 },
     ],
     excluded: [],
   },
@@ -78,6 +80,7 @@ export const placements: Record<string, Placement> = {
       { username: 'sophiescrts', position: 5 },
       { username: 'vietnami', position: 6 },
       { username: 'aussiesunlocked', position: 7 },
+      { username: 'zoeprvx', position: 10 },
     ],
     excluded: [],
   },
@@ -102,8 +105,10 @@ export function pinAcrossCategories(username: string, position: number, slugs?: 
 
 // Active paid placements — one call per order.
 // Current order (face-search / onlyfans-search / categories / home): emilylopz 1,
-// rocketreynaxo 2, sarahwylde 3, hannazuki 4, sophiescrts 5, vietnami 6, aussiesunlocked 7;
-// position 8 onward is organic. On face-search that's ad slots 1-7 = grid cards 1/3/…/13.
+// rocketreynaxo 2, sarahwylde 3, hannazuki 4, sophiescrts 5, vietnami 6, aussiesunlocked 7,
+// zoeprvx 10; 8, 9 and 11 onward are organic. On face-search that's ad slots 1-7 and 10 =
+// grid cards 1/3/…/13 and 19 (second page of 12, after Load more).
+// 2026-10-20 (owner's call): zoeprvx onboarded at 10 on every scope above.
 // 2026-10-10 (owner's call): sarahwylde, vietnami and aussiesunlocked onboarded at 3, 6 and 7;
 // rinayanami's campaign ended (not renewing), so her pins and sponsor override are gone —
 // her panel keeps reporting via networkClickSources.ts. hannazuki 3 → 4.
@@ -128,3 +133,4 @@ pinAcrossCategories('hannazuki', 4);
 pinAcrossCategories('sophiescrts', 5);
 pinAcrossCategories('vietnami', 6);
 pinAcrossCategories('aussiesunlocked', 7);
+pinAcrossCategories('zoeprvx', 10);

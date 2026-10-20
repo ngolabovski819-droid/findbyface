@@ -104,6 +104,20 @@ export const sponsors: Record<string, SponsorOverride> = {
       (_, index) => `/uploads/sponsors/aussiesunlocked/aussies-${String(index + 1).padStart(2, '0')}.jpg`,
     ),
   },
+  // Added 2026-10-20: #10 on face-search, onlyfans-search and every category (see
+  // placements.ts). Client's 20 photos written to disk in their 1..20 order, so the
+  // 01..20 array is display order.
+  zoeprvx: {
+    linkOverride: 'https://onlyfans.com/zoeprvx/c7',
+    imageOverride: '/uploads/sponsors/zoeprvx/zoe-01.jpg',
+    clickTable: 'sponsor_clicks_zoeprvx_fbf', // scripts/migrations/031_*.sql
+    tags: ['fetish friendly', '19 y/o'],
+    additionalTagCount: 8,
+    galleryImages: Array.from(
+      { length: 20 },
+      (_, index) => `/uploads/sponsors/zoeprvx/zoe-${String(index + 1).padStart(2, '0')}.jpg`,
+    ),
+  },
 };
 
 export function getSponsorOverride(username: string): SponsorOverride | undefined {
